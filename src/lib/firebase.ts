@@ -8,12 +8,12 @@ import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  "projectId": "uncoverly-hub",
+  "appId": "1:506136237998:web:06fd0145a782cbd4865a3f",
+  "storageBucket": "uncoverly-hub.firebasestorage.app",
+  "apiKey": "AIzaSyC2bLv4_Mqcnfw-eaztHlwTatGlWtlWe1Q",
+  "authDomain": "uncoverly-hub.firebaseapp.com",
+  "messagingSenderId": "506136237998"
 };
 
 // Initialize Firebase
