@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -13,10 +14,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import type { User } from "@/lib/types";
+import type { User, StudentProfile } from "@/lib/types";
 import { INTEREST_CATEGORIES, LEARNING_OBJECTIVES } from "@/lib/data";
+import { updateUserProfile } from "@/lib/firestore";
 
 const steps = ["welcome", "email", "age", "interests", "availability", "objective", "finish"];
+
+type OnboardingFormData = Omit<StudentProfile, 'id' | 'username' | 'name' | 'role' | 'plan' | 'hasOnboarded'>;
 
 export function OnboardingWizard() {
   const router = useRouter();
@@ -25,7 +29,7 @@ export function OnboardingWizard() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<OnboardingFormData>({
     email: "",
     age: 30,
     interests: [] as string[],
@@ -74,20 +78,36 @@ export function OnboardingWizard() {
     });
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
+    if (!user) return;
     setIsLoading(true);
-    // Simulate saving data and updating user profile
-    setTimeout(() => {
-      console.log("Onboarding data saved:", formData);
-      const updatedUser = { ...user, hasOnboarded: true };
-      localStorage.setItem("uncoverly-user", JSON.stringify(updatedUser));
+    
+    try {
+      const profileData: StudentProfile = {
+        ...user,
+        ...formData,
+        hasOnboarded: true,
+      };
+
+      await updateUserProfile(user.id, profileData);
+      
+      localStorage.setItem("uncoverly-user", JSON.stringify(profileData));
       toast({
         title: "¡Perfil completado!",
         description: "Tu configuración ha sido guardada.",
       });
       router.push("/student/dashboard");
+
+    } catch (error) {
+      console.error("Error saving onboarding data:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo guardar tu perfil. Inténtalo de nuevo."
+      });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
   
   const renderStep = () => {
@@ -118,7 +138,7 @@ export function OnboardingWizard() {
             <CardHeader><CardTitle className="font-headline">¿Cuál es tu edad?</CardTitle></CardHeader>
             <CardContent className="space-y-4">
                 <div className="text-center text-2xl font-bold text-primary">{formData.age}</div>
-                <Slider defaultValue={[30]} min={1} max={100} step={1} value={[formData.age]} onValueChange={(val) => setFormData({...formData, age: val[0]})} />
+                <Slider defaultValue={[30]} min={1} max={100} step={1} value={[formData.age || 30]} onValueChange={(val) => setFormData({...formData, age: val[0]})} />
             </CardContent>
           </>
         );
@@ -133,7 +153,7 @@ export function OnboardingWizard() {
                   <div className="grid grid-cols-2 gap-4">
                       {INTEREST_CATEGORIES.map(interest => (
                           <div key={interest} className="flex items-center space-x-2">
-                              <Checkbox id={interest} checked={formData.interests.includes(interest)} onCheckedChange={(c) => handleInterestChange(interest, c)} />
+                              <Checkbox id={interest} checked={formData.interests?.includes(interest)} onCheckedChange={(c) => handleInterestChange(interest, c)} />
                               <label htmlFor={interest} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{interest}</label>
                           </div>
                       ))}

@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { BookOpen, Calendar, Maximize, Notebook, Paperclip } from "lucide-react";
+import { BookOpen, Calendar, Maximize, Notebook, Paperclip, Loader2 } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -13,13 +14,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, GroupContent } from "@/lib/types";
+import type { User, Group, StudentProfile } from "@/lib/types";
+import { getStudentData } from "@/lib/firestore";
+import { Button } from "../ui/button";
 
-interface StudentDashboardUIProps {
-  user: User | null;
-  content: GroupContent;
+interface StudentDashboardData {
+    user: StudentProfile;
+    group: Group | null;
 }
 
 const cardVariants = {
@@ -49,33 +51,61 @@ function FullScreenCard({ trigger, title, children }: { trigger: React.ReactNode
   );
 }
 
-export function StudentDashboardUI({ user: initialUser, content }: StudentDashboardUIProps) {
+export function StudentDashboardUI() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(initialUser);
+  const [data, setData] = useState<StudentDashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!initialUser) {
-      const storedUser = localStorage.getItem("uncoverly-user");
-      if (storedUser) {
+    const storedUser = localStorage.getItem("uncoverly-user");
+    if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-        if (parsedUser.role !== 'student' || !parsedUser.hasOnboarded) {
+        if (parsedUser.role !== 'student') {
             router.push('/login');
             return;
         }
-        setUser(parsedUser);
-      } else {
+         if (!parsedUser.hasOnboarded) {
+            router.push('/student/onboarding');
+            return;
+        }
+
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const studentData = await getStudentData(parsedUser.id);
+                setData(studentData);
+            } catch (error) {
+                console.error("Error fetching student data:", error);
+                // Handle error (e.g., show toast)
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    } else {
         router.push("/login");
-      }
     }
-  }, [initialUser, router]);
+  }, [router]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' });
   };
+  
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const user = data?.user;
+  const content = data?.group?.content || { scheduledClasses: [], notes: [], books: [] };
 
   return (
     <div className="flex h-screen flex-col">
-      <DashboardHeader user={user} title="Panel de Estudiante" />
+      <DashboardHeader user={user || null} title="Panel de Estudiante" />
       <main className="flex-1 overflow-auto p-4 md:p-8">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Clases Programadas */}
