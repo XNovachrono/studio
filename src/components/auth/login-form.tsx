@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -6,6 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,11 +22,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { users } from "@/lib/data";
+import { auth, db } from "@/lib/firebase";
+import type { User } from "@/lib/types";
 
 const loginSchema = z.object({
-  username: z.string().min(1, "El nombre de usuario es requerido."),
-  password: z.string().min(1, "La contraseña es requerida."),
+  email: z.string().email("Por favor, introduce un correo electrónico válido."),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres."),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -37,43 +41,69 @@ export function LoginForm() {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
 
-  const onSubmit = (data: LoginFormValues) => {
+  const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      const user = users.find((u) => u.username === data.username);
-      // In a real app, you'd check a hashed password.
-      // For this demo, we'll just use a static password "password".
-      if (user && data.password === "password") {
-        localStorage.setItem("uncoverly-user", JSON.stringify(user));
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      const firebaseUser = userCredential.user;
+
+      // Get user profile from Firestore
+      const userDocRef = doc(db, "users", firebaseUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (userDocSnap.exists()) {
+        const userProfile = userDocSnap.data() as User;
+        
+        localStorage.setItem("uncoverly-user", JSON.stringify({ ...userProfile, id: firebaseUser.uid }));
+        
         toast({
           title: "Inicio de sesión exitoso",
-          description: `Bienvenido/a, ${user.name}.`,
+          description: `Bienvenido/a, ${userProfile.name}.`,
         });
 
-        if (user.role === "teacher") {
+        if (userProfile.role === "teacher") {
           router.push("/teacher/dashboard");
         } else {
-          if (user.hasOnboarded) {
+          if (userProfile.hasOnboarded) {
             router.push("/student/dashboard");
           } else {
             router.push("/student/onboarding");
           }
         }
       } else {
-        toast({
-          variant: "destructive",
-          title: "Error de autenticación",
-          description: "Usuario o contraseña incorrectos.",
-        });
-        setIsLoading(false);
+         // This case might happen if the user exists in Auth but not in Firestore.
+         // You might want to create a default profile here or show an error.
+         throw new Error("No se encontró el perfil de usuario.");
       }
-    }, 1000);
+
+    } catch (error: any) {
+      console.error("Firebase Auth Error:", error);
+      let description = "Ha ocurrido un error inesperado.";
+      switch (error.code) {
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+          description = "Usuario o contraseña incorrectos.";
+          break;
+        case 'auth/invalid-email':
+          description = "El formato del correo electrónico no es válido.";
+          break;
+        default:
+          description = error.message;
+      }
+      toast({
+        variant: "destructive",
+        title: "Error de autenticación",
+        description,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -86,12 +116,12 @@ export function LoginForm() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="username"
+              name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Usuario</FormLabel>
+                  <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="tu-usuario" {...field} />
+                    <Input placeholder="tu@email.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
