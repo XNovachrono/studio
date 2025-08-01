@@ -39,10 +39,12 @@ export const getStudentData = async (userId: string): Promise<{ user: StudentPro
         const groupDoc = querySnapshot.docs[0];
         const groupData = groupDoc.data() as Omit<Group, 'id'>;
         // Convert Timestamps to string dates for serialization
-        groupData.content.scheduledClasses = groupData.content.scheduledClasses.map(c => ({
-            ...c,
-            time: (c.time as unknown as Timestamp).toDate().toISOString(),
-        }));
+        if (groupData.content.scheduledClasses) {
+            groupData.content.scheduledClasses = groupData.content.scheduledClasses.map(c => ({
+                ...c,
+                time: c.time instanceof Timestamp ? c.time.toDate().toISOString() : c.time,
+            }));
+        }
         group = { id: groupDoc.id, ...groupData };
     }
 
@@ -71,10 +73,12 @@ export const getTeacherData = async (): Promise<{
     const groups = groupsSnap.docs.map(d => {
         const groupData = d.data() as Omit<Group, 'id'>;
          // Convert Timestamps to string dates for serialization
-        groupData.content.scheduledClasses = groupData.content.scheduledClasses.map(c => ({
-            ...c,
-            time: (c.time as unknown as Timestamp).toDate().toISOString(),
-        }));
+        if (groupData.content.scheduledClasses) {
+            groupData.content.scheduledClasses = groupData.content.scheduledClasses.map(c => ({
+                ...c,
+                time: c.time instanceof Timestamp ? c.time.toDate().toISOString() : c.time,
+            }));
+        }
         return { id: d.id, ...groupData };
     });
 
@@ -92,11 +96,11 @@ export const getTeacherData = async (): Promise<{
 
 // Function to create a new group
 export const createGroup = async (teacherId: string, studentIds: string[], plan: StudentPlan) => {
-    const newGroupId = Math.random().toString().slice(2, 9);
-    const newGroupRef = doc(db, "groups", newGroupId);
+    // A more robust way to get a new group ID is to use Firestore's ability to generate one.
+    const newGroupRef = doc(collection(db, "groups"));
     
     await setDoc(newGroupRef, {
-        name: `Grupo ${newGroupId}`,
+        name: `Grupo ${plan}`,
         type: plan,
         teacherId,
         studentIds,
@@ -118,8 +122,13 @@ export const addContentToGroup = async (
     const groupRef = doc(db, "groups", groupId);
 
     if (type === 'scheduledClass') {
+        const classDate = new Date(data.time);
         await updateDoc(groupRef, {
-            'content.scheduledClasses': arrayUnion({ ...data, id: `c${Date.now()}` })
+            'content.scheduledClasses': arrayUnion({
+                 id: `c${Date.now()}`,
+                 link: data.link, 
+                 time: Timestamp.fromDate(classDate) 
+            })
         });
     } else if (type === 'note') {
         await updateDoc(groupRef, {
@@ -127,6 +136,9 @@ export const addContentToGroup = async (
         });
     } else if (type === 'bookChapter') {
         const groupSnap = await getDoc(groupRef);
+        if (!groupSnap.exists()) {
+            throw new Error("Group not found!");
+        }
         const groupData = groupSnap.data() as Group;
         const books = groupData.content.books || [];
         
@@ -145,6 +157,8 @@ export const addContentToGroup = async (
                 const newChapter = { id: `ch${Date.now()}`, name: data.name, pdfUrl: data.pdfUrl };
                 books[bookIndex].chapters.push(newChapter);
                 await updateDoc(groupRef, { 'content.books': books });
+            } else {
+                 throw new Error("Book not found!");
             }
         }
     }
