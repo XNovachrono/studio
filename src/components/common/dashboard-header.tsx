@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { User } from "@/lib/types";
 
 interface DashboardHeaderProps {
@@ -25,14 +25,6 @@ export function DashboardHeader({ user, title }: DashboardHeaderProps) {
   const handleLogout = () => {
     localStorage.removeItem("uncoverly-user");
     router.push("/login");
-  };
-
-  const getInitials = (name: string) => {
-    const names = name.split(" ");
-    return names
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
   };
 
   return (
@@ -49,9 +41,10 @@ export function DashboardHeader({ user, title }: DashboardHeaderProps) {
         {user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Avatar className="h-9 w-9 cursor-pointer">
-                <AvatarImage src={`https://i.pravatar.cc/150?u=${user.id}`} alt={user.name} />
-                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                <Avatar className="h-9 w-9 cursor-pointer bg-secondary">
+                  <AvatarFallback>
+                    <UserIcon className="h-5 w-5" />
+                  </AvatarFallback>
                 </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
