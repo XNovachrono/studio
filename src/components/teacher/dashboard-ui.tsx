@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User, StudentProfile, Group } from "@/lib/types";
 import { getTeacherData, createGroup, addContentToGroup } from "@/lib/firestore";
+import { Badge } from "../ui/badge";
 
 interface TeacherDashboardData {
     teacher: User | null;
@@ -71,7 +72,7 @@ export function TeacherDashboardUI() {
     } else {
         router.push("/login");
     }
-  }, [router]);
+  }, [router, toast]);
 
   const handleCreateGroup = async () => {
     if (selectedStudentIds.length === 0 || !user || !data) return;
@@ -172,15 +173,15 @@ export function TeacherDashboardUI() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[50px]"><Checkbox onCheckedChange={(checked) => {
-                            if(checked) setSelectedStudentIds(data?.availableStudents.map(s => s.id) || []);
+                            if(checked === true) setSelectedStudentIds(data?.availableStudents.map(s => s.id) || []);
                             else setSelectedStudentIds([]);
                         }}
-                        checked={!!data && selectedStudentIds.length === data.availableStudents.length && data.availableStudents.length > 0}
+                        checked={!!data && data.availableStudents.length > 0 && selectedStudentIds.length === data.availableStudents.length}
                         /></TableHead>
                         <TableHead>Nombre</TableHead>
+                        <TableHead>Plan</TableHead>
                         <TableHead>Intereses</TableHead>
                         <TableHead>Disponibilidad</TableHead>
-                        <TableHead>Plan</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -189,10 +190,12 @@ export function TeacherDashboardUI() {
                           <TableCell><Checkbox checked={selectedStudentIds.includes(student.id)} onCheckedChange={(checked) => {
                               setSelectedStudentIds(prev => checked ? [...prev, student.id] : prev.filter(id => id !== student.id));
                           }} /></TableCell>
-                          <TableCell>{student.name}</TableCell>
+                          <TableCell className="font-medium">{student.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">{student.plan}</Badge>
+                          </TableCell>
                           <TableCell>{student.interests?.join(', ')}</TableCell>
                           <TableCell>{student.availability}</TableCell>
-                          <TableCell><span className="rounded-full bg-primary/20 px-2 py-1 text-xs text-primary">{student.plan}</span></TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -216,7 +219,9 @@ export function TeacherDashboardUI() {
                   <Card key={group.id} className="flex flex-col">
                     <CardHeader>
                       <CardTitle>{group.name}</CardTitle>
-                      <CardDescription>ID: {group.id} - {group.type}</CardDescription>
+                      <CardDescription>
+                        <Badge variant="secondary" className="capitalize">{group.type}</Badge>
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-grow">
                       <h4 className="font-semibold text-sm mb-2">Miembros:</h4>
@@ -308,3 +313,5 @@ export function TeacherDashboardUI() {
     </div>
   );
 }
+
+    
