@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
@@ -17,10 +17,28 @@ import { useToast } from "@/hooks/use-toast";
 import type { User, StudentProfile } from "@/lib/types";
 import { INTEREST_CATEGORIES, LEARNING_OBJECTIVES } from "@/lib/data";
 import { updateUserProfile } from "@/lib/firestore";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 
 const steps = ["welcome", "email", "age", "interests", "availability", "objective", "finish"];
 
-type OnboardingFormData = Omit<StudentProfile, 'id' | 'username' | 'name' | 'role' | 'plan' | 'hasOnboarded'>;
+type OnboardingFormData = Omit<StudentProfile, 'id' | 'username' | 'name' | 'role' | 'plan' | 'hasOnboarded' | 'availability'> & {
+    availability_days: string[];
+    availability_start_time: string;
+};
+
+
+const WEEKDAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
+
+const generateTimeSlots = () => {
+    const slots = [];
+    for (let i = 7; i <= 21; i++) {
+        slots.push(`${i.toString().padStart(2, '0')}:00`);
+    }
+    return slots;
+};
+const TIME_SLOTS = generateTimeSlots();
+
 
 export function OnboardingWizard() {
   const router = useRouter();
@@ -33,7 +51,8 @@ export function OnboardingWizard() {
     email: "",
     age: 30,
     interests: [] as string[],
-    availability: "",
+    availability_days: [],
+    availability_start_time: '18:00',
     objective: "",
     objective_details: "",
   });
@@ -58,6 +77,10 @@ export function OnboardingWizard() {
       toast({ variant: "destructive", description: "Puedes seleccionar hasta 3 intereses." });
       return;
     }
+    if (currentStep === 4 && formData.availability_days.length === 0) {
+        toast({ variant: "destructive", description: "Por favor, selecciona al menos un día." });
+        return;
+    }
     setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
   };
 
@@ -78,14 +101,27 @@ export function OnboardingWizard() {
     });
   };
 
+  const getEndTime = (startTime: string) => {
+        if (!startTime) return "";
+        const [hour] = startTime.split(':').map(Number);
+        const endHour = hour + 3;
+        return `${endHour.toString().padStart(2, '0')}:00`;
+    };
+
   const handleFinish = async () => {
     if (!user) return;
     setIsLoading(true);
+
+    const endTime = getEndTime(formData.availability_start_time);
+    const availabilityString = `${formData.availability_days.join(', ')} de ${formData.availability_start_time} a ${endTime}`;
     
     try {
+      const { availability_days, availability_start_time, ...restOfData } = formData;
+
       const profileData: StudentProfile = {
         ...user,
-        ...formData,
+        ...restOfData,
+        availability: availabilityString,
         hasOnboarded: true,
       };
 
@@ -110,6 +146,15 @@ export function OnboardingWizard() {
     }
   };
   
+    const availabilitySummary = useMemo(() => {
+        if (formData.availability_days.length === 0 || !formData.availability_start_time) {
+            return null;
+        }
+        const endTime = getEndTime(formData.availability_start_time);
+        const days = formData.availability_days.join(', ');
+        return `Tienes una disponibilidad horaria de ${days} entre las ${formData.availability_start_time} - ${endTime}`;
+    }, [formData.availability_days, formData.availability_start_time]);
+
   const renderStep = () => {
     switch (steps[currentStep]) {
       case "welcome":
@@ -164,8 +209,33 @@ export function OnboardingWizard() {
       case "availability":
         return (
             <>
-                <CardHeader><CardTitle className="font-headline">Disponibilidad horaria</CardTitle><CardDescription>Ej: Lunes a Viernes, 18:00 - 21:00</CardDescription></CardHeader>
-                <CardContent><Input placeholder="Tu disponibilidad" value={formData.availability} onChange={e => setFormData({...formData, availability: e.target.value})} /></CardContent>
+                <CardHeader>
+                    <CardTitle className="font-headline">Disponibilidad horaria</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                        <Label>Seleccionar días</Label>
+                        <ToggleGroup type="multiple" variant="outline" className="justify-start flex-wrap" value={formData.availability_days} onValueChange={(days) => setFormData({...formData, availability_days: days})}>
+                           {WEEKDAYS.map(day => <ToggleGroupItem key={day} value={day}>{day}</ToggleGroupItem>)}
+                        </ToggleGroup>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Seleccionar horas</Label>
+                        <div className="flex items-center gap-4">
+                             <Select value={formData.availability_start_time} onValueChange={(time) => setFormData({...formData, availability_start_time: time})}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Hora de inicio" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {TIME_SLOTS.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <span className="text-muted-foreground">-</span>
+                            <Input readOnly value={getEndTime(formData.availability_start_time)} className="w-[180px] bg-muted" />
+                        </div>
+                    </div>
+                    {availabilitySummary && <CardDescription className="pt-4 text-base text-center">{availabilitySummary}</CardDescription>}
+                </CardContent>
             </>
         );
       case "objective":
