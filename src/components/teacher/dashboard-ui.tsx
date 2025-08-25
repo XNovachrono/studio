@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Book, Calendar, FilePlus, Loader2, Notebook, PlusCircle, Users } from "lucide-react";
+import { Book, Calendar, FilePlus, Loader2, MoreVertical, Notebook, PlusCircle, Trash2, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,8 +16,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User, StudentProfile, Group } from "@/lib/types";
-import { getTeacherData, createGroup, addContentToGroup } from "@/lib/firestore";
+import { getTeacherData, createGroup, addContentToGroup, dissolveGroup } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 
 interface TeacherDashboardData {
     teacher: User | null;
@@ -26,7 +28,14 @@ interface TeacherDashboardData {
     allStudents: StudentProfile[];
 }
 
-const GroupSection = ({ title, groups, studentsById }: { title: string, groups: Group[], studentsById: Map<string, StudentProfile> }) => {
+interface GroupSectionProps {
+  title: string;
+  groups: Group[];
+  studentsById: Map<string, StudentProfile>;
+  onDissolve: (groupId: string) => void;
+}
+
+const GroupSection = ({ title, groups, studentsById, onDissolve }: GroupSectionProps) => {
   if (groups.length === 0) {
     return null; // Don't render the section if there are no groups
   }
@@ -36,11 +45,26 @@ const GroupSection = ({ title, groups, studentsById }: { title: string, groups: 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {groups.map(group => (
           <Card key={group.id} className="flex flex-col">
-            <CardHeader>
-              <CardTitle>{group.name}</CardTitle>
-              <CardDescription>
-                <Badge variant="secondary" className="capitalize">{group.type}</Badge>
-              </CardDescription>
+            <CardHeader className="flex-row items-start justify-between">
+              <div>
+                <CardTitle>{group.name}</CardTitle>
+                <CardDescription>
+                  <Badge variant="secondary" className="capitalize">{group.type}</Badge>
+                </CardDescription>
+              </div>
+               <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onDissolve(group.id)} className="text-destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Disolver grupo
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
             </CardHeader>
             <CardContent className="flex-grow">
               <h4 className="font-semibold text-sm mb-2">Miembros:</h4>
@@ -77,6 +101,10 @@ export function TeacherDashboardUI() {
   const [chapterName, setChapterName] = useState('');
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
   const [isAddingContent, setIsAddingContent] = useState(false);
+  
+  // State for dissolving group
+  const [groupToDissolve, setGroupToDissolve] = useState<string | null>(null);
+  const [isDissolving, setIsDissolving] = useState(false);
 
   const fetchDashboardData = async () => {
       try {
@@ -173,6 +201,29 @@ export function TeacherDashboardUI() {
     }
   };
 
+  const handleConfirmDissolve = async () => {
+    if (!groupToDissolve) return;
+    setIsDissolving(true);
+    try {
+      await dissolveGroup(groupToDissolve);
+      toast({
+        title: "Grupo disuelto",
+        description: "Los estudiantes ahora están disponibles nuevamente.",
+      });
+      await fetchDashboardData(); // Refresh data
+    } catch (error) {
+      console.error("Error dissolving group:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo disolver el grupo.",
+      });
+    } finally {
+      setIsDissolving(false);
+      setGroupToDissolve(null);
+    }
+  };
+
   const studentsById = useMemo(() => new Map(data?.allStudents.map(s => [s.id, s])), [data?.allStudents]);
   
   const privateGroups = useMemo(() => data?.groups.filter(g => g.type === 'privado') || [], [data?.groups]);
@@ -253,9 +304,9 @@ export function TeacherDashboardUI() {
                 <CardTitle className="font-headline">Grupos Creados</CardTitle>
               </CardHeader>
               <CardContent className="space-y-8">
-                 <GroupSection title="Grupos Privados" groups={privateGroups} studentsById={studentsById} />
-                 <GroupSection title="Grupos Pequeños" groups={smallGroups} studentsById={studentsById} />
-                 <GroupSection title="Grupos Grandes" groups={largeGroups} studentsById={studentsById} />
+                 <GroupSection title="Grupos Privados" groups={privateGroups} studentsById={studentsById} onDissolve={setGroupToDissolve} />
+                 <GroupSection title="Grupos Pequeños" groups={smallGroups} studentsById={studentsById} onDissolve={setGroupToDissolve} />
+                 <GroupSection title="Grupos Grandes" groups={largeGroups} studentsById={studentsById} onDissolve={setGroupToDissolve} />
                  {data?.groups.length === 0 && (
                     <p className="text-center text-muted-foreground">Aún no se han creado grupos.</p>
                  )}
@@ -336,6 +387,26 @@ export function TeacherDashboardUI() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <AlertDialog open={!!groupToDissolve} onOpenChange={(open) => !open && setGroupToDissolve(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción es permanente. El grupo se eliminará y los estudiantes
+              volverán a la lista de disponibles.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDissolve} disabled={isDissolving} className="bg-destructive hover:bg-destructive/90">
+              {isDissolving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Sí, disolver grupo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }

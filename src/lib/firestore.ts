@@ -1,6 +1,7 @@
 
+
 import { 
-    doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp
+    doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc
 } from "firebase/firestore";
 import { db } from "./firebase";
 import type { User, StudentProfile, Group, StudentPlan } from "./types";
@@ -172,4 +173,10 @@ export const addContentToGroup = async (
             }
         }
     }
+};
+
+// Function to dissolve a group
+export const dissolveGroup = async (groupId: string): Promise<void> => {
+    const groupRef = doc(db, "groups", groupId);
+    await deleteDoc(groupRef);
 };
