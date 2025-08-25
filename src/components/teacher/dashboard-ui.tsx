@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, StudentProfile, Group } from "@/lib/types";
+import type { User, StudentProfile, Group, StudentPlan } from "@/lib/types";
 import { getTeacherData, createGroup, addContentToGroup, dissolveGroup } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
@@ -92,9 +92,10 @@ export function TeacherDashboardUI() {
   
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  
+  // Content management state
+  const [selectedGroupType, setSelectedGroupType] = useState<StudentPlan | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-
-  // Form state for content management
   const [classLink, setClassLink] = useState('');
   const [classTime, setClassTime] = useState('');
   const [noteLink, setNoteLink] = useState('');
@@ -230,6 +231,11 @@ export function TeacherDashboardUI() {
   const smallGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo pequeño') || [], [data?.groups]);
   const largeGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo grande') || [], [data?.groups]);
 
+  const filteredGroups = useMemo(() => {
+    if (!selectedGroupType || !data?.groups) return [];
+    return data.groups.filter(g => g.type === selectedGroupType);
+  }, [selectedGroupType, data?.groups]);
+
 
   if (isLoading) {
     return (
@@ -318,15 +324,45 @@ export function TeacherDashboardUI() {
             <Card>
               <CardHeader>
                 <CardTitle className="font-headline">Gestión de Contenido</CardTitle>
-                <CardDescription>Selecciona un grupo para añadirle contenido.</CardDescription>
+                <CardDescription>Selecciona un tipo de grupo y luego el grupo específico para añadirle contenido.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <Select onValueChange={setSelectedGroup} value={selectedGroup || ''}>
-                  <SelectTrigger><SelectValue placeholder="Selecciona un grupo" /></SelectTrigger>
-                  <SelectContent>
-                    {data?.groups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                        <Label>Selecciona un tipo de grupo</Label>
+                        <Select
+                            onValueChange={(value) => {
+                                setSelectedGroupType(value as StudentPlan);
+                                setSelectedGroup(null); // Reset group selection
+                            }}
+                            value={selectedGroupType || ''}
+                        >
+                            <SelectTrigger><SelectValue placeholder="Selecciona un tipo" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="privado">Privado</SelectItem>
+                                <SelectItem value="grupo pequeño">Grupo Pequeño</SelectItem>
+                                <SelectItem value="grupo grande">Grupo Grande</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    {selectedGroupType && (
+                        <div className="space-y-2">
+                            <Label>Selecciona un grupo</Label>
+                             {filteredGroups.length > 0 ? (
+                                <Select onValueChange={setSelectedGroup} value={selectedGroup || ''}>
+                                    <SelectTrigger><SelectValue placeholder="Selecciona un grupo" /></SelectTrigger>
+                                    <SelectContent>
+                                        {filteredGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                             ) : (
+                                <div className="flex h-10 items-center justify-center rounded-md border border-dashed">
+                                    <p className="text-sm text-muted-foreground">No existe grupo de este tipo</p>
+                                </div>
+                             )}
+                        </div>
+                    )}
+                </div>
 
                 {selectedGroup && (
                   <div className="grid gap-6 md:grid-cols-3">
