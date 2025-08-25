@@ -26,6 +26,38 @@ interface TeacherDashboardData {
     allStudents: StudentProfile[];
 }
 
+const GroupSection = ({ title, groups, studentsById }: { title: string, groups: Group[], studentsById: Map<string, StudentProfile> }) => {
+  if (groups.length === 0) {
+    return null; // Don't render the section if there are no groups
+  }
+  return (
+    <div className="space-y-4">
+      <h3 className="text-xl font-headline text-foreground">{title}</h3>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {groups.map(group => (
+          <Card key={group.id} className="flex flex-col">
+            <CardHeader>
+              <CardTitle>{group.name}</CardTitle>
+              <CardDescription>
+                <Badge variant="secondary" className="capitalize">{group.type}</Badge>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex-grow">
+              <h4 className="font-semibold text-sm mb-2">Miembros:</h4>
+              <ul className="space-y-1 text-sm text-muted-foreground">
+                {group.studentIds.map(id => (
+                  <li key={id}>{studentsById.get(id)?.name || 'Desconocido'}</li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+
 export function TeacherDashboardUI() {
   const router = useRouter();
   const { toast } = useToast();
@@ -141,6 +173,11 @@ export function TeacherDashboardUI() {
   };
 
   const studentsById = useMemo(() => new Map(data?.allStudents.map(s => [s.id, s])), [data?.allStudents]);
+  
+  const privateGroups = useMemo(() => data?.groups.filter(g => g.type === 'privado') || [], [data?.groups]);
+  const smallGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo pequeño') || [], [data?.groups]);
+  const largeGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo grande') || [], [data?.groups]);
+
 
   if (isLoading) {
     return (
@@ -214,25 +251,13 @@ export function TeacherDashboardUI() {
               <CardHeader>
                 <CardTitle className="font-headline">Grupos Creados</CardTitle>
               </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {data?.groups.map(group => (
-                  <Card key={group.id} className="flex flex-col">
-                    <CardHeader>
-                      <CardTitle>{group.name}</CardTitle>
-                      <CardDescription>
-                        <Badge variant="secondary" className="capitalize">{group.type}</Badge>
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-grow">
-                      <h4 className="font-semibold text-sm mb-2">Miembros:</h4>
-                      <ul className="space-y-1 text-sm text-muted-foreground">
-                        {group.studentIds.map(id => (
-                          <li key={id}>{studentsById.get(id)?.name || 'Desconocido'}</li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                ))}
+              <CardContent className="space-y-8">
+                 <GroupSection title="Grupos Privados" groups={privateGroups} studentsById={studentsById} />
+                 <GroupSection title="Grupos Pequeños" groups={smallGroups} studentsById={studentsById} />
+                 <GroupSection title="Grupos Grandes" groups={largeGroups} studentsById={studentsById} />
+                 {data?.groups.length === 0 && (
+                    <p className="text-center text-muted-foreground">Aún no se han creado grupos.</p>
+                 )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -247,7 +272,7 @@ export function TeacherDashboardUI() {
                 <Select onValueChange={setSelectedGroup} value={selectedGroup || ''}>
                   <SelectTrigger><SelectValue placeholder="Selecciona un grupo" /></SelectTrigger>
                   <SelectContent>
-                    {data?.groups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                    {data?.groups.map(g => <SelectItem key={g.id} value={g.id}>{g.name} ({g.type})</SelectItem>)}
                   </SelectContent>
                 </Select>
 
@@ -313,5 +338,3 @@ export function TeacherDashboardUI() {
     </div>
   );
 }
-
-    

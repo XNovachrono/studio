@@ -96,11 +96,11 @@ export const getTeacherData = async (): Promise<{
 
 // Function to create a new group
 export const createGroup = async (teacherId: string, studentIds: string[], plan: StudentPlan) => {
-    // A more robust way to get a new group ID is to use Firestore's ability to generate one.
+    const groupNumber = Math.floor(1000 + Math.random() * 9000);
     const newGroupRef = doc(collection(db, "groups"));
     
     await setDoc(newGroupRef, {
-        name: `Grupo ${plan}`,
+        name: `Grupo ${groupNumber}`,
         type: plan,
         teacherId,
         studentIds,
