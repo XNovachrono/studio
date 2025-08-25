@@ -95,12 +95,21 @@ export const getTeacherData = async (): Promise<{
 }
 
 // Function to create a new group
-export const createGroup = async (teacherId: string, studentIds: string[], plan: StudentPlan) => {
-    const groupNumber = Math.floor(1000 + Math.random() * 9000);
+export const createGroup = async (teacherId: string, students: {id: string, name: string}[], plan: StudentPlan) => {
+    const studentIds = students.map(s => s.id);
+    let groupName = "";
+
+    if (plan === 'privado' && students.length === 1) {
+        groupName = `Clase Privada - ${students[0].name}`;
+    } else {
+        const groupNumber = Math.floor(1000 + Math.random() * 9000);
+        groupName = `Grupo ${groupNumber}`;
+    }
+
     const newGroupRef = doc(collection(db, "groups"));
     
     await setDoc(newGroupRef, {
-        name: `Grupo ${groupNumber}`,
+        name: groupName,
         type: plan,
         teacherId,
         studentIds,
@@ -111,6 +120,7 @@ export const createGroup = async (teacherId: string, studentIds: string[], plan:
         },
     });
 };
+
 
 // Function to add content to a group
 export const addContentToGroup = async (

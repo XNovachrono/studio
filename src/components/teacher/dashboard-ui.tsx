@@ -110,10 +110,10 @@ export function TeacherDashboardUI() {
     if (selectedStudentIds.length === 0 || !user || !data) return;
     setIsCreatingGroup(true);
 
-    const selectedStudents = data.allStudents.filter(s => selectedStudentIds.includes(s.id));
-    const firstPlan = selectedStudents[0]?.plan;
+    const selectedStudentsData = data.allStudents.filter(s => selectedStudentIds.includes(s.id));
+    const firstPlan = selectedStudentsData[0]?.plan;
 
-    if (!firstPlan || !selectedStudents.every(s => s.plan === firstPlan)) {
+    if (!firstPlan || !selectedStudentsData.every(s => s.plan === firstPlan)) {
       toast({
         variant: "destructive",
         title: "Error al crear grupo",
@@ -124,10 +124,11 @@ export function TeacherDashboardUI() {
     }
 
     try {
-        await createGroup(user.id, selectedStudentIds, firstPlan);
+        const studentsToGroup = selectedStudentsData.map(s => ({ id: s.id, name: s.name }));
+        await createGroup(user.id, studentsToGroup, firstPlan);
         toast({
             title: "Grupo creado",
-            description: `Se ha creado un nuevo grupo con ${selectedStudentIds.length} estudiantes.`,
+            description: `Se ha creado un nuevo grupo.`,
         });
         setSelectedStudentIds([]);
         await fetchDashboardData(); // Refresh data
@@ -272,7 +273,7 @@ export function TeacherDashboardUI() {
                 <Select onValueChange={setSelectedGroup} value={selectedGroup || ''}>
                   <SelectTrigger><SelectValue placeholder="Selecciona un grupo" /></SelectTrigger>
                   <SelectContent>
-                    {data?.groups.map(g => <SelectItem key={g.id} value={g.id}>{g.name} ({g.type})</SelectItem>)}
+                    {data?.groups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
 
