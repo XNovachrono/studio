@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Book, Calendar, FilePlus, Loader2, MoreVertical, Notebook, PlusCircle, Trash2, Users } from "lucide-react";
+import { Book, Calendar, FilePlus, Loader2, MoreVertical, Notebook, PlusCircle, Trash2, UserPlus, UserX, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,10 +16,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User, StudentProfile, Group, StudentPlan } from "@/lib/types";
-import { getTeacherData, createGroup, addContentToGroup, dissolveGroup } from "@/lib/firestore";
+import { getTeacherData, createGroup, addContentToGroup, dissolveGroup, addStudentsToGroup, removeStudentsFromGroup } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { ScrollArea } from "../ui/scroll-area";
 
 interface TeacherDashboardData {
     teacher: User | null;
@@ -33,9 +35,10 @@ interface GroupSectionProps {
   groups: Group[];
   studentsById: Map<string, StudentProfile>;
   onDissolve: (groupId: string) => void;
+  onManage: (group: Group) => void;
 }
 
-const GroupSection = ({ title, groups, studentsById, onDissolve }: GroupSectionProps) => {
+const GroupSection = ({ title, groups, studentsById, onDissolve, onManage }: GroupSectionProps) => {
   if (groups.length === 0) {
     return null; // Don't render the section if there are no groups
   }
@@ -59,6 +62,10 @@ const GroupSection = ({ title, groups, studentsById, onDissolve }: GroupSectionP
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onManage(group)}>
+                      <Users className="mr-2 h-4 w-4" />
+                      Administrar grupo
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onDissolve(group.id)} className="text-destructive">
                       <Trash2 className="mr-2 h-4 w-4" />
                       Disolver grupo
@@ -80,7 +87,6 @@ const GroupSection = ({ title, groups, studentsById, onDissolve }: GroupSectionP
     </div>
   );
 };
-
 
 export function TeacherDashboardUI() {
   const router = useRouter();
@@ -106,6 +112,13 @@ export function TeacherDashboardUI() {
   // State for dissolving group
   const [groupToDissolve, setGroupToDissolve] = useState<string | null>(null);
   const [isDissolving, setIsDissolving] = useState(false);
+
+  // State for managing group
+  const [groupToManage, setGroupToManage] = useState<Group | null>(null);
+  const [studentsToAdd, setStudentsToAdd] = useState<string[]>([]);
+  const [studentsToRemove, setStudentsToRemove] = useState<string[]>([]);
+  const [isManagingGroup, setIsManagingGroup] = useState(false);
+
 
   const fetchDashboardData = async () => {
       try {
@@ -225,6 +238,46 @@ export function TeacherDashboardUI() {
     }
   };
 
+  const handleAddStudents = async () => {
+    if (!groupToManage || studentsToAdd.length === 0) return;
+    setIsManagingGroup(true);
+    try {
+        await addStudentsToGroup(groupToManage.id, studentsToAdd);
+        toast({ title: "Estudiantes añadidos", description: "Los estudiantes han sido agregados al grupo." });
+        setStudentsToAdd([]);
+        setGroupToManage(null);
+        await fetchDashboardData();
+    } catch (error) {
+        console.error("Error adding students:", error);
+        toast({ variant: "destructive", title: "Error", description: "No se pudieron añadir los estudiantes." });
+    } finally {
+        setIsManagingGroup(false);
+    }
+  };
+
+  const handleRemoveStudents = async () => {
+    if (!groupToManage || studentsToRemove.length === 0) return;
+    // Prevent dissolving a group by removing all members
+    if (studentsToRemove.length === groupToManage.studentIds.length) {
+        toast({ variant: "destructive", title: "Acción no permitida", description: "No puedes eliminar a todos los miembros. Si quieres, disuelve el grupo." });
+        return;
+    }
+
+    setIsManagingGroup(true);
+    try {
+        await removeStudentsFromGroup(groupToManage.id, studentsToRemove);
+        toast({ title: "Estudiantes eliminados", description: "Los estudiantes han sido eliminados del grupo." });
+        setStudentsToRemove([]);
+        setGroupToManage(null);
+        await fetchDashboardData();
+    } catch (error) {
+        console.error("Error removing students:", error);
+        toast({ variant: "destructive", title: "Error", description: "No se pudieron eliminar los estudiantes." });
+    } finally {
+        setIsManagingGroup(false);
+    }
+  };
+
   const studentsById = useMemo(() => new Map(data?.allStudents.map(s => [s.id, s])), [data?.allStudents]);
   
   const privateGroups = useMemo(() => data?.groups.filter(g => g.type === 'privado') || [], [data?.groups]);
@@ -235,6 +288,16 @@ export function TeacherDashboardUI() {
     if (!selectedGroupType || !data?.groups) return [];
     return data.groups.filter(g => g.type === selectedGroupType);
   }, [selectedGroupType, data?.groups]);
+  
+  const availableStudentsForGroup = useMemo(() => {
+    if (!groupToManage || !data) return [];
+    return data.availableStudents.filter(s => s.plan === groupToManage.type);
+  }, [groupToManage, data]);
+
+  const currentGroupMembers = useMemo(() => {
+    if (!groupToManage || !data) return [];
+    return data.allStudents.filter(s => groupToManage.studentIds.includes(s.id));
+  }, [groupToManage, data]);
 
 
   if (isLoading) {
@@ -310,9 +373,9 @@ export function TeacherDashboardUI() {
                 <CardTitle className="font-headline">Grupos Creados</CardTitle>
               </CardHeader>
               <CardContent className="space-y-8">
-                 <GroupSection title="Grupos Privados" groups={privateGroups} studentsById={studentsById} onDissolve={setGroupToDissolve} />
-                 <GroupSection title="Grupos Pequeños" groups={smallGroups} studentsById={studentsById} onDissolve={setGroupToDissolve} />
-                 <GroupSection title="Grupos Grandes" groups={largeGroups} studentsById={studentsById} onDissolve={setGroupToDissolve} />
+                 <GroupSection title="Grupos Privados" groups={privateGroups} studentsById={studentsById} onDissolve={setGroupToDissolve} onManage={setGroupToManage} />
+                 <GroupSection title="Grupos Pequeños" groups={smallGroups} studentsById={studentsById} onDissolve={setGroupToDissolve} onManage={setGroupToManage} />
+                 <GroupSection title="Grupos Grandes" groups={largeGroups} studentsById={studentsById} onDissolve={setGroupToDissolve} onManage={setGroupToManage} />
                  {data?.groups.length === 0 && (
                     <p className="text-center text-muted-foreground">Aún no se han creado grupos.</p>
                  )}
@@ -424,6 +487,7 @@ export function TeacherDashboardUI() {
         </Tabs>
       </main>
 
+      {/* Dialog for Dissolving Group */}
       <AlertDialog open={!!groupToDissolve} onOpenChange={(open) => !open && setGroupToDissolve(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -443,6 +507,91 @@ export function TeacherDashboardUI() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Dialog for Managing Group */}
+      <Dialog open={!!groupToManage} onOpenChange={(open) => {
+        if (!open) {
+            setGroupToManage(null);
+            setStudentsToAdd([]);
+            setStudentsToRemove([]);
+        }
+      }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Administrar: {groupToManage?.name}</DialogTitle>
+          </DialogHeader>
+          <Tabs defaultValue="add">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="add" disabled={groupToManage?.type === 'privado'}><UserPlus className="mr-2 h-4 w-4" />Agregar Estudiantes</TabsTrigger>
+                <TabsTrigger value="remove"><UserX className="mr-2 h-4 w-4" />Eliminar Estudiantes</TabsTrigger>
+            </TabsList>
+            <TabsContent value="add">
+                <Card>
+                    <CardHeader><CardDescription>Selecciona estudiantes disponibles para añadir al grupo.</CardDescription></CardHeader>
+                    <CardContent>
+                        <ScrollArea className="h-64">
+                          <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[50px]"></TableHead>
+                                    <TableHead>Nombre</TableHead>
+                                    <TableHead>Intereses</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                             <TableBody>
+                                {availableStudentsForGroup.map(student => (
+                                    <TableRow key={student.id}>
+                                        <TableCell><Checkbox checked={studentsToAdd.includes(student.id)} onCheckedChange={(checked) => {
+                                            setStudentsToAdd(prev => checked ? [...prev, student.id] : prev.filter(id => id !== student.id))
+                                        }} /></TableCell>
+                                        <TableCell>{student.name}</TableCell>
+                                        <TableCell>{student.interests?.join(', ')}</TableCell>
+                                    </TableRow>
+                                ))}
+                             </TableBody>
+                          </Table>
+                          {availableStudentsForGroup.length === 0 && <p className="p-4 text-center text-sm text-muted-foreground">No hay estudiantes disponibles con el plan de este grupo.</p>}
+                        </ScrollArea>
+                         <Button onClick={handleAddStudents} disabled={studentsToAdd.length === 0 || isManagingGroup} className="mt-4">
+                            {isManagingGroup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Agregar Seleccionados
+                        </Button>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+            <TabsContent value="remove">
+                 <Card>
+                    <CardHeader><CardDescription>Selecciona estudiantes para eliminar del grupo.</CardDescription></CardHeader>
+                    <CardContent>
+                        <ScrollArea className="h-64">
+                            <Table>
+                               <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[50px]"></TableHead>
+                                    <TableHead>Nombre</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                             <TableBody>
+                                {currentGroupMembers.map(student => (
+                                    <TableRow key={student.id}>
+                                        <TableCell><Checkbox checked={studentsToRemove.includes(student.id)} onCheckedChange={(checked) => {
+                                            setStudentsToRemove(prev => checked ? [...prev, student.id] : prev.filter(id => id !== student.id))
+                                        }} /></TableCell>
+                                        <TableCell>{student.name}</TableCell>
+                                    </TableRow>
+                                ))}
+                             </TableBody>
+                            </Table>
+                        </ScrollArea>
+                         <Button variant="destructive" onClick={handleRemoveStudents} disabled={studentsToRemove.length === 0 || isManagingGroup} className="mt-4">
+                            {isManagingGroup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Eliminar Seleccionados
+                        </Button>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

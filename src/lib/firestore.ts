@@ -1,7 +1,7 @@
 
 
 import { 
-    doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc
+    doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc, arrayRemove
 } from "firebase/firestore";
 import { db } from "./firebase";
 import type { User, StudentProfile, Group, StudentPlan } from "./types";
@@ -179,4 +179,20 @@ export const addContentToGroup = async (
 export const dissolveGroup = async (groupId: string): Promise<void> => {
     const groupRef = doc(db, "groups", groupId);
     await deleteDoc(groupRef);
+};
+
+// Function to add students to an existing group
+export const addStudentsToGroup = async (groupId: string, studentIds: string[]): Promise<void> => {
+    const groupRef = doc(db, "groups", groupId);
+    await updateDoc(groupRef, {
+        studentIds: arrayUnion(...studentIds)
+    });
+};
+
+// Function to remove students from an existing group
+export const removeStudentsFromGroup = async (groupId: string, studentIds: string[]): Promise<void> => {
+    const groupRef = doc(db, "groups", groupId);
+    await updateDoc(groupRef, {
+        studentIds: arrayRemove(...studentIds)
+    });
 };
