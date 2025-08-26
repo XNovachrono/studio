@@ -32,7 +32,7 @@ export interface Group {
   type: StudentPlan;
   studentIds: string[];
   teacherId: string;
-  teacherName?: string; // It's useful to have it here
+  teacherName: string; 
   content: GroupContent;
 }
 
