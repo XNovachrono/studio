@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { User } from "@/lib/types";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { ThemeCustomizer } from "./theme-customizer";
+import { useLanguage } from "@/context/language-context";
 
 interface DashboardHeaderProps {
   user: User | null;
@@ -26,6 +27,7 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ user, title }: DashboardHeaderProps) {
   const router = useRouter();
   const [isThemeCustomizerOpen, setIsThemeCustomizerOpen] = useState(false);
+  const { translations } = useLanguage();
 
   const handleLogout = () => {
     localStorage.removeItem("uncoverly-user");
@@ -66,13 +68,13 @@ export function DashboardHeader({ user, title }: DashboardHeaderProps) {
                 <DialogTrigger asChild>
                   <DropdownMenuItem className="cursor-pointer">
                     <Palette className="mr-2 h-4 w-4" />
-                    <span>Temas</span>
+                    <span>{translations.dashboardHeader.themes}</span>
                   </DropdownMenuItem>
                 </DialogTrigger>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Cerrar sesión</span>
+                  <span>{translations.dashboardHeader.logout}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

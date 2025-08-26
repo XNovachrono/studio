@@ -90,10 +90,27 @@
 }
 
 @layer base {
+  :root {
+    --font-inter: 'Inter', sans-serif;
+    --font-space-grotesk: '"Space Grotesk"', sans-serif;
+    --font-lato: 'Lato', sans-serif;
+    --font-open-sans: '"Open Sans"', sans-serif;
+    --font-montserrat: 'Montserrat', sans-serif;
+    --font-roboto-slab: '"Roboto Slab"', serif;
+    
+    --font-body: var(--font-inter);
+    --font-headline: var(--font-space-grotesk);
+  }
+
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+  
+  h1, h2, h3, h4, h5, h6, .font-headline {
+    font-family: var(--font-headline);
   }
 }

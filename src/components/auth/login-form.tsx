@@ -24,19 +24,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
 import type { User } from "@/lib/types";
+import { useLanguage } from "@/context/language-context";
 
-const loginSchema = z.object({
+const loginSchemaEs = z.object({
   email: z.string().email("Por favor, introduce un correo electrónico válido."),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres."),
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+const loginSchemaEn = z.object({
+  email: z.string().email("Please enter a valid email address."),
+  password: z.string().min(6, "Password must be at least 6 characters long."),
+});
+
 
 export function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const { language, translations } = useLanguage();
+
+  const loginSchema = language === 'es' ? loginSchemaEs : loginSchemaEn;
+  type LoginFormValues = z.infer<typeof loginSchema>;
+
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -52,7 +62,6 @@ export function LoginForm() {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const firebaseUser = userCredential.user;
 
-      // Get user profile from Firestore
       const userDocRef = doc(db, "users", firebaseUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
@@ -62,8 +71,8 @@ export function LoginForm() {
         localStorage.setItem("uncoverly-user", JSON.stringify({ ...userProfile, id: firebaseUser.uid }));
         
         toast({
-          title: "Inicio de sesión exitoso",
-          description: `Bienvenido/a, ${userProfile.name}.`,
+          title: translations.loginForm.successTitle,
+          description: translations.loginForm.successDescription.replace('{name}', userProfile.name),
         });
 
         if (userProfile.role === "teacher") {
@@ -76,29 +85,27 @@ export function LoginForm() {
           }
         }
       } else {
-         // This case might happen if the user exists in Auth but not in Firestore.
-         // You might want to create a default profile here or show an error.
-         throw new Error("No se encontró el perfil de usuario.");
+         throw new Error(translations.loginForm.errorUserNotFound);
       }
 
     } catch (error: any) {
       console.error("Firebase Auth Error:", error);
-      let description = "Ha ocurrido un error inesperado.";
+      let description = translations.loginForm.errorUnexpected;
       switch (error.code) {
         case 'auth/user-not-found':
         case 'auth/wrong-password':
         case 'auth/invalid-credential':
-          description = "Usuario o contraseña incorrectos.";
+          description = translations.loginForm.errorInvalidCredentials;
           break;
         case 'auth/invalid-email':
-          description = "El formato del correo electrónico no es válido.";
+          description = translations.loginForm.errorInvalidEmail;
           break;
         default:
           description = error.message;
       }
       toast({
         variant: "destructive",
-        title: "Error de autenticación",
+        title: translations.loginForm.errorTitle,
         description,
       });
     } finally {
@@ -109,7 +116,7 @@ export function LoginForm() {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="font-headline text-center text-2xl">Iniciar Sesión</CardTitle>
+        <CardTitle className="font-headline text-center text-2xl">{translations.loginForm.title}</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -119,9 +126,9 @@ export function LoginForm() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>{translations.loginForm.emailLabel}</FormLabel>
                   <FormControl>
-                    <Input placeholder="tu@email.com" {...field} />
+                    <Input placeholder={translations.loginForm.emailPlaceholder} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -132,12 +139,12 @@ export function LoginForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Contraseña</FormLabel>
+                  <FormLabel>{translations.loginForm.passwordLabel}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input
                         type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
+                        placeholder={translations.loginForm.passwordPlaceholder}
                         {...field}
                       />
                       <Button
@@ -161,7 +168,7 @@ export function LoginForm() {
             />
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Acceder
+              {translations.loginForm.submitButton}
             </Button>
           </form>
         </Form>

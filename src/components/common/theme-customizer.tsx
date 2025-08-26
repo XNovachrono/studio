@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from "react";
 import { Check, Palette } from "lucide-react";
-import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
   DialogContent,
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "../ui/card";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/language-context";
 
 const themes = [
   { name: "Negro", value: "theme-dark-blue", color: "#3b82f6" },
@@ -28,21 +28,57 @@ const themes = [
   { name: "Menta", value: "theme-mint-green", color: "#10b981" },
 ];
 
+const bodyFonts = [
+    { name: "Inter (Default)", value: "inter" },
+    { name: "Lato", value: "lato" },
+    { name: "Open Sans", value: "open-sans" },
+];
+
+const headlineFonts = [
+    { name: "Space Grotesk (Default)", value: "space-grotesk" },
+    { name: "Montserrat", value: "montserrat" },
+    { name: "Roboto Slab", value: "roboto-slab" },
+];
+
 export function ThemeCustomizer() {
   const [mounted, setMounted] = useState(false);
   const [activeTheme, setActiveTheme] = useState("theme-dark-blue");
-  
+  const [bodyFont, setBodyFont] = useState("inter");
+  const [headlineFont, setHeadlineFont] = useState("space-grotesk");
+  const { language, setLanguage, translations } = useLanguage();
+
   useEffect(() => {
     setMounted(true);
     const storedTheme = localStorage.getItem("uncoverly-theme") || "theme-dark-blue";
+    const storedBodyFont = localStorage.getItem("uncoverly-body-font") || "inter";
+    const storedHeadlineFont = localStorage.getItem("uncoverly-headline-font") || "space-grotesk";
+    
     setActiveTheme(storedTheme);
+    setBodyFont(storedBodyFont);
+    setHeadlineFont(storedHeadlineFont);
+    
     document.documentElement.className = storedTheme;
+    document.body.style.setProperty('--font-body', `var(--font-${storedBodyFont})`);
+    document.body.style.setProperty('--font-headline', `var(--font-${storedHeadlineFont})`);
+
   }, []);
 
   const handleThemeChange = (themeValue: string) => {
     setActiveTheme(themeValue);
     localStorage.setItem("uncoverly-theme", themeValue);
     document.documentElement.className = themeValue;
+  };
+
+  const handleBodyFontChange = (fontValue: string) => {
+    setBodyFont(fontValue);
+    localStorage.setItem("uncoverly-body-font", fontValue);
+    document.body.style.setProperty('--font-body', `var(--font-${fontValue})`);
+  };
+  
+  const handleHeadlineFontChange = (fontValue: string) => {
+    setHeadlineFont(fontValue);
+    localStorage.setItem("uncoverly-headline-font", fontValue);
+     document.body.style.setProperty('--font-headline', `var(--font-${fontValue})`);
   };
 
   if (!mounted) {
@@ -54,16 +90,16 @@ export function ThemeCustomizer() {
       <DialogHeader>
         <DialogTitle className="font-headline text-2xl flex items-center gap-2">
             <Palette />
-            Personaliza tu Experiencia
+            {translations.themeCustomizer.title}
         </DialogTitle>
         <DialogDescription>
-          Modifica la apariencia de Uncoverly. Los cambios se aplican en tiempo real.
+          {translations.themeCustomizer.description}
         </DialogDescription>
       </DialogHeader>
       <div className="space-y-6 py-4">
         {/* Color Themes */}
         <div className="space-y-2">
-          <h3 className="font-headline text-lg text-primary">Temas de Color</h3>
+          <h3 className="font-headline text-lg text-primary">{translations.themeCustomizer.colorThemes}</h3>
           <div className="grid grid-cols-3 gap-4">
             {themes.map((theme) => (
               <button
@@ -91,31 +127,31 @@ export function ThemeCustomizer() {
 
         {/* Typography */}
         <div className="space-y-2">
-          <h3 className="font-headline text-lg text-primary">Tipografía</h3>
+          <h3 className="font-headline text-lg text-primary">{translations.themeCustomizer.typography}</h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label>Fuente de Texto</Label>
-              <Select defaultValue="inter">
+              <Label>{translations.themeCustomizer.bodyFont}</Label>
+              <Select value={bodyFont} onValueChange={handleBodyFontChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar fuente" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="inter">Inter (Default)</SelectItem>
-                  {/* Add other fonts here */}
+                  {bodyFonts.map(font => (
+                    <SelectItem key={font.value} value={font.value}>{font.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Fuente de Títulos</Label>
-              <Select defaultValue="space-grotesk">
+              <Label>{translations.themeCustomizer.headlineFont}</Label>
+              <Select value={headlineFont} onValueChange={handleHeadlineFontChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar fuente" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="space-grotesk">
-                    Space Grotesk (Default)
-                  </SelectItem>
-                  {/* Add other fonts here */}
+                  {headlineFonts.map(font => (
+                    <SelectItem key={font.value} value={font.value}>{font.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -125,17 +161,17 @@ export function ThemeCustomizer() {
         {/* Language Settings */}
         <div className="space-y-2">
           <h3 className="font-headline text-lg text-primary">
-            Configuración de Idioma
+            {translations.themeCustomizer.languageSettings}
           </h3>
           <div className="max-w-xs">
-            <Label>Seleccionar Idioma de la Aplicación</Label>
-            <Select defaultValue="es">
+            <Label>{translations.themeCustomizer.selectLanguage}</Label>
+            <Select value={language} onValueChange={(value) => setLanguage(value as 'es' | 'en')}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar idioma" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="es">Español</SelectItem>
-                <SelectItem value="en">Inglés</SelectItem>
+                <SelectItem value="en">English</SelectItem>
               </SelectContent>
             </Select>
           </div>
