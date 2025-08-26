@@ -39,7 +39,7 @@ export interface Group {
 export interface GroupContent {
   scheduledClasses: ScheduledClass[];
   notes: Note[];
-  books: Book[];
+  reminders: Reminder[];
 }
 
 export interface ScheduledClass {
@@ -54,16 +54,11 @@ export interface Note {
   title: string;
 }
 
-export interface Book {
+export interface Reminder {
   id: string;
-  title: string;
-  chapters: BookChapter[];
-}
-
-export interface BookChapter {
-  id: string;
-  name: string;
-  pdfUrl: string;
+  message: string;
+  teacherName: string;
+  sentAt: string; // ISO date string
 }
 
 export interface PQRSMessage {

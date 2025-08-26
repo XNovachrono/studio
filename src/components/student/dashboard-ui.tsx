@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Calendar, Maximize, Notebook, Loader2, MessageCircleQuestion } from "lucide-react";
+import { Calendar, Maximize, Notebook, Loader2, MessageCircleQuestion, Lightbulb } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,7 +16,7 @@ import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
 import { Checkbox } from "../ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { es, enUS } from "date-fns/locale";
 import { useLanguage } from "@/context/language-context";
 
@@ -172,6 +172,11 @@ export function StudentDashboardUI() {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString(language === 'es' ? 'es-ES' : 'en-US', { dateStyle: 'full', timeStyle: 'short' });
   };
+    const formatReminderDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const locale = language === 'es' ? es : enUS;
+    return format(date, "PPpp", { locale });
+  };
   
   if (isLoading) {
     return (
@@ -182,16 +187,16 @@ export function StudentDashboardUI() {
   }
 
   const user = data?.user;
-  const content = data?.group?.content || { scheduledClasses: [], notes: [] };
+  const content = data?.group?.content || { scheduledClasses: [], notes: [], reminders: [] };
   const teacherInteractions = user?.teacherInteractions || [];
 
   return (
     <div className="flex h-screen flex-col">
       <DashboardHeader user={user || null} title={t.title} />
       <main className="flex-1 overflow-auto p-4 md:p-8">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {/* Clases Programadas */}
-          <motion.div custom={0} initial="hidden" animate="visible" variants={cardVariants}>
+          <motion.div custom={0} initial="hidden" animate="visible" variants={cardVariants} className="lg:col-span-1">
             <Card className="h-full">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -232,7 +237,7 @@ export function StudentDashboardUI() {
           </motion.div>
 
           {/* Notas */}
-          <motion.div custom={1} initial="hidden" animate="visible" variants={cardVariants}>
+          <motion.div custom={1} initial="hidden" animate="visible" variants={cardVariants} className="lg:col-span-1">
             <Card className="h-full">
               <CardHeader className="flex flex-row items-center justify-between">
                  <div className="flex items-center gap-2">
@@ -273,9 +278,37 @@ export function StudentDashboardUI() {
               </CardContent>
             </Card>
           </motion.div>
+          
+          {/* Recordatorios */}
+          <motion.div custom={2} initial="hidden" animate="visible" variants={cardVariants} className="md:col-span-2 lg:col-span-2 xl:col-span-1">
+             <Card className="h-full">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="h-6 w-6 text-primary" />
+                    <CardTitle className="font-headline text-xl">{t.reminders.title}</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {content.reminders && content.reminders.length > 0 ? (
+                    <ScrollArea className="h-48">
+                      <ul className="space-y-4 pr-4">
+                        {content.reminders.slice().reverse().map(r => (
+                          <li key={r.id} className="rounded-lg border bg-card p-3">
+                            <p className="text-sm text-foreground mb-2">{r.message}</p>
+                            <p className="text-xs text-muted-foreground text-right">{r.teacherName} - {formatReminderDate(r.sentAt)}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </ScrollArea>
+                  ) : (
+                    <p className="text-center text-muted-foreground">{t.reminders.noReminders}</p>
+                  )}
+                </CardContent>
+              </Card>
+          </motion.div>
 
           {/* PQRS */}
-          <motion.div custom={2} initial="hidden" animate="visible" variants={cardVariants}>
+          <motion.div custom={3} initial="hidden" animate="visible" variants={cardVariants} className="md:col-span-2 lg:col-span-3 xl:col-span-1">
             <Card className="h-full">
               <CardHeader>
                   <div className="flex items-center gap-2">

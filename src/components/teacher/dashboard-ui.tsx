@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Book, Calendar, FilePlus, Loader2, MoreVertical, Notebook, PlusCircle, Trash2, UserPlus, UserX, Users } from "lucide-react";
+import { Lightbulb, Calendar, FilePlus, Loader2, MoreVertical, Notebook, PlusCircle, Trash2, UserPlus, UserX, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { ScrollArea } from "../ui/scroll-area";
 import { useLanguage } from "@/context/language-context";
+import { Textarea } from "../ui/textarea";
 
 interface TeacherDashboardData {
     teacher: User | null;
@@ -112,8 +113,7 @@ export function TeacherDashboardUI() {
   const [classLink, setClassLink] = useState('');
   const [classTime, setClassTime] = useState('');
   const [noteLink, setNoteLink] = useState('');
-  const [chapterName, setChapterName] = useState('');
-  const [selectedBook, setSelectedBook] = useState<string | null>(null);
+  const [reminderMessage, setReminderMessage] = useState('');
   const [isAddingContent, setIsAddingContent] = useState(false);
   
   // State for dissolving group
@@ -190,7 +190,7 @@ export function TeacherDashboardUI() {
     }
   };
   
-  const handleAddContent = async (type: 'class' | 'note' | 'chapter') => {
+  const handleAddContent = async (type: 'class' | 'note' | 'reminder') => {
     if (!selectedGroup) return;
     setIsAddingContent(true);
 
@@ -204,11 +204,10 @@ export function TeacherDashboardUI() {
             await addContentToGroup(selectedGroup, 'note', { link: noteLink, title: `Nota - ${new Date().toLocaleDateString()}` });
             successMessage = t_toast.noteAdded;
             setNoteLink('');
-        } else if (type === 'chapter' && chapterName && selectedBook) {
-             await addContentToGroup(selectedGroup, 'bookChapter', { bookId: selectedBook, name: chapterName, pdfUrl: '/mock.pdf' }, chapterName);
-             successMessage = t_toast.chapterAdded;
-             setChapterName('');
-             setSelectedBook(null);
+        } else if (type === 'reminder' && reminderMessage) {
+             await addContentToGroup(selectedGroup, 'reminder', { message: reminderMessage });
+             successMessage = t_toast.reminderAdded;
+             setReminderMessage('');
         }
 
         if (successMessage) {
@@ -465,24 +464,14 @@ export function TeacherDashboardUI() {
                       </CardContent>
                     </Card>
                      <Card>
-                      <CardHeader><CardTitle className="flex items-center gap-2 text-lg font-semibold"><Book className="h-5 w-5"/> {t.content.uploadChapter.title}</CardTitle></CardHeader>
+                      <CardHeader><CardTitle className="flex items-center gap-2 text-lg font-semibold"><Lightbulb className="h-5 w-5"/> {t.content.uploadReminder.title}</CardTitle></CardHeader>
                       <CardContent className="space-y-4">
                          <div className="space-y-1">
-                            <Label htmlFor="book-select">{t.content.uploadChapter.book}</Label>
-                            <Select onValueChange={setSelectedBook} value={selectedBook || ''}>
-                                <SelectTrigger><SelectValue placeholder={t.content.uploadChapter.selectPlaceholder} /></SelectTrigger>
-                                <SelectContent>
-                                    {data?.groups.find(g=>g.id === selectedGroup)?.content.books.map(b=><SelectItem key={b.id} value={b.id}>{b.title}</SelectItem>)}
-                                    <SelectItem value="new">{t.content.uploadChapter.newBook}</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <Label htmlFor="reminder-message">{t.content.uploadReminder.message}</Label>
+                            <Textarea id="reminder-message" value={reminderMessage} onChange={e => setReminderMessage(e.target.value)} placeholder={t.content.uploadReminder.placeholder} />
                         </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="chapter-name">{t.content.uploadChapter.name}</Label>
-                          <Input id="chapter-name" value={chapterName} onChange={e => setChapterName(e.target.value)} placeholder={t.content.uploadChapter.namePlaceholder} />
-                        </div>
-                        <Button onClick={() => handleAddContent('chapter')} size="sm" className="w-full" disabled={isAddingContent || !chapterName || !selectedBook}>
-                           {isAddingContent && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} {t.content.uploadChapter.button}
+                        <Button onClick={() => handleAddContent('reminder')} size="sm" className="w-full" disabled={isAddingContent || !reminderMessage}>
+                           {isAddingContent && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} {t.content.uploadReminder.button}
                         </Button>
                       </CardContent>
                     </Card>

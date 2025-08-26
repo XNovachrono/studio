@@ -45,6 +45,10 @@ export const translations = {
                 viewButton: "Ver en Notion",
                 noNotes: "No hay notas disponibles."
             },
+            reminders: {
+                title: "Recordatorios",
+                noReminders: "No hay recordatorios del profesor."
+            },
             pqrs: {
                 title: "PQRS",
                 description: "Contacta a tus últimos profesores.",
@@ -106,7 +110,7 @@ export const translations = {
                 noGroupsOfType: "No existe grupo de este tipo",
                 uploadClass: { title: "Cargar Clase", link: "Link de clase", dateTime: "Fecha y hora", button: "Añadir Clase" },
                 uploadNote: { title: "Cargar Nota", link: "Link de Notion", button: "Añadir Nota" },
-                uploadChapter: { title: "Cargar Capítulo", book: "Libro", selectPlaceholder: "Selecciona o crea libro", newBook: "Crear nuevo libro...", name: "Nombre del capítulo o libro", namePlaceholder: "Título del libro o capítulo...", button: "Añadir PDF" },
+                uploadReminder: { title: "Enviar Recordatorio", message: "Mensaje", placeholder: "Escribe un consejo, sugerencia o recordatorio...", button: "Enviar Recordatorio" },
             },
             planTypes: {
                 privado: "Privado",
@@ -140,7 +144,7 @@ export const translations = {
                  contentAddedTitle: "Contenido añadido",
                  classAdded: "Clase añadida.",
                  noteAdded: "Nota añadida.",
-                 chapterAdded: "Capítulo/Libro añadido.",
+                 reminderAdded: "Recordatorio enviado.",
                  addContentError: "No se pudo añadir el contenido.",
                  groupDissolvedTitle: "Grupo disuelto",
                  groupDissolvedDescription: "Los estudiantes ahora están disponibles nuevamente.",
@@ -234,6 +238,10 @@ export const translations = {
                 viewButton: "View in Notion",
                 noNotes: "No notes available."
             },
+             reminders: {
+                title: "Reminders",
+                noReminders: "No reminders from the teacher."
+            },
             pqrs: {
                 title: "PQRS",
                 description: "Contact your last teachers.",
@@ -295,7 +303,7 @@ export const translations = {
                 noGroupsOfType: "No groups of this type exist",
                 uploadClass: { title: "Upload Class", link: "Class link", dateTime: "Date and time", button: "Add Class" },
                 uploadNote: { title: "Upload Note", link: "Notion link", button: "Add Note" },
-                uploadChapter: { title: "Upload Chapter", book: "Book", selectPlaceholder: "Select or create book", newBook: "Create new book...", name: "Chapter or book name", namePlaceholder: "Title of the book or chapter...", button: "Add PDF" },
+                uploadReminder: { title: "Send Reminder", message: "Message", placeholder: "Write a piece of advice, a suggestion, or a reminder...", button: "Send Reminder" },
             },
              planTypes: {
                 privado: "Private",
@@ -329,7 +337,7 @@ export const translations = {
                  contentAddedTitle: "Content added",
                  classAdded: "Class added.",
                  noteAdded: "Note added.",
-                 chapterAdded: "Chapter/Book added.",
+                 reminderAdded: "Reminder sent.",
                  addContentError: "Could not add content.",
                  groupDissolvedTitle: "Group dissolved",
                  groupDissolvedDescription: "Students are now available again.",

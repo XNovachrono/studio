@@ -4,7 +4,7 @@ import {
     doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc, arrayRemove, addDoc
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage } from "./types";
+import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder } from "./types";
 
 // Function to get a user profile
 export const getUserProfile = async (userId: string): Promise<User | null> => {
@@ -48,11 +48,18 @@ export const getStudentData = async (userId: string): Promise<{ user: StudentPro
     if (!querySnapshot.empty) {
         const groupDoc = querySnapshot.docs[0];
         const groupData = groupDoc.data() as Omit<Group, 'id'>;
+        
         // Convert Timestamps to string dates for serialization
         if (groupData.content.scheduledClasses) {
             groupData.content.scheduledClasses = groupData.content.scheduledClasses.map(c => ({
                 ...c,
                 time: c.time instanceof Timestamp ? c.time.toDate().toISOString() : c.time,
+            }));
+        }
+        if (groupData.content.reminders) {
+             groupData.content.reminders = groupData.content.reminders.map(r => ({
+                ...r,
+                sentAt: r.sentAt instanceof Timestamp ? r.sentAt.toDate().toISOString() : r.sentAt,
             }));
         }
         group = { id: groupDoc.id, ...groupData };
@@ -138,7 +145,7 @@ export const createGroup = async (teacher: User, students: {id: string, name: st
         content: {
             scheduledClasses: [],
             notes: [],
-            books: [],
+            reminders: [],
         },
     });
 };
@@ -147,9 +154,8 @@ export const createGroup = async (teacher: User, students: {id: string, name: st
 // Function to add content to a group
 export const addContentToGroup = async (
     groupId: string, 
-    type: 'scheduledClass' | 'note' | 'bookChapter',
+    type: 'scheduledClass' | 'note' | 'reminder',
     data: any,
-    bookTitle?: string
 ) => {
     const groupRef = doc(db, "groups", groupId);
     const groupSnap = await getDoc(groupRef);
@@ -168,7 +174,7 @@ export const addContentToGroup = async (
             })
         });
 
-        // NEW: Update teacher interaction for each student in the group
+        // Update teacher interaction for each student in the group
         const batch = writeBatch(db);
         const newInteraction: Omit<TeacherInteraction, 'lastInteraction'> = {
             teacherId: groupData.teacherId,
@@ -204,28 +210,15 @@ export const addContentToGroup = async (
         await updateDoc(groupRef, {
             'content.notes': arrayUnion({ ...data, id: `n${Date.now()}` })
         });
-    } else if (type === 'bookChapter') {
-        const books = groupData.content.books || [];
-        
-        if (data.bookId === 'new') {
-            // Create a new book
-            const newBook = {
-                id: `b${Date.now()}`,
-                title: bookTitle || 'Nuevo Libro',
-                chapters: [{ id: `ch${Date.now()}`, name: data.name, pdfUrl: data.pdfUrl }]
-            };
-            await updateDoc(groupRef, { 'content.books': arrayUnion(newBook) });
-        } else {
-            // Add chapter to existing book
-            const bookIndex = books.findIndex(b => b.id === data.bookId);
-            if (bookIndex > -1) {
-                const newChapter = { id: `ch${Date.now()}`, name: data.name, pdfUrl: data.pdfUrl };
-                books[bookIndex].chapters.push(newChapter);
-                await updateDoc(groupRef, { 'content.books': books });
-            } else {
-                 throw new Error("Book not found!");
-            }
-        }
+    } else if (type === 'reminder') {
+        const newReminder: Omit<Reminder, 'id'> = {
+            message: data.message,
+            teacherName: groupData.teacherName || 'Profesor(a)',
+            sentAt: Timestamp.now() as any,
+        };
+        await updateDoc(groupRef, {
+            'content.reminders': arrayUnion({ ...newReminder, id: `r${Date.now()}` })
+        });
     }
 };
 
