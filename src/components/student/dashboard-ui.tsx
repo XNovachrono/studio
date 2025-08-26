@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Calendar, Maximize, Notebook, Loader2, MessageSquareQuestion } from "lucide-react";
+import { Calendar, Maximize, Notebook, Loader2, MessageCircleQuestion } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -270,7 +270,7 @@ export function StudentDashboardUI() {
             <Card className="h-full">
               <CardHeader>
                   <div className="flex items-center gap-2">
-                      <MessageSquareQuestion className="h-6 w-6 text-primary" />
+                      <MessageCircleQuestion className="h-6 w-6 text-primary" />
                       <CardTitle className="font-headline text-xl">PQRS</CardTitle>
                   </div>
                   <CardDescription>Contacta a tus últimos profesores.</CardDescription>
