@@ -62,6 +62,11 @@ export function DashboardHeader({ user, title }: DashboardHeaderProps) {
                     <p className="text-xs leading-none text-muted-foreground">
                       {user.email}
                     </p>
+                    {user.plan && (
+                       <p className="text-xs font-medium capitalize leading-none text-primary pt-1">
+                        {user.plan}
+                      </p>
+                    )}
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
