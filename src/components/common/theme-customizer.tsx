@@ -23,9 +23,9 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/language-context";
 
 const themes = [
-  { name: "Negro", value: "theme-dark-blue", color: "#3b82f6" },
-  { name: "Blanco", value: "theme-light-blue", color: "#3b82f6" },
-  { name: "Menta", value: "theme-mint-green", color: "#10b981" },
+  { name: "Negro", name_en: "Black", value: "theme-dark-blue", color: "#3b82f6" },
+  { name: "Blanco", name_en: "White", value: "theme-light-blue", color: "#3b82f6" },
+  { name: "Menta", name_en: "Mint", value: "theme-mint-green", color: "#10b981" },
 ];
 
 const bodyFonts = [
@@ -46,6 +46,7 @@ export function ThemeCustomizer() {
   const [bodyFont, setBodyFont] = useState("inter");
   const [headlineFont, setHeadlineFont] = useState("space-grotesk");
   const { language, setLanguage, translations } = useLanguage();
+  const t = translations.themeCustomizer;
 
   useEffect(() => {
     setMounted(true);
@@ -90,16 +91,16 @@ export function ThemeCustomizer() {
       <DialogHeader>
         <DialogTitle className="font-headline text-2xl flex items-center gap-2">
             <Palette />
-            {translations.themeCustomizer.title}
+            {t.title}
         </DialogTitle>
         <DialogDescription>
-          {translations.themeCustomizer.description}
+          {t.description}
         </DialogDescription>
       </DialogHeader>
       <div className="space-y-6 py-4">
         {/* Color Themes */}
         <div className="space-y-2">
-          <h3 className="font-headline text-lg text-primary">{translations.themeCustomizer.colorThemes}</h3>
+          <h3 className="font-headline text-lg text-primary">{t.colorThemes}</h3>
           <div className="grid grid-cols-3 gap-4">
             {themes.map((theme) => (
               <button
@@ -116,7 +117,7 @@ export function ThemeCustomizer() {
                   className="h-6 w-6 rounded-full"
                   style={{ backgroundColor: theme.color }}
                 />
-                <span className="font-medium">{theme.name}</span>
+                <span className="font-medium">{language === 'es' ? theme.name : theme.name_en}</span>
                 {activeTheme === theme.value && (
                   <Check className="absolute right-3 top-3 h-5 w-5 text-primary" />
                 )}
@@ -127,13 +128,13 @@ export function ThemeCustomizer() {
 
         {/* Typography */}
         <div className="space-y-2">
-          <h3 className="font-headline text-lg text-primary">{translations.themeCustomizer.typography}</h3>
+          <h3 className="font-headline text-lg text-primary">{t.typography}</h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label>{translations.themeCustomizer.bodyFont}</Label>
+              <Label>{t.bodyFont}</Label>
               <Select value={bodyFont} onValueChange={handleBodyFontChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar fuente" />
+                  <SelectValue placeholder={t.selectPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {bodyFonts.map(font => (
@@ -143,10 +144,10 @@ export function ThemeCustomizer() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>{translations.themeCustomizer.headlineFont}</Label>
+              <Label>{t.headlineFont}</Label>
               <Select value={headlineFont} onValueChange={handleHeadlineFontChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar fuente" />
+                  <SelectValue placeholder={t.selectPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {headlineFonts.map(font => (
@@ -161,13 +162,13 @@ export function ThemeCustomizer() {
         {/* Language Settings */}
         <div className="space-y-2">
           <h3 className="font-headline text-lg text-primary">
-            {translations.themeCustomizer.languageSettings}
+            {t.languageSettings}
           </h3>
           <div className="max-w-xs">
-            <Label>{translations.themeCustomizer.selectLanguage}</Label>
+            <Label>{t.selectLanguage}</Label>
             <Select value={language} onValueChange={(value) => setLanguage(value as 'es' | 'en')}>
               <SelectTrigger>
-                <SelectValue placeholder="Seleccionar idioma" />
+                <SelectValue placeholder={t.selectPlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="es">Español</SelectItem>

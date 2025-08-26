@@ -44,6 +44,7 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const { language, translations } = useLanguage();
 
+  const t = translations.loginForm;
   const loginSchema = language === 'es' ? loginSchemaEs : loginSchemaEn;
   type LoginFormValues = z.infer<typeof loginSchema>;
 
@@ -71,8 +72,8 @@ export function LoginForm() {
         localStorage.setItem("uncoverly-user", JSON.stringify({ ...userProfile, id: firebaseUser.uid }));
         
         toast({
-          title: translations.loginForm.successTitle,
-          description: translations.loginForm.successDescription.replace('{name}', userProfile.name),
+          title: t.successTitle,
+          description: t.successDescription.replace('{name}', userProfile.name),
         });
 
         if (userProfile.role === "teacher") {
@@ -85,27 +86,27 @@ export function LoginForm() {
           }
         }
       } else {
-         throw new Error(translations.loginForm.errorUserNotFound);
+         throw new Error(t.errorUserNotFound);
       }
 
     } catch (error: any) {
       console.error("Firebase Auth Error:", error);
-      let description = translations.loginForm.errorUnexpected;
+      let description = t.errorUnexpected;
       switch (error.code) {
         case 'auth/user-not-found':
         case 'auth/wrong-password':
         case 'auth/invalid-credential':
-          description = translations.loginForm.errorInvalidCredentials;
+          description = t.errorInvalidCredentials;
           break;
         case 'auth/invalid-email':
-          description = translations.loginForm.errorInvalidEmail;
+          description = t.errorInvalidEmail;
           break;
         default:
           description = error.message;
       }
       toast({
         variant: "destructive",
-        title: translations.loginForm.errorTitle,
+        title: t.errorTitle,
         description,
       });
     } finally {
@@ -116,7 +117,7 @@ export function LoginForm() {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="font-headline text-center text-2xl">{translations.loginForm.title}</CardTitle>
+        <CardTitle className="font-headline text-center text-2xl">{t.title}</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -126,9 +127,9 @@ export function LoginForm() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{translations.loginForm.emailLabel}</FormLabel>
+                  <FormLabel>{t.emailLabel}</FormLabel>
                   <FormControl>
-                    <Input placeholder={translations.loginForm.emailPlaceholder} {...field} />
+                    <Input placeholder={t.emailPlaceholder} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -139,12 +140,12 @@ export function LoginForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{translations.loginForm.passwordLabel}</FormLabel>
+                  <FormLabel>{t.passwordLabel}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input
                         type={showPassword ? "text" : "password"}
-                        placeholder={translations.loginForm.passwordPlaceholder}
+                        placeholder={t.passwordPlaceholder}
                         {...field}
                       />
                       <Button
@@ -168,7 +169,7 @@ export function LoginForm() {
             />
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {translations.loginForm.submitButton}
+              {t.submitButton}
             </Button>
           </form>
         </Form>

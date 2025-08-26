@@ -22,6 +22,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { ScrollArea } from "../ui/scroll-area";
+import { useLanguage } from "@/context/language-context";
 
 interface TeacherDashboardData {
     teacher: User | null;
@@ -39,6 +40,9 @@ interface GroupSectionProps {
 }
 
 const GroupSection = ({ title, groups, studentsById, onDissolve, onManage }: GroupSectionProps) => {
+  const { translations } = useLanguage();
+  const t = translations.teacherDashboard.groups;
+
   if (groups.length === 0) {
     return null; // Don't render the section if there are no groups
   }
@@ -64,20 +68,20 @@ const GroupSection = ({ title, groups, studentsById, onDissolve, onManage }: Gro
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => onManage(group)}>
                       <Users className="mr-2 h-4 w-4" />
-                      Administrar grupo
+                      {t.manageGroup}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onDissolve(group.id)} className="text-destructive">
                       <Trash2 className="mr-2 h-4 w-4" />
-                      Disolver grupo
+                      {t.dissolveGroup}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
             </CardHeader>
             <CardContent className="flex-grow">
-              <h4 className="font-semibold text-sm mb-2">Miembros:</h4>
+              <h4 className="font-semibold text-sm mb-2">{t.members}:</h4>
               <ul className="space-y-1 text-sm text-muted-foreground">
                 {group.studentIds.map(id => (
-                  <li key={id}>{studentsById.get(id)?.name || 'Desconocido'}</li>
+                  <li key={id}>{studentsById.get(id)?.name || t.unknown}</li>
                 ))}
               </ul>
             </CardContent>
@@ -91,6 +95,9 @@ const GroupSection = ({ title, groups, studentsById, onDissolve, onManage }: Gro
 export function TeacherDashboardUI() {
   const router = useRouter();
   const { toast } = useToast();
+  const { translations } = useLanguage();
+  const t = translations.teacherDashboard;
+  const t_toast = translations.teacherDashboard.toasts;
   
   const [user, setUser] = useState<User | null>(null);
   const [data, setData] = useState<TeacherDashboardData | null>(null);
@@ -126,7 +133,7 @@ export function TeacherDashboardUI() {
         setData(teacherData);
       } catch (error) {
           console.error("Error fetching teacher data:", error);
-          toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los datos."});
+          toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
       } finally {
           setIsLoading(false);
       }
@@ -146,7 +153,8 @@ export function TeacherDashboardUI() {
     } else {
         router.push("/login");
     }
-  }, [router, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   const handleCreateGroup = async () => {
     if (selectedStudentIds.length === 0 || !user || !data) return;
@@ -158,8 +166,8 @@ export function TeacherDashboardUI() {
     if (!firstPlan || !selectedStudentsData.every(s => s.plan === firstPlan)) {
       toast({
         variant: "destructive",
-        title: "Error al crear grupo",
-        description: "Todos los estudiantes deben tener el mismo plan.",
+        title: t_toast.createGroupErrorTitle,
+        description: t_toast.planMismatchError,
       });
       setIsCreatingGroup(false);
       return;
@@ -169,14 +177,14 @@ export function TeacherDashboardUI() {
         const studentsToGroup = selectedStudentsData.map(s => ({ id: s.id, name: s.name }));
         await createGroup(user, studentsToGroup, firstPlan);
         toast({
-            title: "Grupo creado",
-            description: `Se ha creado un nuevo grupo.`,
+            title: t_toast.groupCreatedTitle,
+            description: t_toast.groupCreatedDescription,
         });
         setSelectedStudentIds([]);
         await fetchDashboardData(); // Refresh data
     } catch (error) {
         console.error("Error creating group:", error);
-        toast({ variant: "destructive", title: "Error", description: "No se pudo crear el grupo."});
+        toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.createGroupError });
     } finally {
         setIsCreatingGroup(false);
     }
@@ -190,26 +198,26 @@ export function TeacherDashboardUI() {
         let successMessage = "";
         if (type === 'class' && classLink && classTime) {
             await addContentToGroup(selectedGroup, 'scheduledClass', { link: classLink, time: classTime });
-            successMessage = "Clase añadida.";
+            successMessage = t_toast.classAdded;
             setClassLink(''); setClassTime('');
         } else if (type === 'note' && noteLink) {
             await addContentToGroup(selectedGroup, 'note', { link: noteLink, title: `Nota - ${new Date().toLocaleDateString()}` });
-            successMessage = "Nota añadida.";
+            successMessage = t_toast.noteAdded;
             setNoteLink('');
         } else if (type === 'chapter' && chapterName && selectedBook) {
              await addContentToGroup(selectedGroup, 'bookChapter', { bookId: selectedBook, name: chapterName, pdfUrl: '/mock.pdf' }, chapterName);
-             successMessage = "Capítulo/Libro añadido.";
+             successMessage = t_toast.chapterAdded;
              setChapterName('');
              setSelectedBook(null);
         }
 
         if (successMessage) {
-            toast({ title: "Contenido añadido", description: successMessage });
+            toast({ title: t_toast.contentAddedTitle, description: successMessage });
             await fetchDashboardData(); // Refresh data
         }
     } catch (error) {
         console.error("Error adding content:", error);
-        toast({ variant: "destructive", title: "Error", description: "No se pudo añadir el contenido."});
+        toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.addContentError });
     } finally {
         setIsAddingContent(false);
     }
@@ -221,16 +229,16 @@ export function TeacherDashboardUI() {
     try {
       await dissolveGroup(groupToDissolve);
       toast({
-        title: "Grupo disuelto",
-        description: "Los estudiantes ahora están disponibles nuevamente.",
+        title: t_toast.groupDissolvedTitle,
+        description: t_toast.groupDissolvedDescription,
       });
       await fetchDashboardData(); // Refresh data
     } catch (error) {
       console.error("Error dissolving group:", error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "No se pudo disolver el grupo.",
+        title: t_toast.errorTitle,
+        description: t_toast.dissolveGroupError,
       });
     } finally {
       setIsDissolving(false);
@@ -243,13 +251,13 @@ export function TeacherDashboardUI() {
     setIsManagingGroup(true);
     try {
         await addStudentsToGroup(groupToManage.id, studentsToAdd);
-        toast({ title: "Estudiantes añadidos", description: "Los estudiantes han sido agregados al grupo." });
+        toast({ title: t_toast.studentsAddedTitle, description: t_toast.studentsAddedDescription });
         setStudentsToAdd([]);
         setGroupToManage(null);
         await fetchDashboardData();
     } catch (error) {
         console.error("Error adding students:", error);
-        toast({ variant: "destructive", title: "Error", description: "No se pudieron añadir los estudiantes." });
+        toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.addStudentsError });
     } finally {
         setIsManagingGroup(false);
     }
@@ -257,22 +265,21 @@ export function TeacherDashboardUI() {
 
   const handleRemoveStudents = async () => {
     if (!groupToManage || studentsToRemove.length === 0) return;
-    // Prevent dissolving a group by removing all members
     if (studentsToRemove.length === groupToManage.studentIds.length) {
-        toast({ variant: "destructive", title: "Acción no permitida", description: "No puedes eliminar a todos los miembros. Si quieres, disuelve el grupo." });
+        toast({ variant: "destructive", title: t_toast.actionNotAllowedTitle, description: t_toast.removeAllStudentsError });
         return;
     }
 
     setIsManagingGroup(true);
     try {
         await removeStudentsFromGroup(groupToManage.id, studentsToRemove);
-        toast({ title: "Estudiantes eliminados", description: "Los estudiantes han sido eliminados del grupo." });
+        toast({ title: t_toast.studentsRemovedTitle, description: t_toast.studentsRemovedDescription });
         setStudentsToRemove([]);
         setGroupToManage(null);
         await fetchDashboardData();
     } catch (error) {
         console.error("Error removing students:", error);
-        toast({ variant: "destructive", title: "Error", description: "No se pudieron eliminar los estudiantes." });
+        toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.removeStudentsError });
     } finally {
         setIsManagingGroup(false);
     }
@@ -310,20 +317,20 @@ export function TeacherDashboardUI() {
 
   return (
     <div className="flex h-screen flex-col">
-      <DashboardHeader user={user} title="Panel de Docente" />
+      <DashboardHeader user={user} title={t.title} />
       <main className="flex-1 overflow-auto p-4 md:p-8">
         <Tabs defaultValue="students" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="students"><Users className="mr-2 h-4 w-4" />Estudiantes</TabsTrigger>
-            <TabsTrigger value="groups"><Users className="mr-2 h-4 w-4" />Grupos</TabsTrigger>
-            <TabsTrigger value="content"><FilePlus className="mr-2 h-4 w-4" />Contenido</TabsTrigger>
+            <TabsTrigger value="students"><Users className="mr-2 h-4 w-4" />{t.tabs.students}</TabsTrigger>
+            <TabsTrigger value="groups"><Users className="mr-2 h-4 w-4" />{t.tabs.groups}</TabsTrigger>
+            <TabsTrigger value="content"><FilePlus className="mr-2 h-4 w-4" />{t.tabs.content}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="students">
             <Card>
               <CardHeader>
-                <CardTitle className="font-headline">Lista de Estudiantes Individuales</CardTitle>
-                <CardDescription>Selecciona estudiantes para crear un nuevo grupo.</CardDescription>
+                <CardTitle className="font-headline">{t.students.title}</CardTitle>
+                <CardDescription>{t.students.description}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="rounded-md border">
@@ -336,10 +343,10 @@ export function TeacherDashboardUI() {
                         }}
                         checked={!!data && data.availableStudents.length > 0 && selectedStudentIds.length === data.availableStudents.length}
                         /></TableHead>
-                        <TableHead>Nombre</TableHead>
-                        <TableHead>Plan</TableHead>
-                        <TableHead>Intereses</TableHead>
-                        <TableHead>Disponibilidad</TableHead>
+                        <TableHead>{t.students.table.name}</TableHead>
+                        <TableHead>{t.students.table.plan}</TableHead>
+                        <TableHead>{t.students.table.interests}</TableHead>
+                        <TableHead>{t.students.table.availability}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -361,7 +368,7 @@ export function TeacherDashboardUI() {
                 </div>
                 <Button onClick={handleCreateGroup} disabled={selectedStudentIds.length === 0 || isCreatingGroup} className="mt-4">
                   {isCreatingGroup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <PlusCircle className="mr-2 h-4 w-4" /> Crear Grupo
+                  <PlusCircle className="mr-2 h-4 w-4" /> {t.students.createGroupButton}
                 </Button>
               </CardContent>
             </Card>
@@ -370,14 +377,14 @@ export function TeacherDashboardUI() {
           <TabsContent value="groups">
             <Card>
               <CardHeader>
-                <CardTitle className="font-headline">Grupos Creados</CardTitle>
+                <CardTitle className="font-headline">{t.groups.title}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-8">
-                 <GroupSection title="Grupos Privados" groups={privateGroups} studentsById={studentsById} onDissolve={setGroupToDissolve} onManage={setGroupToManage} />
-                 <GroupSection title="Grupos Pequeños" groups={smallGroups} studentsById={studentsById} onDissolve={setGroupToDissolve} onManage={setGroupToManage} />
-                 <GroupSection title="Grupos Grandes" groups={largeGroups} studentsById={studentsById} onDissolve={setGroupToDissolve} onManage={setGroupToManage} />
+                 <GroupSection title={t.groups.private} groups={privateGroups} studentsById={studentsById} onDissolve={setGroupToDissolve} onManage={setGroupToManage} />
+                 <GroupSection title={t.groups.small} groups={smallGroups} studentsById={studentsById} onDissolve={setGroupToDissolve} onManage={setGroupToManage} />
+                 <GroupSection title={t.groups.large} groups={largeGroups} studentsById={studentsById} onDissolve={setGroupToDissolve} onManage={setGroupToManage} />
                  {data?.groups.length === 0 && (
-                    <p className="text-center text-muted-foreground">Aún no se han creado grupos.</p>
+                    <p className="text-center text-muted-foreground">{t.groups.noGroups}</p>
                  )}
               </CardContent>
             </Card>
@@ -386,13 +393,13 @@ export function TeacherDashboardUI() {
           <TabsContent value="content">
             <Card>
               <CardHeader>
-                <CardTitle className="font-headline">Gestión de Contenido</CardTitle>
-                <CardDescription>Selecciona un tipo de grupo y luego el grupo específico para añadirle contenido.</CardDescription>
+                <CardTitle className="font-headline">{t.content.title}</CardTitle>
+                <CardDescription>{t.content.description}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                        <Label>Selecciona un tipo de grupo</Label>
+                        <Label>{t.content.selectGroupType}</Label>
                         <Select
                             onValueChange={(value) => {
                                 setSelectedGroupType(value as StudentPlan);
@@ -400,27 +407,27 @@ export function TeacherDashboardUI() {
                             }}
                             value={selectedGroupType || ''}
                         >
-                            <SelectTrigger><SelectValue placeholder="Selecciona un tipo" /></SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder={t.content.selectTypePlaceholder} /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="privado">Privado</SelectItem>
-                                <SelectItem value="grupo pequeño">Grupo Pequeño</SelectItem>
-                                <SelectItem value="grupo grande">Grupo Grande</SelectItem>
+                                <SelectItem value="privado">{t.planTypes.privado}</SelectItem>
+                                <SelectItem value="grupo pequeño">{t.planTypes.small}</SelectItem>
+                                <SelectItem value="grupo grande">{t.planTypes.large}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                     {selectedGroupType && (
                         <div className="space-y-2">
-                            <Label>Selecciona un grupo</Label>
+                            <Label>{t.content.selectGroup}</Label>
                              {filteredGroups.length > 0 ? (
                                 <Select onValueChange={setSelectedGroup} value={selectedGroup || ''}>
-                                    <SelectTrigger><SelectValue placeholder="Selecciona un grupo" /></SelectTrigger>
+                                    <SelectTrigger><SelectValue placeholder={t.content.selectGroupPlaceholder} /></SelectTrigger>
                                     <SelectContent>
                                         {filteredGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                              ) : (
                                 <div className="flex h-10 items-center justify-center rounded-md border border-dashed">
-                                    <p className="text-sm text-muted-foreground">No existe grupo de este tipo</p>
+                                    <p className="text-sm text-muted-foreground">{t.content.noGroupsOfType}</p>
                                 </div>
                              )}
                         </div>
@@ -430,52 +437,52 @@ export function TeacherDashboardUI() {
                 {selectedGroup && (
                   <div className="grid gap-6 md:grid-cols-3">
                     <Card>
-                      <CardHeader><CardTitle className="flex items-center gap-2 text-lg font-semibold"><Calendar className="h-5 w-5"/> Cargar Clase</CardTitle></CardHeader>
+                      <CardHeader><CardTitle className="flex items-center gap-2 text-lg font-semibold"><Calendar className="h-5 w-5"/> {t.content.uploadClass.title}</CardTitle></CardHeader>
                       <CardContent className="space-y-4">
                         <div className="space-y-1">
-                          <Label htmlFor="class-link">Link de clase</Label>
+                          <Label htmlFor="class-link">{t.content.uploadClass.link}</Label>
                           <Input id="class-link" value={classLink} onChange={e => setClassLink(e.target.value)} placeholder="https://meet.google.com/..." />
                         </div>
                          <div className="space-y-1">
-                          <Label htmlFor="class-time">Fecha y hora</Label>
+                          <Label htmlFor="class-time">{t.content.uploadClass.dateTime}</Label>
                           <Input id="class-time" value={classTime} onChange={e => setClassTime(e.target.value)} type="datetime-local" />
                         </div>
                         <Button onClick={() => handleAddContent('class')} size="sm" className="w-full" disabled={isAddingContent || !classLink || !classTime}>
-                           {isAddingContent && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Añadir Clase
+                           {isAddingContent && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} {t.content.uploadClass.button}
                         </Button>
                       </CardContent>
                     </Card>
                      <Card>
-                      <CardHeader><CardTitle className="flex items-center gap-2 text-lg font-semibold"><Notebook className="h-5 w-5"/> Cargar Nota</CardTitle></CardHeader>
+                      <CardHeader><CardTitle className="flex items-center gap-2 text-lg font-semibold"><Notebook className="h-5 w-5"/> {t.content.uploadNote.title}</CardTitle></CardHeader>
                       <CardContent className="space-y-4">
                         <div className="space-y-1">
-                          <Label htmlFor="note-link">Link de Notion</Label>
+                          <Label htmlFor="note-link">{t.content.uploadNote.link}</Label>
                           <Input id="note-link" value={noteLink} onChange={e => setNoteLink(e.target.value)} placeholder="https://notion.so/..." />
                         </div>
                         <Button onClick={() => handleAddContent('note')} size="sm" className="w-full" disabled={isAddingContent || !noteLink}>
-                           {isAddingContent && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Añadir Nota
+                           {isAddingContent && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} {t.content.uploadNote.button}
                         </Button>
                       </CardContent>
                     </Card>
                      <Card>
-                      <CardHeader><CardTitle className="flex items-center gap-2 text-lg font-semibold"><Book className="h-5 w-5"/> Cargar Capítulo</CardTitle></CardHeader>
+                      <CardHeader><CardTitle className="flex items-center gap-2 text-lg font-semibold"><Book className="h-5 w-5"/> {t.content.uploadChapter.title}</CardTitle></CardHeader>
                       <CardContent className="space-y-4">
                          <div className="space-y-1">
-                            <Label htmlFor="book-select">Libro</Label>
+                            <Label htmlFor="book-select">{t.content.uploadChapter.book}</Label>
                             <Select onValueChange={setSelectedBook} value={selectedBook || ''}>
-                                <SelectTrigger><SelectValue placeholder="Selecciona o crea libro" /></SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder={t.content.uploadChapter.selectPlaceholder} /></SelectTrigger>
                                 <SelectContent>
                                     {data?.groups.find(g=>g.id === selectedGroup)?.content.books.map(b=><SelectItem key={b.id} value={b.id}>{b.title}</SelectItem>)}
-                                    <SelectItem value="new">Crear nuevo libro...</SelectItem>
+                                    <SelectItem value="new">{t.content.uploadChapter.newBook}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                         <div className="space-y-1">
-                          <Label htmlFor="chapter-name">Nombre del capítulo o libro</Label>
-                          <Input id="chapter-name" value={chapterName} onChange={e => setChapterName(e.target.value)} placeholder="Título del libro o capítulo..." />
+                          <Label htmlFor="chapter-name">{t.content.uploadChapter.name}</Label>
+                          <Input id="chapter-name" value={chapterName} onChange={e => setChapterName(e.target.value)} placeholder={t.content.uploadChapter.namePlaceholder} />
                         </div>
                         <Button onClick={() => handleAddContent('chapter')} size="sm" className="w-full" disabled={isAddingContent || !chapterName || !selectedBook}>
-                           {isAddingContent && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Añadir PDF
+                           {isAddingContent && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} {t.content.uploadChapter.button}
                         </Button>
                       </CardContent>
                     </Card>
@@ -491,17 +498,14 @@ export function TeacherDashboardUI() {
       <AlertDialog open={!!groupToDissolve} onOpenChange={(open) => !open && setGroupToDissolve(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción es permanente. El grupo se eliminará y los estudiantes
-              volverán a la lista de disponibles.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t.dissolveDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{t.dissolveDialog.description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t.dissolveDialog.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDissolve} disabled={isDissolving} className="bg-destructive hover:bg-destructive/90">
               {isDissolving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sí, disolver grupo
+              {t.dissolveDialog.confirm}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -517,24 +521,24 @@ export function TeacherDashboardUI() {
       }}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Administrar: {groupToManage?.name}</DialogTitle>
+            <DialogTitle>{t.manageDialog.title}: {groupToManage?.name}</DialogTitle>
           </DialogHeader>
           <Tabs defaultValue="add">
             <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="add" disabled={groupToManage?.type === 'privado'}><UserPlus className="mr-2 h-4 w-4" />Agregar Estudiantes</TabsTrigger>
-                <TabsTrigger value="remove"><UserX className="mr-2 h-4 w-4" />Eliminar Estudiantes</TabsTrigger>
+                <TabsTrigger value="add" disabled={groupToManage?.type === 'privado'}><UserPlus className="mr-2 h-4 w-4" />{t.manageDialog.addTab}</TabsTrigger>
+                <TabsTrigger value="remove"><UserX className="mr-2 h-4 w-4" />{t.manageDialog.removeTab}</TabsTrigger>
             </TabsList>
             <TabsContent value="add">
                 <Card>
-                    <CardHeader><CardDescription>Selecciona estudiantes disponibles para añadir al grupo.</CardDescription></CardHeader>
+                    <CardHeader><CardDescription>{t.manageDialog.addDescription}</CardDescription></CardHeader>
                     <CardContent>
                         <ScrollArea className="h-64">
                           <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-[50px]"></TableHead>
-                                    <TableHead>Nombre</TableHead>
-                                    <TableHead>Intereses</TableHead>
+                                    <TableHead>{t.students.table.name}</TableHead>
+                                    <TableHead>{t.students.table.interests}</TableHead>
                                 </TableRow>
                             </TableHeader>
                              <TableBody>
@@ -549,25 +553,25 @@ export function TeacherDashboardUI() {
                                 ))}
                              </TableBody>
                           </Table>
-                          {availableStudentsForGroup.length === 0 && <p className="p-4 text-center text-sm text-muted-foreground">No hay estudiantes disponibles con el plan de este grupo.</p>}
+                          {availableStudentsForGroup.length === 0 && <p className="p-4 text-center text-sm text-muted-foreground">{t.manageDialog.noAvailableStudents}</p>}
                         </ScrollArea>
                          <Button onClick={handleAddStudents} disabled={studentsToAdd.length === 0 || isManagingGroup} className="mt-4">
                             {isManagingGroup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Agregar Seleccionados
+                            {t.manageDialog.addButton}
                         </Button>
                     </CardContent>
                 </Card>
             </TabsContent>
             <TabsContent value="remove">
                  <Card>
-                    <CardHeader><CardDescription>Selecciona estudiantes para eliminar del grupo.</CardDescription></CardHeader>
+                    <CardHeader><CardDescription>{t.manageDialog.removeDescription}</CardDescription></CardHeader>
                     <CardContent>
                         <ScrollArea className="h-64">
                             <Table>
                                <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-[50px]"></TableHead>
-                                    <TableHead>Nombre</TableHead>
+                                    <TableHead>{t.students.table.name}</TableHead>
                                 </TableRow>
                             </TableHeader>
                              <TableBody>
@@ -584,7 +588,7 @@ export function TeacherDashboardUI() {
                         </ScrollArea>
                          <Button variant="destructive" onClick={handleRemoveStudents} disabled={studentsToRemove.length === 0 || isManagingGroup} className="mt-4">
                             {isManagingGroup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Eliminar Seleccionados
+                            {t.manageDialog.removeButton}
                         </Button>
                     </CardContent>
                 </Card>

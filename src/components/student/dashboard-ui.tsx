@@ -17,7 +17,8 @@ import { Label } from "../ui/label";
 import { Checkbox } from "../ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
+import { useLanguage } from "@/context/language-context";
 
 
 interface StudentDashboardData {
@@ -58,10 +59,16 @@ function PqrsDialog({ teacher, studentId, studentEmail }: { teacher: TeacherInte
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const { toast } = useToast();
+    const { language, translations } = useLanguage();
+    const t = translations.studentDashboard.pqrsDialog;
+    const t_toast = translations.studentDashboard.toasts;
+    
+    const dateLocale = language === 'es' ? es : enUS;
+    const lastInteractionText = t.lastInteraction.replace('{time}', formatDistanceToNow(new Date(teacher.lastInteraction), { addSuffix: true, locale: dateLocale }));
 
     const handleSubmit = async () => {
         if (!message.trim()) {
-            toast({ variant: 'destructive', description: 'El mensaje no puede estar vacío.' });
+            toast({ variant: 'destructive', description: t_toast.emptyMessage });
             return;
         }
         setIsSubmitting(true);
@@ -73,13 +80,13 @@ function PqrsDialog({ teacher, studentId, studentEmail }: { teacher: TeacherInte
                 message,
                 isAnonymous,
             });
-            toast({ title: 'Mensaje enviado', description: 'Tu PQRS ha sido enviado correctamente.' });
+            toast({ title: t_toast.pqrsSentTitle, description: t_toast.pqrsSentDescription });
             setMessage('');
             setIsAnonymous(false);
             setIsOpen(false);
         } catch (error) {
             console.error("Error submitting PQRS:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo enviar tu mensaje.' });
+            toast({ variant: 'destructive', title: t_toast.errorTitle, description: t_toast.errorDescription });
         } finally {
             setIsSubmitting(false);
         }
@@ -91,31 +98,31 @@ function PqrsDialog({ teacher, studentId, studentEmail }: { teacher: TeacherInte
                 <button className="block w-full text-left rounded-lg p-3 hover:bg-secondary">
                     <p className="font-semibold">{teacher.teacherName}</p>
                     <p className="text-sm text-muted-foreground">
-                        Última interacción: {formatDistanceToNow(new Date(teacher.lastInteraction), { addSuffix: true, locale: es })}
+                        {lastInteractionText}
                     </p>
                 </button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Enviar PQRS a {teacher.teacherName}</DialogTitle>
+                    <DialogTitle>{t.title.replace('{teacherName}', teacher.teacherName)}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label htmlFor="pqrs-message">Tu mensaje</Label>
-                        <Textarea id="pqrs-message" placeholder="Escribe tu petición, queja, reclamo o sugerencia aquí..." value={message} onChange={(e) => setMessage(e.target.value)} rows={6} />
+                        <Label htmlFor="pqrs-message">{t.messageLabel}</Label>
+                        <Textarea id="pqrs-message" placeholder={t.messagePlaceholder} value={message} onChange={(e) => setMessage(e.target.value)} rows={6} />
                     </div>
                     <div className="flex items-center space-x-2">
                         <Checkbox id="anonymous" checked={isAnonymous} onCheckedChange={(checked) => setIsAnonymous(!!checked)} />
                         <label htmlFor="anonymous" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                            Enviar como anónimo
+                            {t.anonymousLabel}
                         </label>
                     </div>
                 </div>
                 <DialogFooter>
-                    <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
+                    <DialogClose asChild><Button variant="ghost">{t.cancelButton}</Button></DialogClose>
                     <Button onClick={handleSubmit} disabled={isSubmitting}>
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Enviar Mensaje
+                        {t.submitButton}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -127,7 +134,9 @@ export function StudentDashboardUI() {
   const router = useRouter();
   const [data, setData] = useState<StudentDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
+  const { language, translations } = useLanguage();
+  const t = translations.studentDashboard;
+  
   useEffect(() => {
     const storedUser = localStorage.getItem("uncoverly-user");
     if (storedUser) {
@@ -161,7 +170,7 @@ export function StudentDashboardUI() {
   }, [router]);
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' });
+    return new Date(dateString).toLocaleString(language === 'es' ? 'es-ES' : 'en-US', { dateStyle: 'full', timeStyle: 'short' });
   };
   
   if (isLoading) {
@@ -178,7 +187,7 @@ export function StudentDashboardUI() {
 
   return (
     <div className="flex h-screen flex-col">
-      <DashboardHeader user={user || null} title="Panel de Estudiante" />
+      <DashboardHeader user={user || null} title={t.title} />
       <main className="flex-1 overflow-auto p-4 md:p-8">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Clases Programadas */}
@@ -187,22 +196,22 @@ export function StudentDashboardUI() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-6 w-6 text-primary" />
-                  <CardTitle className="font-headline text-xl">Clases Programadas</CardTitle>
+                  <CardTitle className="font-headline text-xl">{t.scheduledClasses.title}</CardTitle>
                 </div>
                  <FullScreenCard
                   trigger={<Button variant="ghost" size="icon"><Maximize className="h-4 w-4" /></Button>}
-                  title="Clases Programadas"
+                  title={t.scheduledClasses.title}
                 >
                   {content.scheduledClasses.length > 0 ? (
                     <ul className="space-y-4 p-4">
                       {content.scheduledClasses.map(c => (
                         <li key={c.id} className="rounded-lg border p-4">
                           <p className="font-semibold">{formatDate(c.time)}</p>
-                          <a href={c.link} target="_blank" rel="noopener noreferrer" className="text-sm text-accent hover:underline">Unirse a la clase</a>
+                          <a href={c.link} target="_blank" rel="noopener noreferrer" className="text-sm text-accent hover:underline">{t.scheduledClasses.joinButton}</a>
                         </li>
                       ))}
                     </ul>
-                  ) : <p className="p-4 text-center text-muted-foreground">No hay clases programadas.</p>}
+                  ) : <p className="p-4 text-center text-muted-foreground">{t.scheduledClasses.noClasses}</p>}
                 </FullScreenCard>
               </CardHeader>
               <CardContent>
@@ -212,12 +221,12 @@ export function StudentDashboardUI() {
                       <li key={c.id}>
                         <a href={c.link} target="_blank" rel="noopener noreferrer" className="block rounded-lg p-3 hover:bg-secondary">
                           <p className="font-semibold">{formatDate(c.time)}</p>
-                          <p className="text-sm text-accent hover:underline">Link de la clase</p>
+                          <p className="text-sm text-accent hover:underline">{t.scheduledClasses.classLink}</p>
                         </a>
                       </li>
                     ))}
                   </ul>
-                ) : <p className="text-center text-muted-foreground">No hay clases programadas.</p>}
+                ) : <p className="text-center text-muted-foreground">{t.scheduledClasses.noClasses}</p>}
               </CardContent>
             </Card>
           </motion.div>
@@ -228,11 +237,11 @@ export function StudentDashboardUI() {
               <CardHeader className="flex flex-row items-center justify-between">
                  <div className="flex items-center gap-2">
                   <Notebook className="h-6 w-6 text-primary" />
-                  <CardTitle className="font-headline text-xl">Notas</CardTitle>
+                  <CardTitle className="font-headline text-xl">{t.notes.title}</CardTitle>
                  </div>
                  <FullScreenCard
                     trigger={<Button variant="ghost" size="icon"><Maximize className="h-4 w-4" /></Button>}
-                    title="Notas de Clase"
+                    title={t.notes.fullScreenTitle}
                   >
                      {content.notes.length > 0 ? (
                         <ul className="space-y-2 p-4">
@@ -240,12 +249,12 @@ export function StudentDashboardUI() {
                             <li key={n.id}>
                                <a href={n.link} target="_blank" rel="noopener noreferrer" className="block rounded-lg border p-4 hover:bg-secondary">
                                   <p className="font-semibold">{n.title}</p>
-                                  <p className="text-sm text-accent hover:underline">Ver en Notion</p>
+                                  <p className="text-sm text-accent hover:underline">{t.notes.viewButton}</p>
                                </a>
                             </li>
                           ))}
                         </ul>
-                     ) : <p className="p-4 text-center text-muted-foreground">No hay notas disponibles.</p>}
+                     ) : <p className="p-4 text-center text-muted-foreground">{t.notes.noNotes}</p>}
                  </FullScreenCard>
               </CardHeader>
               <CardContent>
@@ -255,12 +264,12 @@ export function StudentDashboardUI() {
                       <li key={n.id}>
                         <a href={n.link} target="_blank" rel="noopener noreferrer" className="block rounded-lg p-3 hover:bg-secondary">
                           <p className="font-semibold">{n.title}</p>
-                          <p className="text-sm text-accent hover:underline">Ver en Notion</p>
+                          <p className="text-sm text-accent hover:underline">{t.notes.viewButton}</p>
                         </a>
                       </li>
                     ))}
                   </ul>
-                ) : <p className="text-center text-muted-foreground">No hay notas disponibles.</p>}
+                ) : <p className="text-center text-muted-foreground">{t.notes.noNotes}</p>}
               </CardContent>
             </Card>
           </motion.div>
@@ -271,9 +280,9 @@ export function StudentDashboardUI() {
               <CardHeader>
                   <div className="flex items-center gap-2">
                       <MessageCircleQuestion className="h-6 w-6 text-primary" />
-                      <CardTitle className="font-headline text-xl">PQRS</CardTitle>
+                      <CardTitle className="font-headline text-xl">{t.pqrs.title}</CardTitle>
                   </div>
-                  <CardDescription>Contacta a tus últimos profesores.</CardDescription>
+                  <CardDescription>{t.pqrs.description}</CardDescription>
               </CardHeader>
               <CardContent>
                 {teacherInteractions.length > 0 && user ? (
@@ -285,7 +294,7 @@ export function StudentDashboardUI() {
                         ))}
                     </ul>
                 ) : (
-                    <p className="text-center text-muted-foreground">Aún no has interactuado con profesores.</p>
+                    <p className="text-center text-muted-foreground">{t.pqrs.noInteractions}</p>
                 )}
               </CardContent>
             </Card>
