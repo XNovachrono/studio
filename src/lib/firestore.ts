@@ -1,10 +1,10 @@
 
 
 import { 
-    doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc, arrayRemove
+    doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc, arrayRemove, addDoc
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { User, StudentProfile, Group, StudentPlan } from "./types";
+import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage } from "./types";
 
 // Function to get a user profile
 export const getUserProfile = async (userId: string): Promise<User | null> => {
@@ -12,7 +12,16 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
     const userDocSnap = await getDoc(userDocRef);
 
     if (userDocSnap.exists()) {
-        return { id: userDocSnap.id, ...userDocSnap.data() } as User;
+        const userData = userDocSnap.data();
+        if (userData.teacherInteractions) {
+            userData.teacherInteractions = userData.teacherInteractions.map((interaction: any) => ({
+                ...interaction,
+                lastInteraction: interaction.lastInteraction instanceof Timestamp 
+                    ? interaction.lastInteraction.toDate().toISOString() 
+                    : interaction.lastInteraction,
+            }));
+        }
+        return { id: userDocSnap.id, ...userData } as User;
     }
     return null;
 }
@@ -26,7 +35,7 @@ export const updateUserProfile = async (userId: string, data: Partial<StudentPro
 // === Student Functions ===
 
 export const getStudentData = async (userId: string): Promise<{ user: StudentProfile, group: Group | null }> => {
-    // Get user profile
+    // Get user profile, which now includes teacher interactions
     const user = await getUserProfile(userId) as StudentProfile;
     if (!user) throw new Error("Student profile not found.");
 
@@ -51,6 +60,17 @@ export const getStudentData = async (userId: string): Promise<{ user: StudentPro
 
     return { user, group };
 }
+
+
+// Function to submit a PQRS message
+export const submitPQRS = async (pqrsData: Omit<PQRSMessage, 'createdAt'>): Promise<void> => {
+    const pqrsCollectionRef = collection(db, 'pqrs');
+    await addDoc(pqrsCollectionRef, {
+        ...pqrsData,
+        createdAt: Timestamp.now(),
+    });
+};
+
 
 // === Teacher Functions ===
 
@@ -96,7 +116,7 @@ export const getTeacherData = async (): Promise<{
 }
 
 // Function to create a new group
-export const createGroup = async (teacherId: string, students: {id: string, name: string}[], plan: StudentPlan) => {
+export const createGroup = async (teacher: User, students: {id: string, name: string}[], plan: StudentPlan) => {
     const studentIds = students.map(s => s.id);
     let groupName = "";
 
@@ -112,7 +132,8 @@ export const createGroup = async (teacherId: string, students: {id: string, name
     await setDoc(newGroupRef, {
         name: groupName,
         type: plan,
-        teacherId,
+        teacherId: teacher.id,
+        teacherName: teacher.name,
         studentIds,
         content: {
             scheduledClasses: [],
@@ -131,6 +152,11 @@ export const addContentToGroup = async (
     bookTitle?: string
 ) => {
     const groupRef = doc(db, "groups", groupId);
+    const groupSnap = await getDoc(groupRef);
+    if (!groupSnap.exists()) {
+        throw new Error("Group not found!");
+    }
+    const groupData = groupSnap.data() as Group;
 
     if (type === 'scheduledClass') {
         const classDate = new Date(data.time);
@@ -141,16 +167,44 @@ export const addContentToGroup = async (
                  time: Timestamp.fromDate(classDate) 
             })
         });
+
+        // NEW: Update teacher interaction for each student in the group
+        const batch = writeBatch(db);
+        const newInteraction: Omit<TeacherInteraction, 'lastInteraction'> = {
+            teacherId: groupData.teacherId,
+            teacherName: groupData.teacherName || 'Profesor(a)',
+        };
+
+        const studentsSnap = await getDocs(query(collection(db, 'users'), where('__name__', 'in', groupData.studentIds)));
+        
+        studentsSnap.forEach(studentDoc => {
+            const studentData = studentDoc.data() as StudentProfile;
+            let interactions = studentData.teacherInteractions || [];
+            
+            const existingInteractionIndex = interactions.findIndex(i => i.teacherId === newInteraction.teacherId);
+            
+            if (existingInteractionIndex > -1) {
+                // Update existing interaction
+                interactions[existingInteractionIndex].lastInteraction = Timestamp.now() as any;
+            } else {
+                // Add new interaction
+                interactions.push({ ...newInteraction, lastInteraction: Timestamp.now() as any });
+            }
+
+            // Keep only the 5 most recent interactions
+            interactions.sort((a, b) => (b.lastInteraction as any) - (a.lastInteraction as any));
+            const updatedInteractions = interactions.slice(0, 5);
+
+            batch.update(studentDoc.ref, { teacherInteractions: updatedInteractions });
+        });
+        await batch.commit();
+
+
     } else if (type === 'note') {
         await updateDoc(groupRef, {
             'content.notes': arrayUnion({ ...data, id: `n${Date.now()}` })
         });
     } else if (type === 'bookChapter') {
-        const groupSnap = await getDoc(groupRef);
-        if (!groupSnap.exists()) {
-            throw new Error("Group not found!");
-        }
-        const groupData = groupSnap.data() as Group;
         const books = groupData.content.books || [];
         
         if (data.bookId === 'new') {

@@ -167,7 +167,7 @@ export function TeacherDashboardUI() {
 
     try {
         const studentsToGroup = selectedStudentsData.map(s => ({ id: s.id, name: s.name }));
-        await createGroup(user.id, studentsToGroup, firstPlan);
+        await createGroup(user, studentsToGroup, firstPlan);
         toast({
             title: "Grupo creado",
             description: `Se ha creado un nuevo grupo.`,

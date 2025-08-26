@@ -4,20 +4,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { BookOpen, Calendar, Maximize, Notebook, Paperclip, Loader2 } from "lucide-react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Calendar, Maximize, Notebook, Loader2, MessageSquareQuestion } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, Group, StudentProfile } from "@/lib/types";
-import { getStudentData } from "@/lib/firestore";
+import type { User, Group, StudentProfile, TeacherInteraction } from "@/lib/types";
+import { getStudentData, submitPQRS } from "@/lib/firestore";
 import { Button } from "../ui/button";
+import { Textarea } from "../ui/textarea";
+import { Label } from "../ui/label";
+import { Checkbox } from "../ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
+
 
 interface StudentDashboardData {
     user: StudentProfile;
@@ -49,6 +50,77 @@ function FullScreenCard({ trigger, title, children }: { trigger: React.ReactNode
       </DialogContent>
     </Dialog>
   );
+}
+
+function PqrsDialog({ teacher, studentId, studentEmail }: { teacher: TeacherInteraction; studentId: string; studentEmail: string }) {
+    const [message, setMessage] = useState('');
+    const [isAnonymous, setIsAnonymous] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+    const { toast } = useToast();
+
+    const handleSubmit = async () => {
+        if (!message.trim()) {
+            toast({ variant: 'destructive', description: 'El mensaje no puede estar vacío.' });
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            await submitPQRS({
+                studentId,
+                studentEmail,
+                teacherId: teacher.teacherId,
+                message,
+                isAnonymous,
+            });
+            toast({ title: 'Mensaje enviado', description: 'Tu PQRS ha sido enviado correctamente.' });
+            setMessage('');
+            setIsAnonymous(false);
+            setIsOpen(false);
+        } catch (error) {
+            console.error("Error submitting PQRS:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo enviar tu mensaje.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <button className="block w-full text-left rounded-lg p-3 hover:bg-secondary">
+                    <p className="font-semibold">{teacher.teacherName}</p>
+                    <p className="text-sm text-muted-foreground">
+                        Última interacción: {formatDistanceToNow(new Date(teacher.lastInteraction), { addSuffix: true, locale: es })}
+                    </p>
+                </button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Enviar PQRS a {teacher.teacherName}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="pqrs-message">Tu mensaje</Label>
+                        <Textarea id="pqrs-message" placeholder="Escribe tu petición, queja, reclamo o sugerencia aquí..." value={message} onChange={(e) => setMessage(e.target.value)} rows={6} />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="anonymous" checked={isAnonymous} onCheckedChange={(checked) => setIsAnonymous(!!checked)} />
+                        <label htmlFor="anonymous" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            Enviar como anónimo
+                        </label>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
+                    <Button onClick={handleSubmit} disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Enviar Mensaje
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 }
 
 export function StudentDashboardUI() {
@@ -101,7 +173,8 @@ export function StudentDashboardUI() {
   }
 
   const user = data?.user;
-  const content = data?.group?.content || { scheduledClasses: [], notes: [], books: [] };
+  const content = data?.group?.content || { scheduledClasses: [], notes: [] };
+  const teacherInteractions = user?.teacherInteractions || [];
 
   return (
     <div className="flex h-screen flex-col">
@@ -192,67 +265,28 @@ export function StudentDashboardUI() {
             </Card>
           </motion.div>
 
-          {/* Libros */}
+          {/* PQRS */}
           <motion.div custom={2} initial="hidden" animate="visible" variants={cardVariants}>
             <Card className="h-full">
-              <CardHeader className="flex flex-row items-center justify-between">
-                 <div className="flex items-center gap-2">
-                  <BookOpen className="h-6 w-6 text-primary" />
-                  <CardTitle className="font-headline text-xl">Libros</CardTitle>
-                 </div>
-                 <FullScreenCard
-                    trigger={<Button variant="ghost" size="icon"><Maximize className="h-4 w-4" /></Button>}
-                    title="Material de Lectura"
-                  >
-                    <div className="p-4">
-                      {content.books.length > 0 ? (
-                        <Accordion type="single" collapsible className="w-full">
-                          {content.books.map(book => (
-                            <AccordionItem value={book.id} key={book.id}>
-                              <AccordionTrigger className="font-semibold">{book.title}</AccordionTrigger>
-                              <AccordionContent>
-                                {book.chapters.length > 0 ? (
-                                  <ul className="space-y-2 pt-2">
-                                    {book.chapters.map(ch => (
-                                      <li key={ch.id}>
-                                        <a href={ch.pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg p-2 hover:bg-secondary">
-                                          <Paperclip className="h-4 w-4" /> <span>{ch.name}</span>
-                                        </a>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : <p className="text-sm text-muted-foreground">No hay capítulos.</p>}
-                              </AccordionContent>
-                            </AccordionItem>
-                          ))}
-                        </Accordion>
-                      ) : <p className="text-center text-muted-foreground">No hay libros asignados.</p>}
-                    </div>
-                  </FullScreenCard>
+              <CardHeader>
+                  <div className="flex items-center gap-2">
+                      <MessageSquareQuestion className="h-6 w-6 text-primary" />
+                      <CardTitle className="font-headline text-xl">PQRS</CardTitle>
+                  </div>
+                  <CardDescription>Contacta a tus últimos profesores.</CardDescription>
               </CardHeader>
               <CardContent>
-                {content.books.length > 0 ? (
-                  <Accordion type="single" collapsible className="w-full">
-                    {content.books.map(book => (
-                      <AccordionItem value={book.id} key={book.id}>
-                        <AccordionTrigger>{book.title}</AccordionTrigger>
-                        <AccordionContent>
-                           {book.chapters.length > 0 ? (
-                            <ul className="space-y-1">
-                              {book.chapters.map(ch => (
-                                <li key={ch.id}>
-                                  <a href={ch.pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md p-2 text-sm hover:bg-secondary">
-                                    <Paperclip className="h-4 w-4 text-muted-foreground" /> {ch.name}
-                                  </a>
-                                </li>
-                              ))}
-                            </ul>
-                           ) : <p className="px-2 py-1 text-sm text-muted-foreground">No hay capítulos.</p>}
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                ) : <p className="text-center text-muted-foreground">No hay libros asignados.</p>}
+                {teacherInteractions.length > 0 && user ? (
+                    <ul className="space-y-2">
+                        {teacherInteractions.map(teacher => (
+                            <li key={teacher.teacherId}>
+                                <PqrsDialog teacher={teacher} studentId={user.id} studentEmail={user.email || ''} />
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <p className="text-center text-muted-foreground">Aún no has interactuado con profesores.</p>
+                )}
               </CardContent>
             </Card>
           </motion.div>

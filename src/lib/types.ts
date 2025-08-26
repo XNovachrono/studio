@@ -11,12 +11,19 @@ export interface User {
   email?: string;
 }
 
+export interface TeacherInteraction {
+  teacherId: string;
+  teacherName: string;
+  lastInteraction: string; // ISO date string
+}
+
 export interface StudentProfile extends User {
   age?: number;
   interests?: string[];
   availability?: string;
   objective?: string;
   objective_details?: string;
+  teacherInteractions?: TeacherInteraction[];
 }
 
 export interface Group {
@@ -25,6 +32,7 @@ export interface Group {
   type: StudentPlan;
   studentIds: string[];
   teacherId: string;
+  teacherName?: string; // It's useful to have it here
   content: GroupContent;
 }
 
@@ -56,4 +64,13 @@ export interface BookChapter {
   id: string;
   name: string;
   pdfUrl: string;
+}
+
+export interface PQRSMessage {
+    studentId: string;
+    studentEmail: string;
+    teacherId: string;
+    message: string;
+    isAnonymous: boolean;
+    createdAt: string; // ISO date string
 }
