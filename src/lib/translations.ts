@@ -61,7 +61,8 @@ export const translations = {
                 anonymousLabel: "Enviar como anónimo",
                 cancelButton: "Cancelar",
                 submitButton: "Enviar Mensaje",
-                lastInteraction: "Última interacción: {time}"
+                lastInteraction: "Última interacción: {time}",
+                teacherPrefix: "Teacher",
             },
             toasts: {
                 emptyMessage: "El mensaje no puede estar vacío.",
@@ -254,7 +255,8 @@ export const translations = {
                 anonymousLabel: "Send anonymously",
                 cancelButton: "Cancel",
                 submitButton: "Send Message",
-                lastInteraction: "Last interaction: {time}"
+                lastInteraction: "Last interaction: {time}",
+                teacherPrefix: "Teacher",
             },
             toasts: {
                 emptyMessage: "The message cannot be empty.",
@@ -387,3 +389,5 @@ export const translations = {
         }
     }
 };
+
+    

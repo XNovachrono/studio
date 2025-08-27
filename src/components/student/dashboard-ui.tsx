@@ -96,7 +96,7 @@ function PqrsDialog({ teacher, studentId, studentEmail }: { teacher: TeacherInte
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
                 <button className="block w-full text-left rounded-lg p-3 hover:bg-secondary">
-                    <p className="font-semibold">{teacher.teacherName}</p>
+                    <p className="font-semibold">{t.teacherPrefix} {teacher.teacherName}</p>
                     <p className="text-sm text-muted-foreground">
                         {lastInteractionText}
                     </p>
@@ -104,7 +104,7 @@ function PqrsDialog({ teacher, studentId, studentEmail }: { teacher: TeacherInte
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>{t.title.replace('{teacherName}', teacher.teacherName)}</DialogTitle>
+                    <DialogTitle>{t.title.replace('{teacherName}', `${t.teacherPrefix} ${teacher.teacherName}`)}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                     <div className="space-y-2">
@@ -295,7 +295,7 @@ export function StudentDashboardUI() {
                         {content.reminders.slice().reverse().map(r => (
                           <li key={r.id} className="rounded-lg border bg-card p-3">
                             <p className="text-sm text-foreground mb-2">{r.message}</p>
-                            <p className="text-xs text-muted-foreground text-right">{r.teacherName} - {formatReminderDate(r.sentAt)}</p>
+                            <p className="text-xs text-muted-foreground text-right">{t.pqrsDialog.teacherPrefix} {r.teacherName} - {formatReminderDate(r.sentAt)}</p>
                           </li>
                         ))}
                       </ul>
@@ -337,3 +337,5 @@ export function StudentDashboardUI() {
     </div>
   );
 }
+
+    
