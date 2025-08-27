@@ -178,7 +178,7 @@ export const addContentToGroup = async (
         const batch = writeBatch(db);
         const newInteraction: Omit<TeacherInteraction, 'lastInteraction'> = {
             teacherId: groupData.teacherId,
-            teacherName: groupData.teacherName,
+            teacherName: groupData.teacherName || "Teacher",
         };
 
         const studentsSnap = await getDocs(query(collection(db, 'users'), where('__name__', 'in', groupData.studentIds)));
@@ -213,7 +213,7 @@ export const addContentToGroup = async (
     } else if (type === 'reminder') {
         const newReminder: Omit<Reminder, 'id'> = {
             message: data.message,
-            teacherName: groupData.teacherName,
+            teacherName: groupData.teacherName || "Teacher",
             sentAt: Timestamp.now() as any,
         };
         await updateDoc(groupRef, {
