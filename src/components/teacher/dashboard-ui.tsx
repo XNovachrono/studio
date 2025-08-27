@@ -113,6 +113,7 @@ export function TeacherDashboardUI() {
   const [classLink, setClassLink] = useState('');
   const [classTime, setClassTime] = useState('');
   const [noteLink, setNoteLink] = useState('');
+  const [noteTitle, setNoteTitle] = useState('');
   const [reminderMessage, setReminderMessage] = useState('');
   const [isAddingContent, setIsAddingContent] = useState(false);
   
@@ -191,21 +192,21 @@ export function TeacherDashboardUI() {
   };
   
   const handleAddContent = async (type: 'class' | 'note' | 'reminder') => {
-    if (!selectedGroup) return;
+    if (!selectedGroup || !user) return;
     setIsAddingContent(true);
 
     try {
         let successMessage = "";
         if (type === 'class' && classLink && classTime) {
-            await addContentToGroup(selectedGroup, 'scheduledClass', { link: classLink, time: classTime });
+            await addContentToGroup(selectedGroup, 'scheduledClass', { link: classLink, time: classTime }, user.id);
             successMessage = t_toast.classAdded;
             setClassLink(''); setClassTime('');
-        } else if (type === 'note' && noteLink) {
-            await addContentToGroup(selectedGroup, 'note', { link: noteLink, title: `Nota - ${new Date().toLocaleDateString()}` });
+        } else if (type === 'note' && noteLink && noteTitle) {
+            await addContentToGroup(selectedGroup, 'note', { link: noteLink, title: noteTitle }, user.id);
             successMessage = t_toast.noteAdded;
-            setNoteLink('');
+            setNoteLink(''); setNoteTitle('');
         } else if (type === 'reminder' && reminderMessage) {
-             await addContentToGroup(selectedGroup, 'reminder', { message: reminderMessage });
+             await addContentToGroup(selectedGroup, 'reminder', { message: reminderMessage }, user.id);
              successMessage = t_toast.reminderAdded;
              setReminderMessage('');
         }
@@ -343,6 +344,7 @@ export function TeacherDashboardUI() {
                         checked={!!data && data.availableStudents.length > 0 && selectedStudentIds.length === data.availableStudents.length}
                         /></TableHead>
                         <TableHead>{t.students.table.name}</TableHead>
+                        <TableHead>{t.students.table.age}</TableHead>
                         <TableHead>{t.students.table.plan}</TableHead>
                         <TableHead>{t.students.table.interests}</TableHead>
                         <TableHead>{t.students.table.availability}</TableHead>
@@ -355,6 +357,7 @@ export function TeacherDashboardUI() {
                               setSelectedStudentIds(prev => checked ? [...prev, student.id] : prev.filter(id => id !== student.id));
                           }} /></TableCell>
                           <TableCell className="font-medium">{student.name}</TableCell>
+                          <TableCell>{student.age}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="capitalize">{student.plan}</Badge>
                           </TableCell>
@@ -454,11 +457,15 @@ export function TeacherDashboardUI() {
                      <Card>
                       <CardHeader><CardTitle className="flex items-center gap-2 text-lg font-semibold"><Notebook className="h-5 w-5"/> {t.content.uploadNote.title}</CardTitle></CardHeader>
                       <CardContent className="space-y-4">
+                         <div className="space-y-1">
+                          <Label htmlFor="note-title">{t.content.uploadNote.titleLabel}</Label>
+                          <Input id="note-title" value={noteTitle} onChange={e => setNoteTitle(e.target.value)} placeholder={t.content.uploadNote.titlePlaceholder} />
+                        </div>
                         <div className="space-y-1">
                           <Label htmlFor="note-link">{t.content.uploadNote.link}</Label>
                           <Input id="note-link" value={noteLink} onChange={e => setNoteLink(e.target.value)} placeholder="https://notion.so/..." />
                         </div>
-                        <Button onClick={() => handleAddContent('note')} size="sm" className="w-full" disabled={isAddingContent || !noteLink}>
+                        <Button onClick={() => handleAddContent('note')} size="sm" className="w-full" disabled={isAddingContent || !noteLink || !noteTitle}>
                            {isAddingContent && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} {t.content.uploadNote.button}
                         </Button>
                       </CardContent>
@@ -588,3 +595,5 @@ export function TeacherDashboardUI() {
     </div>
   );
 }
+
+    

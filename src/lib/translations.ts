@@ -42,7 +42,7 @@ export const translations = {
             notes: {
                 title: "Notas",
                 fullScreenTitle: "Notas de Clase",
-                viewButton: "Ver en Notion",
+                viewButton: "Ver Nota",
                 noNotes: "No hay notas disponibles."
             },
             reminders: {
@@ -85,6 +85,7 @@ export const translations = {
                 createGroupButton: "Crear Grupo",
                 table: {
                     name: "Nombre",
+                    age: "Edad",
                     plan: "Plan",
                     interests: "Intereses",
                     availability: "Disponibilidad"
@@ -110,7 +111,7 @@ export const translations = {
                 selectGroupPlaceholder: "Selecciona un grupo",
                 noGroupsOfType: "No existe grupo de este tipo",
                 uploadClass: { title: "Cargar Clase", link: "Link de clase", dateTime: "Fecha y hora", button: "Añadir Clase" },
-                uploadNote: { title: "Cargar Nota", link: "Link de Notion", button: "Añadir Nota" },
+                uploadNote: { title: "Cargar Nota", link: "Link de la nota", titleLabel: "Título de la nota", titlePlaceholder: "Ej: Clase 1 - Presente Simple", button: "Añadir Nota" },
                 uploadReminder: { title: "Enviar Recordatorio", message: "Mensaje", placeholder: "Escribe un consejo, sugerencia o recordatorio...", button: "Enviar Recordatorio" },
             },
             planTypes: {
@@ -236,7 +237,7 @@ export const translations = {
             notes: {
                 title: "Notes",
                 fullScreenTitle: "Class Notes",
-                viewButton: "View in Notion",
+                viewButton: "View Note",
                 noNotes: "No notes available."
             },
              reminders: {
@@ -279,6 +280,7 @@ export const translations = {
                 createGroupButton: "Create Group",
                 table: {
                     name: "Name",
+                    age: "Age",
                     plan: "Plan",
                     interests: "Interests",
                     availability: "Availability"
@@ -304,7 +306,7 @@ export const translations = {
                 selectGroupPlaceholder: "Select a group",
                 noGroupsOfType: "No groups of this type exist",
                 uploadClass: { title: "Upload Class", link: "Class link", dateTime: "Date and time", button: "Add Class" },
-                uploadNote: { title: "Upload Note", link: "Notion link", button: "Add Note" },
+                uploadNote: { title: "Upload Note", link: "Note link", titleLabel: "Note title", titlePlaceholder: "e.g. Class 1 - Simple Present", button: "Add Note" },
                 uploadReminder: { title: "Send Reminder", message: "Message", placeholder: "Write a piece of advice, a suggestion, or a reminder...", button: "Send Reminder" },
             },
              planTypes: {
