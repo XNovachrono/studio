@@ -189,6 +189,21 @@ export function StudentDashboardUI() {
   const user = data?.user;
   const content = data?.group?.content || { scheduledClasses: [], notes: [], reminders: [] };
   const teacherInteractions = user?.teacherInteractions || [];
+  
+  const RemindersContent = () => (
+    content.reminders && content.reminders.length > 0 ? (
+      <ul className="space-y-4 p-1">
+        {content.reminders.slice().reverse().map(r => (
+          <li key={r.id} className="rounded-lg border bg-card p-3">
+            <p className="text-sm text-foreground mb-2">{r.message}</p>
+            <p className="text-xs text-muted-foreground text-right">{t.pqrsDialog.teacherPrefix} {r.teacherName} - {formatReminderDate(r.sentAt)}</p>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="p-4 text-center text-muted-foreground">{t.reminders.noReminders}</p>
+    )
+  );
 
   return (
     <div className="flex h-screen flex-col">
@@ -282,23 +297,22 @@ export function StudentDashboardUI() {
           {/* Recordatorios */}
           <motion.div custom={2} initial="hidden" animate="visible" variants={cardVariants} className="md:col-span-2 lg:col-span-2 xl:col-span-1">
              <Card className="h-full">
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Lightbulb className="h-6 w-6 text-primary" />
                     <CardTitle className="font-headline text-xl">{t.reminders.title}</CardTitle>
                   </div>
+                   <FullScreenCard
+                      trigger={<Button variant="ghost" size="icon"><Maximize className="h-4 w-4" /></Button>}
+                      title={t.reminders.title}
+                    >
+                      <RemindersContent />
+                   </FullScreenCard>
                 </CardHeader>
                 <CardContent>
                   {content.reminders && content.reminders.length > 0 ? (
-                    <ScrollArea className="h-48">
-                      <ul className="space-y-4 pr-4">
-                        {content.reminders.slice().reverse().map(r => (
-                          <li key={r.id} className="rounded-lg border bg-card p-3">
-                            <p className="text-sm text-foreground mb-2">{r.message}</p>
-                            <p className="text-xs text-muted-foreground text-right">{t.pqrsDialog.teacherPrefix} {r.teacherName} - {formatReminderDate(r.sentAt)}</p>
-                          </li>
-                        ))}
-                      </ul>
+                    <ScrollArea className="h-48 pr-4">
+                      <RemindersContent />
                     </ScrollArea>
                   ) : (
                     <p className="text-center text-muted-foreground">{t.reminders.noReminders}</p>
@@ -337,5 +351,3 @@ export function StudentDashboardUI() {
     </div>
   );
 }
-
-    
