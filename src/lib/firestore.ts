@@ -175,10 +175,16 @@ export const addContentToGroup = async (
         });
 
         // Update teacher interaction for each student in the group
+        const teacherProfile = await getUserProfile(groupData.teacherId);
+        if (!teacherProfile) {
+            console.error("Teacher profile not found for interaction update.");
+            return;
+        }
+
         const batch = writeBatch(db);
         const newInteraction: Omit<TeacherInteraction, 'lastInteraction'> = {
             teacherId: groupData.teacherId,
-            teacherName: groupData.teacherName || "Teacher",
+            teacherName: teacherProfile.name, // Use the fetched teacher's name
         };
 
         const studentsSnap = await getDocs(query(collection(db, 'users'), where('__name__', 'in', groupData.studentIds)));
@@ -190,15 +196,19 @@ export const addContentToGroup = async (
             const existingInteractionIndex = interactions.findIndex(i => i.teacherId === newInteraction.teacherId);
             
             if (existingInteractionIndex > -1) {
-                // Update existing interaction
+                // Update existing interaction's timestamp
                 interactions[existingInteractionIndex].lastInteraction = Timestamp.now() as any;
             } else {
                 // Add new interaction
                 interactions.push({ ...newInteraction, lastInteraction: Timestamp.now() as any });
             }
 
-            // Keep only the 5 most recent interactions
-            interactions.sort((a, b) => (b.lastInteraction as any) - (a.lastInteraction as any));
+            // Keep only the 5 most recent interactions by sorting
+            interactions.sort((a, b) => {
+                const timeA = a.lastInteraction instanceof Timestamp ? a.lastInteraction.toMillis() : new Date(a.lastInteraction).getTime();
+                const timeB = b.lastInteraction instanceof Timestamp ? b.lastInteraction.toMillis() : new Date(b.lastInteraction).getTime();
+                return timeB - timeA;
+            });
             const updatedInteractions = interactions.slice(0, 5);
 
             batch.update(studentDoc.ref, { teacherInteractions: updatedInteractions });
@@ -213,7 +223,7 @@ export const addContentToGroup = async (
     } else if (type === 'reminder') {
         const newReminder: Omit<Reminder, 'id'> = {
             message: data.message,
-            teacherName: groupData.teacherName || "Teacher",
+            teacherName: groupData.teacherName,
             sentAt: Timestamp.now() as any,
         };
         await updateDoc(groupRef, {
