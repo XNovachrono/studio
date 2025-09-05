@@ -87,8 +87,10 @@ export const translations = {
                 notGrouped: "Sin grupo",
                 table: {
                     name: "Nombre",
+                    age: "Edad",
                     phone: "Teléfono",
                     email: "Email",
+                    plan: "Plan",
                     level: "Nivel",
                     duration: "Duración",
                     currentWeek: "Semana",
@@ -97,6 +99,7 @@ export const translations = {
                     status: "Estado",
                     group: "Grupo",
                     actions: "Acciones",
+                    interests: "Intereses",
                 }
             },
             groups: {
@@ -304,8 +307,10 @@ export const translations = {
                 notGrouped: "Ungrouped",
                 table: {
                     name: "Name",
+                    age: "Age",
                     phone: "Phone",
                     email: "Email",
+                    plan: "Plan",
                     level: "Level",
                     duration: "Duration",
                     currentWeek: "Week",
@@ -314,6 +319,7 @@ export const translations = {
                     status: "Status",
                     group: "Group",
                     actions: "Actions",
+                    interests: "Interests",
                 }
             },
             groups: {

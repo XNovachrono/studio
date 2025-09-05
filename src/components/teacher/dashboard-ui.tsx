@@ -398,18 +398,20 @@ export function TeacherDashboardUI() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[50px]">
-                            {!studentsInGroups.size ? (
-                                <Checkbox onCheckedChange={(checked) => {
-                                    if(checked === true) setSelectedStudentIds(data?.allStudents.filter(s => !studentsInGroups.has(s.id)).map(s => s.id) || []);
+                            <Checkbox 
+                                onCheckedChange={(checked) => {
+                                    const ungroupedIds = data?.allStudents.filter(s => !studentsInGroups.has(s.id)).map(s => s.id) || [];
+                                    if(checked === true) setSelectedStudentIds(ungroupedIds);
                                     else setSelectedStudentIds([]);
                                 }}
-                                checked={!!data && data.allStudents.filter(s => !studentsInGroups.has(s.id)).length > 0 && selectedStudentIds.length === data.allStudents.filter(s => !studentsInGroups.has(s.id)).length}
-                                />
-                            ) : null}
+                                checked={!!data && (data.allStudents.filter(s => !studentsInGroups.has(s.id)).length > 0) && selectedStudentIds.length === data.allStudents.filter(s => !studentsInGroups.has(s.id)).length}
+                            />
                         </TableHead>
                         <TableHead>{t.students.table.name}</TableHead>
+                        <TableHead>{t.students.table.age}</TableHead>
                         <TableHead>{t.students.table.phone}</TableHead>
                         <TableHead>{t.students.table.email}</TableHead>
+                        <TableHead>{t.students.table.plan}</TableHead>
                         <TableHead>{t.students.table.level}</TableHead>
                         <TableHead>{t.students.table.duration}</TableHead>
                         <TableHead>{t.students.table.currentWeek}</TableHead>
@@ -436,8 +438,10 @@ export function TeacherDashboardUI() {
                                 />
                             </TableCell>
                             <TableCell className="font-medium">{student.name}</TableCell>
+                            <TableCell>{student.age || '-'}</TableCell>
                             <TableCell>{student.phone || '-'}</TableCell>
                             <TableCell>{student.email || '-'}</TableCell>
+                            <TableCell><Badge variant="outline" className="capitalize">{student.plan || '-'}</Badge></TableCell>
                             <TableCell>{student.level || '-'}</TableCell>
                             <TableCell>{student.courseDuration ? `${student.courseDuration} sem` : '-'}</TableCell>
                             <TableCell>{courseInfo.currentWeek}</TableCell>
