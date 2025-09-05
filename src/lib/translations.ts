@@ -30,6 +30,36 @@ export const translations = {
         dashboardHeader: {
             themes: "Temas",
             logout: "Cerrar sesión",
+            dataSettings: "Ajuste de datos",
+        },
+        studentDataSettings: {
+            title: "Ajuste de Datos",
+            description: "Actualiza tu información personal y credenciales.",
+            tabs: {
+                personalInfo: "Información Personal",
+                credentials: "Credenciales",
+            },
+            phoneLabel: "Número de Teléfono",
+            emailLabel: "Correo Electrónico",
+            newPasswordLabel: "Nueva Contraseña",
+            currentPasswordLabel: "Contraseña Actual (para confirmar)",
+            credentialsNotice: "Para cambiar tu correo o contraseña, debes confirmar tu contraseña actual.",
+            cancelButton: "Cancelar",
+            saveButton: "Guardar Cambios",
+            validations: {
+                phoneRequired: "El teléfono es requerido.",
+                emailInvalid: "Por favor, introduce un correo válido.",
+                passwordLength: "La contraseña debe tener al menos 6 caracteres.",
+                currentPasswordRequired: "La contraseña actual es requerida.",
+            },
+            toasts: {
+                infoSuccessTitle: "Información Actualizada",
+                infoSuccessDescription: "Tu número de teléfono ha sido guardado.",
+                credentialsSuccessTitle: "Credenciales Actualizadas",
+                credentialsSuccessDescription: "Tu correo y contraseña han sido actualizados.",
+                errorTitle: "Error",
+                credentialsError: "No se pudieron actualizar las credenciales. Error: {message}",
+            }
         },
         studentDashboard: {
             title: "Panel de Estudiante",
@@ -250,6 +280,36 @@ export const translations = {
         dashboardHeader: {
             themes: "Themes",
             logout: "Log out",
+            dataSettings: "Data Settings",
+        },
+        studentDataSettings: {
+            title: "Data Settings",
+            description: "Update your personal information and credentials.",
+            tabs: {
+                personalInfo: "Personal Info",
+                credentials: "Credentials",
+            },
+            phoneLabel: "Phone Number",
+            emailLabel: "Email Address",
+            newPasswordLabel: "New Password",
+            currentPasswordLabel: "Current Password (to confirm)",
+            credentialsNotice: "To change your email or password, you must confirm your current password.",
+            cancelButton: "Cancel",
+            saveButton: "Save Changes",
+            validations: {
+                phoneRequired: "Phone is required.",
+                emailInvalid: "Please enter a valid email.",
+                passwordLength: "Password must be at least 6 characters.",
+                currentPasswordRequired: "Current password is required.",
+            },
+            toasts: {
+                infoSuccessTitle: "Information Updated",
+                infoSuccessDescription: "Your phone number has been saved.",
+                credentialsSuccessTitle: "Credentials Updated",
+                credentialsSuccessDescription: "Your email and password have been updated.",
+                errorTitle: "Error",
+                credentialsError: "Could not update credentials. Error: {message}",
+            }
         },
         studentDashboard: {
             title: "Student Dashboard",
@@ -441,5 +501,3 @@ export const translations = {
         }
     }
 };
-
-    

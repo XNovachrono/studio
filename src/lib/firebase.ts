@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, reauthenticateWithCredential, EmailAuthProvider, updateEmail, updatePassword } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // TODO: Add SDKs for Firebase products that you want to use
@@ -21,3 +21,23 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+
+export const updateUserCredentials = async (currentPassword: string, newEmail?: string, newPassword?: string) => {
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+        throw new Error("No user is currently signed in.");
+    }
+
+    // Re-authenticate the user
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+    await reauthenticateWithCredential(user, credential);
+
+    // After re-authentication, update email and/or password
+    if (newEmail && newEmail !== user.email) {
+        await updateEmail(user, newEmail);
+    }
+    if (newPassword) {
+        await updatePassword(user, newPassword);
+    }
+};

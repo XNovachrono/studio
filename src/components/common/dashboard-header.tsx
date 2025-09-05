@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Palette, User as UserIcon } from "lucide-react";
+import { LogOut, Palette, User as UserIcon, Settings } from "lucide-react";
 import { Logo } from "./logo";
 import {
   DropdownMenu,
@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { User } from "@/lib/types";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { ThemeCustomizer } from "./theme-customizer";
+import { StudentDataSettings } from "@/components/student/student-data-settings";
 import { useLanguage } from "@/context/language-context";
 
 interface DashboardHeaderProps {
@@ -27,6 +28,7 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ user, title }: DashboardHeaderProps) {
   const router = useRouter();
   const [isThemeCustomizerOpen, setIsThemeCustomizerOpen] = useState(false);
+  const [isDataSettingsOpen, setIsDataSettingsOpen] = useState(false);
   const { translations } = useLanguage();
 
   const handleLogout = () => {
@@ -70,6 +72,12 @@ export function DashboardHeader({ user, title }: DashboardHeaderProps) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {user.role === 'student' && (
+                  <DropdownMenuItem onSelect={() => setIsDataSettingsOpen(true)} className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>{translations.dashboardHeader.dataSettings}</span>
+                  </DropdownMenuItem>
+                )}
                 <DialogTrigger asChild>
                   <DropdownMenuItem className="cursor-pointer">
                     <Palette className="mr-2 h-4 w-4" />
@@ -87,6 +95,7 @@ export function DashboardHeader({ user, title }: DashboardHeaderProps) {
         </div>
       </header>
       <ThemeCustomizer />
+      {user?.role === 'student' && <StudentDataSettings user={user} isOpen={isDataSettingsOpen} onOpenChange={setIsDataSettingsOpen} />}
     </Dialog>
   );
 }
