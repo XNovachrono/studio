@@ -62,7 +62,7 @@ const GroupSection = ({ title, groups, studentsById, onDissolve, onManage, onVie
                   <Badge variant="secondary" className="capitalize">{group.type}</Badge>
                 </CardDescription>
               </div>
-               <DropdownMenu onOpenChange={(e) => e.stopPropagation()} >
+               <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <MoreVertical className="h-4 w-4" />
