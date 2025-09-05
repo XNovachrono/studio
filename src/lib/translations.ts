@@ -80,15 +80,23 @@ export const translations = {
                 content: "Contenido",
             },
             students: {
-                title: "Lista de Estudiantes Individuales",
-                description: "Selecciona estudiantes para crear un nuevo grupo.",
+                title: "Lista de Estudiantes",
+                description: "Selecciona estudiantes sin grupo para crear uno nuevo.",
                 createGroupButton: "Crear Grupo",
+                grouped: "En grupo",
+                notGrouped: "Sin grupo",
                 table: {
                     name: "Nombre",
-                    age: "Edad",
-                    plan: "Plan",
-                    interests: "Intereses",
-                    availability: "Disponibilidad"
+                    phone: "Teléfono",
+                    email: "Email",
+                    level: "Nivel",
+                    duration: "Duración",
+                    currentWeek: "Semana",
+                    startDate: "Inicio",
+                    endDate: "Fin",
+                    status: "Estado",
+                    group: "Grupo",
+                    actions: "Acciones",
                 }
             },
             groups: {
@@ -125,6 +133,16 @@ export const translations = {
                 cancel: "Cancelar",
                 confirm: "Sí, disolver grupo"
             },
+             editStudentDialog: {
+                title: "Editar {studentName}",
+                level: "Nivel",
+                levelPlaceholder: "Seleccionar nivel",
+                startDate: "Fecha de Inicio",
+                duration: "Duración (sem)",
+                durationPlaceholder: "Ej: 16",
+                cancel: "Cancelar",
+                save: "Guardar Cambios",
+            },
             manageDialog: {
                 title: "Administrar",
                 addTab: "Agregar Estudiantes",
@@ -158,7 +176,10 @@ export const translations = {
                  removeAllStudentsError: "No puedes eliminar a todos los miembros. Si quieres, disuelve el grupo.",
                  studentsRemovedTitle: "Estudiantes eliminados",
                  studentsRemovedDescription: "Los estudiantes han sido eliminados del grupo.",
-                 removeStudentsError: "No se pudieron eliminar los estudiantes."
+                 removeStudentsError: "No se pudieron eliminar los estudiantes.",
+                 studentUpdatedTitle: "Estudiante actualizado",
+                 studentUpdatedDescription: "Los detalles del estudiante han sido guardados.",
+                 studentUpdateError: "No se pudo actualizar al estudiante.",
             }
         },
         onboardingWizard: {
@@ -172,6 +193,7 @@ export const translations = {
                     description2: "Vamos a configurar tu perfil para personalizar tu aprendizaje."
                 },
                 email: { title: "Tu correo electrónico" },
+                phone: { title: "Tu número de teléfono" },
                 age: { title: "¿Cuál es tu edad?" },
                 interests: { title: "Tus intereses", description: "Selecciona de 1 a 3 categorías." },
                 availability: { 
@@ -275,15 +297,23 @@ export const translations = {
                 content: "Content",
             },
             students: {
-                title: "Individual Students List",
-                description: "Select students to create a new group.",
+                title: "Students List",
+                description: "Select ungrouped students to create a new group.",
                 createGroupButton: "Create Group",
+                grouped: "Grouped",
+                notGrouped: "Ungrouped",
                 table: {
                     name: "Name",
-                    age: "Age",
-                    plan: "Plan",
-                    interests: "Interests",
-                    availability: "Availability"
+                    phone: "Phone",
+                    email: "Email",
+                    level: "Level",
+                    duration: "Duration",
+                    currentWeek: "Week",
+                    startDate: "Start",
+                    endDate: "End",
+                    status: "Status",
+                    group: "Group",
+                    actions: "Actions",
                 }
             },
             groups: {
@@ -320,6 +350,16 @@ export const translations = {
                 cancel: "Cancel",
                 confirm: "Yes, dissolve group"
             },
+            editStudentDialog: {
+                title: "Edit {studentName}",
+                level: "Level",
+                levelPlaceholder: "Select level",
+                startDate: "Start Date",
+                duration: "Duration (wks)",
+                durationPlaceholder: "e.g. 16",
+                cancel: "Cancel",
+                save: "Save Changes",
+            },
             manageDialog: {
                 title: "Manage",
                 addTab: "Add Students",
@@ -353,7 +393,10 @@ export const translations = {
                  removeAllStudentsError: "You cannot remove all members. Dissolve the group instead.",
                  studentsRemovedTitle: "Students removed",
                  studentsRemovedDescription: "The students have been removed from the group.",
-                 removeStudentsError: "Could not remove the students."
+                 removeStudentsError: "Could not remove the students.",
+                 studentUpdatedTitle: "Student updated",
+                 studentUpdatedDescription: "The student's details have been saved.",
+                 studentUpdateError: "Could not update the student.",
             }
         },
          onboardingWizard: {
@@ -367,6 +410,7 @@ export const translations = {
                     description2: "Let's set up your profile to personalize your learning."
                 },
                 email: { title: "Your email address" },
+                phone: { title: "Your phone number" },
                 age: { title: "What is your age?" },
                 interests: { title: "Your interests", description: "Select 1 to 3 categories." },
                 availability: { 

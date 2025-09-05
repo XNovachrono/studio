@@ -83,7 +83,6 @@ export const submitPQRS = async (pqrsData: Omit<PQRSMessage, 'createdAt'>): Prom
 
 export const getTeacherData = async (): Promise<{
     teacher: User | null,
-    availableStudents: StudentProfile[],
     groups: Group[],
     allStudents: StudentProfile[],
 }> => {
@@ -93,7 +92,7 @@ export const getTeacherData = async (): Promise<{
     const allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() })) as User[];
     
     const teacher = allUsers.find(u => u.role === 'teacher') || null;
-    const allStudents = allUsers.filter(u => u.role === 'student') as StudentProfile[];
+    const allStudents = allUsers.filter(u => u.role === 'student' && u.hasOnboarded) as StudentProfile[];
 
     // 2. Get all groups
     const groupsRef = collection(db, "groups");
@@ -110,13 +109,8 @@ export const getTeacherData = async (): Promise<{
         return { id: d.id, ...groupData };
     });
 
-    // 3. Determine available students (those not in any group)
-    const studentsInGroups = new Set(groups.flatMap(g => g.studentIds));
-    const availableStudents = allStudents.filter(s => s.hasOnboarded && !studentsInGroups.has(s.id));
-
     return {
         teacher,
-        availableStudents,
         groups,
         allStudents,
     }
@@ -253,3 +247,15 @@ export const removeStudentsFromGroup = async (groupId: string, studentIds: strin
         studentIds: arrayRemove(...studentIds)
     });
 };
+
+// Function for teacher to update student details
+export const updateStudentDetails = async (studentId: string, data: { level: string, courseStartDate: string, courseDuration: number }): Promise<void> => {
+    const studentRef = doc(db, "users", studentId);
+    await updateDoc(studentRef, {
+        level: data.level,
+        courseStartDate: data.courseStartDate,
+        courseDuration: data.courseDuration,
+    });
+};
+
+    

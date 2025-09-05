@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import { useLanguage } from "@/context/language-context";
 
-const steps = ["welcome", "email", "age", "interests", "availability", "objective", "finish"];
+const steps = ["welcome", "email", "phone", "age", "interests", "availability", "objective", "finish"];
 
 type OnboardingFormData = Omit<StudentProfile, 'id' | 'username' | 'name' | 'role' | 'plan' | 'hasOnboarded' | 'availability'> & {
     availability_days: string[];
@@ -56,6 +56,7 @@ export function OnboardingWizard() {
   
   const [formData, setFormData] = useState<OnboardingFormData>({
     email: "",
+    phone: "",
     age: 30,
     interests: [] as string[],
     availability_days: [],
@@ -76,15 +77,15 @@ export function OnboardingWizard() {
   }, [router]);
 
   const handleNext = () => {
-    if (currentStep === 3 && formData.interests.length === 0) {
+    if (currentStep === 4 && formData.interests.length === 0) {
       toast({ variant: "destructive", description: t_toast.selectOneInterest });
       return;
     }
-     if (currentStep === 3 && formData.interests.length > 3) {
+     if (currentStep === 4 && formData.interests.length > 3) {
       toast({ variant: "destructive", description: t_toast.selectMaxThreeInterests });
       return;
     }
-    if (currentStep === 4 && formData.availability_days.length === 0) {
+    if (currentStep === 5 && formData.availability_days.length === 0) {
         toast({ variant: "destructive", description: t_toast.selectOneDay });
         return;
     }
@@ -186,6 +187,15 @@ export function OnboardingWizard() {
             <CardHeader><CardTitle className="font-headline">{stepContent.title}</CardTitle></CardHeader>
             <CardContent>
               <Input type="email" placeholder="email@example.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+            </CardContent>
+          </>
+        );
+        case "phone":
+        return (
+          <>
+            <CardHeader><CardTitle className="font-headline">{stepContent.title}</CardTitle></CardHeader>
+            <CardContent>
+              <Input type="tel" placeholder="+1234567890" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
             </CardContent>
           </>
         );
@@ -320,3 +330,5 @@ export function OnboardingWizard() {
     </Card>
   );
 }
+
+    

@@ -1,3 +1,4 @@
+
 export type UserRole = 'student' | 'teacher';
 export type StudentPlan = 'privado' | 'grupo pequeño' | 'grupo grande';
 
@@ -19,11 +20,15 @@ export interface TeacherInteraction {
 
 export interface StudentProfile extends User {
   age?: number;
+  phone?: string;
   interests?: string[];
   availability?: string;
   objective?: string;
   objective_details?: string;
   teacherInteractions?: TeacherInteraction[];
+  level?: string;
+  courseStartDate?: string; // YYYY-MM-DD
+  courseDuration?: number; // in weeks
 }
 
 export interface Group {
@@ -69,3 +74,5 @@ export interface PQRSMessage {
     isAnonymous: boolean;
     createdAt: string; // ISO date string
 }
+
+    

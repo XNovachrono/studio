@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Lightbulb, Calendar, FilePlus, Loader2, MoreVertical, Notebook, PlusCircle, Trash2, UserPlus, UserX, Users } from "lucide-react";
+import { Lightbulb, Calendar, FilePlus, Loader2, MoreVertical, Notebook, PlusCircle, Trash2, UserPlus, UserX, Users, Edit } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,18 +16,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User, StudentProfile, Group, StudentPlan } from "@/lib/types";
-import { getTeacherData, createGroup, addContentToGroup, dissolveGroup, addStudentsToGroup, removeStudentsFromGroup } from "@/lib/firestore";
+import { getTeacherData, createGroup, addContentToGroup, dissolveGroup, addStudentsToGroup, removeStudentsFromGroup, updateStudentDetails } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "../ui/dialog";
 import { ScrollArea } from "../ui/scroll-area";
 import { useLanguage } from "@/context/language-context";
 import { Textarea } from "../ui/textarea";
 
 interface TeacherDashboardData {
     teacher: User | null;
-    availableStudents: StudentProfile[];
     groups: Group[];
     allStudents: StudentProfile[];
 }
@@ -39,6 +38,8 @@ interface GroupSectionProps {
   onDissolve: (groupId: string) => void;
   onManage: (group: Group) => void;
 }
+
+const ENGLISH_LEVELS = ["A1", "A1.5", "A2", "A2.5", "B1", "B1.5", "C1", "C1.5", "C2"];
 
 const GroupSection = ({ title, groups, studentsById, onDissolve, onManage }: GroupSectionProps) => {
   const { translations } = useLanguage();
@@ -127,6 +128,10 @@ export function TeacherDashboardUI() {
   const [studentsToRemove, setStudentsToRemove] = useState<string[]>([]);
   const [isManagingGroup, setIsManagingGroup] = useState(false);
 
+  // State for editing student
+  const [studentToEdit, setStudentToEdit] = useState<StudentProfile | null>(null);
+  const [editFormData, setEditFormData] = useState({ level: '', courseStartDate: '', courseDuration: 0 });
+  const [isUpdatingStudent, setIsUpdatingStudent] = useState(false);
 
   const fetchDashboardData = async () => {
       try {
@@ -156,6 +161,16 @@ export function TeacherDashboardUI() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
+
+  useEffect(() => {
+    if (studentToEdit) {
+      setEditFormData({
+        level: studentToEdit.level || '',
+        courseStartDate: studentToEdit.courseStartDate || '',
+        courseDuration: studentToEdit.courseDuration || 0,
+      });
+    }
+  }, [studentToEdit]);
 
   const handleCreateGroup = async () => {
     if (selectedStudentIds.length === 0 || !user || !data) return;
@@ -198,15 +213,15 @@ export function TeacherDashboardUI() {
     try {
         let successMessage = "";
         if (type === 'class' && classLink && classTime) {
-            await addContentToGroup(selectedGroup, 'scheduledClass', { link: classLink, time: classTime }, user.id);
+            await addContentToGroup(selectedGroup, 'scheduledClass', { link: classLink, time: classTime });
             successMessage = t_toast.classAdded;
             setClassLink(''); setClassTime('');
         } else if (type === 'note' && noteLink && noteTitle) {
-            await addContentToGroup(selectedGroup, 'note', { link: noteLink, title: noteTitle }, user.id);
+            await addContentToGroup(selectedGroup, 'note', { link: noteLink, title: noteTitle });
             successMessage = t_toast.noteAdded;
             setNoteLink(''); setNoteTitle('');
         } else if (type === 'reminder' && reminderMessage) {
-             await addContentToGroup(selectedGroup, 'reminder', { message: reminderMessage }, user.id);
+             await addContentToGroup(selectedGroup, 'reminder', { message: reminderMessage });
              successMessage = t_toast.reminderAdded;
              setReminderMessage('');
         }
@@ -285,6 +300,49 @@ export function TeacherDashboardUI() {
     }
   };
 
+  const handleUpdateStudentDetails = async () => {
+    if (!studentToEdit) return;
+    setIsUpdatingStudent(true);
+    try {
+      await updateStudentDetails(studentToEdit.id, editFormData);
+      toast({ title: t_toast.studentUpdatedTitle, description: t_toast.studentUpdatedDescription });
+      setStudentToEdit(null);
+      await fetchDashboardData();
+    } catch (error) {
+      console.error("Error updating student:", error);
+      toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.studentUpdateError });
+    } finally {
+      setIsUpdatingStudent(false);
+    }
+  };
+
+  const getStudentCourseInfo = (student: StudentProfile) => {
+    const { courseStartDate, courseDuration } = student;
+    if (!courseStartDate || !courseDuration) {
+      return { endDate: '-', currentWeek: '-', status: '-' };
+    }
+
+    const startDate = new Date(courseStartDate);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + courseDuration * 7);
+
+    const now = new Date();
+    const currentWeek = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 7)) + 1;
+    
+    let status = 'Finalizado';
+    if (now >= startDate && now <= endDate) {
+      status = 'Activo';
+    } else if (now < startDate) {
+      status = 'Próximo';
+    }
+
+    return {
+      endDate: endDate.toLocaleDateString(),
+      currentWeek: currentWeek > 0 && currentWeek <= courseDuration ? currentWeek : '-',
+      status: status,
+    };
+  };
+
   const studentsById = useMemo(() => new Map(data?.allStudents.map(s => [s.id, s])), [data?.allStudents]);
   
   const privateGroups = useMemo(() => data?.groups.filter(g => g.type === 'privado') || [], [data?.groups]);
@@ -298,7 +356,8 @@ export function TeacherDashboardUI() {
   
   const availableStudentsForGroup = useMemo(() => {
     if (!groupToManage || !data) return [];
-    return data.availableStudents.filter(s => s.plan === groupToManage.type);
+    const studentsInGroups = new Set(data.groups.flatMap(g => g.studentIds));
+    return data.allStudents.filter(s => s.plan === groupToManage.type && !studentsInGroups.has(s.id));
   }, [groupToManage, data]);
 
   const currentGroupMembers = useMemo(() => {
@@ -306,6 +365,7 @@ export function TeacherDashboardUI() {
     return data.allStudents.filter(s => groupToManage.studentIds.includes(s.id));
   }, [groupToManage, data]);
 
+  const studentsInGroups = useMemo(() => new Set(data?.groups.flatMap(g => g.studentIds)), [data?.groups]);
 
   if (isLoading) {
     return (
@@ -337,34 +397,68 @@ export function TeacherDashboardUI() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[50px]"><Checkbox onCheckedChange={(checked) => {
-                            if(checked === true) setSelectedStudentIds(data?.availableStudents.map(s => s.id) || []);
-                            else setSelectedStudentIds([]);
-                        }}
-                        checked={!!data && data.availableStudents.length > 0 && selectedStudentIds.length === data.availableStudents.length}
-                        /></TableHead>
+                        <TableHead className="w-[50px]">
+                            {!studentsInGroups.size ? (
+                                <Checkbox onCheckedChange={(checked) => {
+                                    if(checked === true) setSelectedStudentIds(data?.allStudents.filter(s => !studentsInGroups.has(s.id)).map(s => s.id) || []);
+                                    else setSelectedStudentIds([]);
+                                }}
+                                checked={!!data && data.allStudents.filter(s => !studentsInGroups.has(s.id)).length > 0 && selectedStudentIds.length === data.allStudents.filter(s => !studentsInGroups.has(s.id)).length}
+                                />
+                            ) : null}
+                        </TableHead>
                         <TableHead>{t.students.table.name}</TableHead>
-                        <TableHead>{t.students.table.age}</TableHead>
-                        <TableHead>{t.students.table.plan}</TableHead>
-                        <TableHead>{t.students.table.interests}</TableHead>
-                        <TableHead>{t.students.table.availability}</TableHead>
+                        <TableHead>{t.students.table.phone}</TableHead>
+                        <TableHead>{t.students.table.email}</TableHead>
+                        <TableHead>{t.students.table.level}</TableHead>
+                        <TableHead>{t.students.table.duration}</TableHead>
+                        <TableHead>{t.students.table.currentWeek}</TableHead>
+                        <TableHead>{t.students.table.startDate}</TableHead>
+                        <TableHead>{t.students.table.endDate}</TableHead>
+                        <TableHead>{t.students.table.status}</TableHead>
+                        <TableHead>{t.students.table.group}</TableHead>
+                        <TableHead>{t.students.table.actions}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data?.availableStudents.map(student => (
-                        <TableRow key={student.id}>
-                          <TableCell><Checkbox checked={selectedStudentIds.includes(student.id)} onCheckedChange={(checked) => {
-                              setSelectedStudentIds(prev => checked ? [...prev, student.id] : prev.filter(id => id !== student.id));
-                          }} /></TableCell>
-                          <TableCell className="font-medium">{student.name}</TableCell>
-                          <TableCell>{student.age}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="capitalize">{student.plan}</Badge>
-                          </TableCell>
-                          <TableCell>{student.interests?.join(', ')}</TableCell>
-                          <TableCell>{student.availability}</TableCell>
-                        </TableRow>
-                      ))}
+                      {data?.allStudents.map(student => {
+                         const isGrouped = studentsInGroups.has(student.id);
+                         const courseInfo = getStudentCourseInfo(student);
+                         return (
+                            <TableRow key={student.id}>
+                            <TableCell>
+                                <Checkbox 
+                                    checked={selectedStudentIds.includes(student.id)} 
+                                    onCheckedChange={(checked) => {
+                                        setSelectedStudentIds(prev => checked ? [...prev, student.id] : prev.filter(id => id !== student.id));
+                                    }} 
+                                    disabled={isGrouped}
+                                />
+                            </TableCell>
+                            <TableCell className="font-medium">{student.name}</TableCell>
+                            <TableCell>{student.phone || '-'}</TableCell>
+                            <TableCell>{student.email || '-'}</TableCell>
+                            <TableCell>{student.level || '-'}</TableCell>
+                            <TableCell>{student.courseDuration ? `${student.courseDuration} sem` : '-'}</TableCell>
+                            <TableCell>{courseInfo.currentWeek}</TableCell>
+                            <TableCell>{student.courseStartDate ? new Date(student.courseStartDate).toLocaleDateString() : '-'}</TableCell>
+                            <TableCell>{courseInfo.endDate}</TableCell>
+                            <TableCell>
+                                <Badge variant={courseInfo.status === 'Activo' ? 'default' : 'secondary'}>{courseInfo.status}</Badge>
+                            </TableCell>
+                            <TableCell>
+                                <Badge variant={isGrouped ? 'outline' : 'secondary'}>
+                                {isGrouped ? t.students.grouped : t.students.notGrouped}
+                                </Badge>
+                            </TableCell>
+                            <TableCell>
+                                <Button variant="ghost" size="icon" onClick={() => setStudentToEdit(student)}>
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                            </TableCell>
+                            </TableRow>
+                        )
+                      })}
                     </TableBody>
                   </Table>
                 </div>
@@ -590,6 +684,58 @@ export function TeacherDashboardUI() {
                 </Card>
             </TabsContent>
           </Tabs>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog for Editing Student */}
+      <Dialog open={!!studentToEdit} onOpenChange={(open) => !open && setStudentToEdit(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t.editStudentDialog.title.replace('{studentName}', studentToEdit?.name || '')}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="level" className="text-right">{t.editStudentDialog.level}</Label>
+              <Select value={editFormData.level} onValueChange={(value) => setEditFormData(prev => ({ ...prev, level: value }))}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder={t.editStudentDialog.levelPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {ENGLISH_LEVELS.map(level => (
+                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="courseStartDate" className="text-right">{t.editStudentDialog.startDate}</Label>
+                <Input
+                    id="courseStartDate"
+                    type="date"
+                    value={editFormData.courseStartDate}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, courseStartDate: e.target.value }))}
+                    className="col-span-3"
+                />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="courseDuration" className="text-right">{t.editStudentDialog.duration}</Label>
+                <Input
+                    id="courseDuration"
+                    type="number"
+                    value={editFormData.courseDuration}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, courseDuration: parseInt(e.target.value, 10) || 0 }))}
+                    className="col-span-3"
+                    placeholder={t.editStudentDialog.durationPlaceholder}
+                />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="ghost">{t.editStudentDialog.cancel}</Button></DialogClose>
+            <Button onClick={handleUpdateStudentDetails} disabled={isUpdatingStudent}>
+              {isUpdatingStudent && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t.editStudentDialog.save}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
