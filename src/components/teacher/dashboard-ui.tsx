@@ -150,7 +150,9 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange }: { gro
             <DialogContent className="max-w-lg">
                 <DialogHeader>
                     <DialogTitle>{group.name}</DialogTitle>
-                    <DialogDescription><Badge variant="secondary" className="capitalize">{group.type}</Badge></DialogDescription>
+                    <DialogDescription>
+                      <Badge variant="secondary" className="capitalize">{group.type}</Badge>
+                    </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
                     <h4 className="font-semibold text-md mb-2">{t.members}:</h4>
