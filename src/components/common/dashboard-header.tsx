@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { User } from "@/lib/types";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { ThemeCustomizer } from "./theme-customizer";
 import { StudentDataSettings } from "@/components/student/student-data-settings";
 import { useLanguage } from "@/context/language-context";
@@ -78,12 +78,10 @@ export function DashboardHeader({ user, title }: DashboardHeaderProps) {
                     <span>{translations.dashboardHeader.dataSettings}</span>
                   </DropdownMenuItem>
                 )}
-                <DialogTrigger asChild>
-                  <DropdownMenuItem className="cursor-pointer">
-                    <Palette className="mr-2 h-4 w-4" />
-                    <span>{translations.dashboardHeader.themes}</span>
-                  </DropdownMenuItem>
-                </DialogTrigger>
+                <DropdownMenuItem onSelect={() => setIsThemeCustomizerOpen(true)} className="cursor-pointer">
+                  <Palette className="mr-2 h-4 w-4" />
+                  <span>{translations.dashboardHeader.themes}</span>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
