@@ -412,6 +412,7 @@ export function TeacherDashboardUI() {
                         <TableHead>{t.students.table.phone}</TableHead>
                         <TableHead>{t.students.table.email}</TableHead>
                         <TableHead>{t.students.table.plan}</TableHead>
+                        <TableHead>{t.students.table.interests}</TableHead>
                         <TableHead>{t.students.table.level}</TableHead>
                         <TableHead>{t.students.table.duration}</TableHead>
                         <TableHead>{t.students.table.currentWeek}</TableHead>
@@ -442,6 +443,7 @@ export function TeacherDashboardUI() {
                             <TableCell>{student.phone || '-'}</TableCell>
                             <TableCell>{student.email || '-'}</TableCell>
                             <TableCell><Badge variant="outline" className="capitalize">{student.plan || '-'}</Badge></TableCell>
+                            <TableCell className="max-w-[200px] truncate">{student.interests?.join(', ') || '-'}</TableCell>
                             <TableCell>{student.level || '-'}</TableCell>
                             <TableCell>{student.courseDuration ? `${student.courseDuration} sem` : '-'}</TableCell>
                             <TableCell>{courseInfo.currentWeek}</TableCell>
@@ -745,5 +747,3 @@ export function TeacherDashboardUI() {
     </div>
   );
 }
-
-    
