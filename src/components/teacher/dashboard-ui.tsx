@@ -504,13 +504,11 @@ export function TeacherDashboardUI() {
                         <TableHead>{t.students.table.startDate}</TableHead>
                         <TableHead>{t.students.table.endDate}</TableHead>
                         <TableHead>{t.students.table.status}</TableHead>
-                        <TableHead>{t.students.table.group}</TableHead>
                         <TableHead>{t.students.table.actions}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data?.allStudents.map(student => {
-                         const isGrouped = studentsInGroups.has(student.id);
+                      {data?.allStudents.filter(student => !studentsInGroups.has(student.id)).map(student => {
                          const courseInfo = getStudentCourseInfo(student);
                          return (
                             <TableRow key={student.id}>
@@ -520,7 +518,6 @@ export function TeacherDashboardUI() {
                                     onCheckedChange={(checked) => {
                                         setSelectedStudentIds(prev => checked ? [...prev, student.id] : prev.filter(id => id !== student.id));
                                     }} 
-                                    disabled={isGrouped}
                                 />
                             </TableCell>
                             <TableCell className="font-medium">{student.name}</TableCell>
@@ -546,11 +543,6 @@ export function TeacherDashboardUI() {
                             <TableCell>{courseInfo.endDate}</TableCell>
                             <TableCell>
                                 <Badge variant={courseInfo.status === 'Activo' ? 'default' : 'secondary'}>{courseInfo.status}</Badge>
-                            </TableCell>
-                            <TableCell>
-                                <Badge variant={isGrouped ? 'outline' : 'secondary'}>
-                                {isGrouped ? t.students.grouped : t.students.notGrouped}
-                                </Badge>
                             </TableCell>
                             <TableCell>
                                 <Button variant="ghost" size="icon" onClick={() => setStudentToEdit(student)}>
