@@ -119,14 +119,8 @@ export const getTeacherData = async (): Promise<{
 // Function to create a new group
 export const createGroup = async (teacher: User, students: {id: string, name: string}[], plan: StudentPlan) => {
     const studentIds = students.map(s => s.id);
-    let groupName = "";
-
-    if (plan === 'privado' && students.length === 1) {
-        groupName = `Clase Privada - ${students[0].name}`;
-    } else {
-        const groupNumber = Math.floor(1000 + Math.random() * 9000);
-        groupName = `Grupo ${groupNumber}`;
-    }
+    const studentNames = students.map(s => s.name);
+    const groupName = studentNames.join(', ');
 
     const newGroupRef = doc(collection(db, "groups"));
     
