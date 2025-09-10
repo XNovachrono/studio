@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Download, Edit, Loader2, PlusCircle, RefreshCw, Trash2, Upload } from "lucide-react";
 import {
   Card,
@@ -37,26 +37,30 @@ export function FileBank({ user, bankType }: FileBankProps) {
   const { toast } = useToast();
   
   const [files, setFiles] = useState<BankCard[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [hasFetched, setHasFetched] = useState(false);
 
   const fetchFiles = async () => {
     setIsLoading(true);
     setError(null);
-    setHasFetched(true);
     try {
       const fetchedFiles = await getBankFiles(user.id, bankType);
       setFiles(fetchedFiles);
     } catch (err: any) {
       console.error(`Error fetching ${bankType} bank files:`, err);
       setError(err.message || t.errors.loadError);
+      toast({ variant: "destructive", title: t.errors.errorTitle, description: err.message || t.errors.loadError });
     } finally {
       setIsLoading(false);
     }
   };
+  
+  useEffect(() => {
+    fetchFiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.id, bankType]);
 
   const handleFileSelect = () => {
     fileInputRef.current?.click();
@@ -94,19 +98,8 @@ export function FileBank({ user, bankType }: FileBankProps) {
 
 
   const renderContent = () => {
-    if (!hasFetched) {
-        return (
-            <div className="text-center p-4">
-                <Button onClick={fetchFiles} disabled={isLoading}>
-                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                    Cargar archivos
-                </Button>
-            </div>
-        );
-    }
-
     if (isLoading) {
-      return <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+      return <div className="flex justify-center p-4"><Loader2 className="h-6 w-6 animate-spin" /></div>;
     }
     
     if (error) {

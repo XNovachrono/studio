@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, PlusCircle, Trash2, Edit, RefreshCw } from "lucide-react";
 import {
   Card,
@@ -46,27 +46,31 @@ export function CardBank({ user, bankType }: CardBankProps) {
   const { toast } = useToast();
 
   const [cards, setCards] = useState<BankCard[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start loading immediately
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<Partial<BankCard> | null>(null);
-  const [hasFetched, setHasFetched] = useState(false);
 
   const fetchCards = async () => {
     setIsLoading(true);
     setError(null);
-    setHasFetched(true);
     try {
       const fetchedCards = await getBankCards(user.id, bankType);
       setCards(fetchedCards);
     } catch (err: any) {
       console.error(`Error fetching ${bankType} bank cards:`, err);
       setError(err.message || t.errors.loadError);
+      toast({ variant: "destructive", title: t.errors.errorTitle, description: err.message || t.errors.loadError });
     } finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCards();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.id, bankType]); // Refetch when bankType changes
 
   const handleOpenModal = (card: BankCard | null = null) => {
     if (card) {
@@ -121,19 +125,8 @@ export function CardBank({ user, bankType }: CardBankProps) {
   }
 
   const renderContent = () => {
-    if (!hasFetched) {
-        return (
-            <div className="text-center p-4">
-                <Button onClick={fetchCards} disabled={isLoading}>
-                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                    Cargar tarjetas
-                </Button>
-            </div>
-        );
-    }
-
     if (isLoading) {
-      return <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+      return <div className="flex justify-center p-4"><Loader2 className="h-6 w-6 animate-spin" /></div>;
     }
 
     if (error) {
