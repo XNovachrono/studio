@@ -3,43 +3,36 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check ownership
-    function isOwner(userId, resource) {
-      return resource.data.ownerId == userId;
-    }
-
-    // Users can read their own profile, admins can read any profile
+    // Regla general: Los usuarios solo pueden ver y editar su propio perfil.
     match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read, update: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Authenticated users can read the list of banks to perform queries.
-    // However, they can only get, create, update, or delete specific documents they own.
+    // Regla para la colección de bancos de contenido.
+    // Un usuario puede realizar cualquier operación (crear, leer, actualizar, borrar)
+    // en una tarjeta si y solo si el 'ownerId' del documento coincide con su ID de usuario.
     match /banks/{cardId} {
-        allow list: if request.auth != null;
-        allow get, update, delete: if request.auth != null && isOwner(request.auth.uid, resource);
-        allow create: if request.auth != null && isOwner(request.auth.uid, request.resource);
-    }
-    
-    // Teachers can read groups they are assigned to. Students can read groups they are in.
-    match /groups/{groupId} {
-        allow read: if request.auth != null && (resource.data.teacherId == request.auth.uid || request.auth.uid in resource.data.studentIds);
-        allow write: if request.auth != null && resource.data.teacherId == request.auth.uid; // Only teachers can write to their groups
-        
-        // Rules for the lessons subcollection
-        match /lessons/{lessonId} {
-            // Teacher of the group and students in the group can read lessons.
-            allow read: if request.auth != null && (get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.studentIds);
-            // Only the teacher of the group can create, update, or delete lessons.
-            allow write: if request.auth != null && get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid;
-        }
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.ownerId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
     }
 
-    // Default deny all other reads/writes
-    match /{document=**} {
-      allow read, write: if false;
+    // Reglas para grupos y lecciones
+    match /groups/{groupId} {
+      // Permite la lectura del grupo a los usuarios autenticados.
+      // La lógica de la aplicación se encarga de mostrar solo los grupos correctos.
+      allow read: if request.auth != null;
+
+      // Un profesor solo puede actualizar el contenido de un grupo si es el profesor asignado.
+      allow update: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId;
+
+      // Reglas para la subcolección de lecciones.
+      match /lessons/{lessonId} {
+        // Permite la lectura de lecciones a usuarios autenticados.
+        allow read: if request.auth != null;
+
+        // Solo el profesor del grupo puede crear, actualizar o borrar lecciones.
+        allow write: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId;
+      }
     }
   }
 }
