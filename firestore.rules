@@ -1,26 +1,29 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Regla de seguridad simple: Solo usuarios autenticados pueden leer y escribir.
-    // La lógica de negocio (quién ve qué) se maneja en las consultas de la aplicación.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    // Users can only read and write to their own user document.
+    match /users/{userId} {
+      allow read, update: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Regla específica y segura para la colección de bancos.
-    // Esto anula la regla general anterior para esta colección específica.
+    // Any authenticated user can read groups and their subcollections (like lessons).
+    // Writes are also allowed for authenticated users.
+    // The application logic ensures that only the correct users (teachers) can perform these actions.
+    match /groups/{groupId}/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Users can only read, create, update, or delete bank cards that they own.
     match /bank_cards/{cardId} {
-      // Un usuario puede leer, actualizar o borrar un documento...
-      allow read, update, delete: if request.auth != null && 
-                                    // ...solo si el 'ownerId' del documento existente coincide con su propio ID.
-                                    resource.data.ownerId == request.auth.uid;
-      // Un usuario puede crear un nuevo documento...
-      allow create: if request.auth != null && 
-                      // ...solo si el 'ownerId' del nuevo documento que se está creando coincide con su propio ID.
-                      request.resource.data.ownerId == request.auth.uid;
+      allow read, delete, update: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+    }
+
+    // Fallback rule: deny all other access
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
