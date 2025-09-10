@@ -2,9 +2,10 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -485,7 +486,7 @@ export function TeacherDashboardUI({ user }: TeacherDashboardUIProps) {
   return (
     <div className="flex h-screen flex-col">
       <DashboardHeader user={user} title={t.title} />
-      <main className="flex-1 overflow-auto p-4 md:p-8">
+      <main className="flex-1 overflow-auto p-4 md:p-8 space-y-8">
         <Card>
           <CardHeader>
             <CardTitle className="font-headline">{t.groups.title}</CardTitle>
@@ -498,6 +499,20 @@ export function TeacherDashboardUI({ user }: TeacherDashboardUIProps) {
                 <p className="text-center text-muted-foreground">{t.groups.noGroups}</p>
              )}
           </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle className="font-headline">{t.banks.title}</CardTitle>
+                <CardDescription>{t.banks.description}</CardDescription>
+            </CardHeader>
+            <CardFooter>
+                 <Button asChild>
+                    <Link href="/teacher/banks">
+                       {t.banks.button} <ChevronRight className="ml-2 h-4 w-4" />
+                    </Link>
+                </Button>
+            </CardFooter>
         </Card>
       </main>
       

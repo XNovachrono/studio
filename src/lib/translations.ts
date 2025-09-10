@@ -24,7 +24,7 @@ export const translations = {
                     title: "Banco de Objetivos",
                     description: "Crea, edita y gestiona tarjetas de objetivos reutilizables para tus clases.",
                 },
-                classes: {
+                class: {
                      title: "Banco de Clases",
                     description: "Crea, edita y gestiona tarjetas de clases reutilizables.",
                 },
@@ -242,6 +242,11 @@ export const translations = {
                 viewGroup: "Ver lecciones",
                 editGroup: "Gestionar miembros",
             },
+            banks: {
+                title: "Bancos de Contenido",
+                description: "Gestiona tu material reutilizable para clases, tareas y objetivos.",
+                button: "Gestionar Bancos"
+            },
             lessons: {
                 newLesson: "Nueva Lección",
                 saveChanges: "Guardar Cambios",
@@ -348,7 +353,7 @@ export const translations = {
                     title: "Objectives Bank",
                     description: "Create, edit, and manage reusable objective cards for your classes.",
                 },
-                classes: {
+                class: {
                     title: "Classes Bank",
                     description: "Create, edit, and manage reusable class cards.",
                 },
@@ -565,6 +570,11 @@ export const translations = {
                 viewData: "View data",
                 viewGroup: "View lessons",
                 editGroup: "Manage members",
+            },
+            banks: {
+                title: "Content Banks",
+                description: "Manage your reusable material for classes, homework, and objectives.",
+                button: "Manage Banks"
             },
             lessons: {
                 newLesson: "New Lesson",

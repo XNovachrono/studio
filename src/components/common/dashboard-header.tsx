@@ -65,9 +65,6 @@ export function DashboardHeader({ user, title }: DashboardHeaderProps) {
                 <Button variant="ghost" asChild>
                     <Link href={getDashboardUrl()}><Home className="mr-2"/>{translations.dashboardHeader.dashboard}</Link>
                 </Button>
-                <Button variant="ghost" asChild>
-                    <Link href="/teacher/banks"><Library className="mr-2"/>{translations.dashboardHeader.banks}</Link>
-                </Button>
             </nav>
           )}
 
