@@ -55,11 +55,11 @@ const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: Student
 
     const studentData = [
         { label: t.name, value: student.name },
+        { label: t.plan, value: student.plan, isBadge: true },
+        { label: t.level, value: student.level },
         { label: t.age, value: student.age },
         { label: t.email, value: student.email },
         { label: t.phone, value: student.phone },
-        { label: t.plan, value: student.plan, isBadge: true },
-        { label: t.level, value: student.level },
         { label: t.interests, value: student.interests?.join(', ') },
         { label: t.objective, value: student.objective },
         { label: t.availability, value: student.availability },
