@@ -60,7 +60,6 @@ export function ObjectiveBank({ user }: ObjectiveBankProps) {
     } catch (error) {
       console.error("Error fetching bank cards:", error);
       setError(t_toast.loadError);
-      toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.loadError });
     } finally {
       setIsLoading(false);
     }
@@ -120,7 +119,7 @@ export function ObjectiveBank({ user }: ObjectiveBankProps) {
     }
     if (error) {
       return (
-        <Alert variant="destructive" className="mt-4">
+        <Alert variant="destructive">
           <AlertTitle>{t_toast.errorTitle}</AlertTitle>
           <AlertDescription>
             <p>{error}</p>
