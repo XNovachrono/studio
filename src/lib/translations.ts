@@ -19,11 +19,11 @@ export const translations = {
                 audios: "Banco de Audios",
             },
             cardBank: {
-                objectives: {
+                objective: {
                     title: "Banco de Objetivos",
                     description: "Crea, edita y gestiona tarjetas de objetivos reutilizables para tus clases.",
                 },
-                classes: {
+                class: {
                      title: "Banco de Clases",
                     description: "Crea, edita y gestiona tarjetas de clases reutilizables.",
                 },
@@ -312,11 +312,11 @@ export const translations = {
                 audios: "Audio Bank",
             },
             cardBank: {
-                objectives: {
+                objective: {
                     title: "Objectives Bank",
                     description: "Create, edit, and manage reusable objective cards for your classes.",
                 },
-                classes: {
+                class: {
                     title: "Classes Bank",
                     description: "Create, edit, and manage reusable class cards.",
                 },
@@ -589,3 +589,4 @@ export const translations = {
 };
 
     
+
