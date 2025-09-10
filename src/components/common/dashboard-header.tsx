@@ -56,6 +56,14 @@ export function DashboardHeader({ user, title }: DashboardHeaderProps) {
           <div className="hidden md:block">
               <Logo />
           </div>
+          <nav className="hidden md:flex items-center gap-4">
+             <Link href={getDashboardUrl()} passHref>
+                <Button variant="ghost" className="text-sm font-medium">
+                    <Home className="mr-2 h-4 w-4"/>
+                    {translations.dashboardHeader.dashboard}
+                </Button>
+            </Link>
+          </nav>
           <h1 className="text-xl font-semibold text-foreground md:hidden">{title}</h1>
         </div>
         
