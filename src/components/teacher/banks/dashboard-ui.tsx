@@ -9,6 +9,20 @@ import type { User } from "@/lib/types";
 import { useLanguage } from "@/context/language-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectiveBank } from "./objective-bank";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+const NotImplemented = ({ title }: { title: string }) => (
+    <Card>
+        <CardHeader>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>Esta sección estará disponible próximamente.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <p className="text-center text-muted-foreground">Próximamente...</p>
+        </CardContent>
+    </Card>
+)
+
 
 export function BanksDashboardUI() {
   const router = useRouter();
@@ -48,14 +62,29 @@ export function BanksDashboardUI() {
         <Tabs defaultValue="objectives">
           <TabsList>
             <TabsTrigger value="objectives">{t.tabs.objectives}</TabsTrigger>
-            <TabsTrigger value="classes" disabled>{t.tabs.classes}</TabsTrigger>
-            <TabsTrigger value="homework" disabled>{t.tabs.homework}</TabsTrigger>
-            <TabsTrigger value="images" disabled>{t.tabs.images}</TabsTrigger>
-            <TabsTrigger value="videos" disabled>{t.tabs.videos}</TabsTrigger>
-            <TabsTrigger value="audios" disabled>{t.tabs.audios}</TabsTrigger>
+            <TabsTrigger value="classes">{t.tabs.classes}</TabsTrigger>
+            <TabsTrigger value="homework">{t.tabs.homework}</TabsTrigger>
+            <TabsTrigger value="images">{t.tabs.images}</TabsTrigger>
+            <TabsTrigger value="videos">{t.tabs.videos}</TabsTrigger>
+            <TabsTrigger value="audios">{t.tabs.audios}</TabsTrigger>
           </TabsList>
           <TabsContent value="objectives" className="mt-4">
             <ObjectiveBank user={user} />
+          </TabsContent>
+           <TabsContent value="classes" className="mt-4">
+            <NotImplemented title={t.tabs.classes} />
+          </TabsContent>
+           <TabsContent value="homework" className="mt-4">
+            <NotImplemented title={t.tabs.homework} />
+          </TabsContent>
+           <TabsContent value="images" className="mt-4">
+            <NotImplemented title={t.tabs.images} />
+          </TabsContent>
+           <TabsContent value="videos" className="mt-4">
+            <NotImplemented title={t.tabs.videos} />
+          </TabsContent>
+           <TabsContent value="audios" className="mt-4">
+            <NotImplemented title={t.tabs.audios} />
           </TabsContent>
         </Tabs>
       </main>

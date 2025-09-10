@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, PlusCircle, Trash2, Edit } from "lucide-react";
+import { Loader2, PlusCircle, Trash2, Edit, RefreshCw } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -20,6 +20,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -40,21 +41,26 @@ interface ObjectiveBankProps {
 export function ObjectiveBank({ user }: ObjectiveBankProps) {
   const { translations } = useLanguage();
   const t = translations.banksDashboard.objectiveBank;
+  const t_toast = t.toasts;
   const { toast } = useToast();
 
   const [cards, setCards] = useState<BankCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<Partial<BankCard> | null>(null);
 
   const fetchCards = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const fetchedCards = await getBankCards(user.id, 'objective');
       setCards(fetchedCards);
     } catch (error) {
-      toast({ variant: "destructive", title: t.toasts.errorTitle, description: t.toasts.loadError });
+      console.error("Error fetching bank cards:", error);
+      setError(t_toast.loadError);
+      toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.loadError });
     } finally {
       setIsLoading(false);
     }
@@ -76,23 +82,23 @@ export function ObjectiveBank({ user }: ObjectiveBankProps) {
 
   const handleSaveCard = async () => {
     if (!editingCard || !editingCard.name || !editingCard.content) {
-      toast({ variant: "destructive", description: t.toasts.nameRequired });
+      toast({ variant: "destructive", description: t_toast.nameRequired });
       return;
     }
     setIsSaving(true);
     try {
       if (editingCard.id) {
         await updateBankCard(editingCard.id, editingCard);
-        toast({ title: t.toasts.updateSuccessTitle });
+        toast({ title: t_toast.updateSuccessTitle });
       } else {
         await createBankCard(editingCard as Omit<BankCard, 'id' | 'createdAt'>);
-        toast({ title: t.toasts.createSuccessTitle });
+        toast({ title: t_toast.createSuccessTitle });
       }
       await fetchCards();
       setIsModalOpen(false);
       setEditingCard(null);
     } catch (error) {
-      toast({ variant: "destructive", title: t.toasts.errorTitle, description: t.toasts.saveError });
+      toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.saveError });
     } finally {
       setIsSaving(false);
     }
@@ -101,12 +107,57 @@ export function ObjectiveBank({ user }: ObjectiveBankProps) {
   const handleDeleteCard = async (cardId: string) => {
       try {
           await deleteBankCard(cardId);
-          toast({ title: t.toasts.deleteSuccessTitle });
+          toast({ title: t_toast.deleteSuccessTitle });
           await fetchCards();
       } catch (error) {
-           toast({ variant: "destructive", title: t.toasts.errorTitle, description: t.toasts.deleteError });
+           toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.deleteError });
       }
   }
+
+  const renderContent = () => {
+    if (isLoading) {
+      return <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+    }
+    if (error) {
+      return (
+        <Alert variant="destructive" className="mt-4">
+          <AlertTitle>{t_toast.errorTitle}</AlertTitle>
+          <AlertDescription>
+            <p>{error}</p>
+            <Button variant="link" onClick={fetchCards} className="p-0 mt-2 h-auto text-destructive-foreground">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Reintentar
+            </Button>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    if (cards.length > 0) {
+      return (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {cards.map(card => (
+            <Card key={card.id}>
+              <CardHeader>
+                <CardTitle className="truncate">{card.name}</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                <p>{t.createdAt}: {new Date(card.createdAt).toLocaleDateString()}</p>
+              </CardContent>
+              <CardFooter className="flex justify-end gap-2">
+                <Button variant="outline" size="icon" onClick={() => handleOpenModal(card)}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button variant="destructive" size="icon" onClick={() => handleDeleteCard(card.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      );
+    }
+    return <p className="text-center text-muted-foreground">{t.noCards}</p>;
+  };
 
   return (
     <Card>
@@ -123,32 +174,7 @@ export function ObjectiveBank({ user }: ObjectiveBankProps) {
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
-        ) : cards.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {cards.map(card => (
-              <Card key={card.id}>
-                <CardHeader>
-                  <CardTitle className="truncate">{card.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground">
-                  <p>{t.createdAt}: {new Date(card.createdAt).toLocaleDateString()}</p>
-                </CardContent>
-                <CardFooter className="flex justify-end gap-2">
-                    <Button variant="outline" size="icon" onClick={() => handleOpenModal(card)}>
-                        <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="destructive" size="icon" onClick={() => handleDeleteCard(card.id)}>
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <p className="text-center text-muted-foreground">{t.noCards}</p>
-        )}
+        {renderContent()}
       </CardContent>
 
       {/* Edit/Create Modal */}
