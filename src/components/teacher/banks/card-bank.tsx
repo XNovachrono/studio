@@ -83,20 +83,20 @@ export function CardBank({ user, bankType }: CardBankProps) {
       return;
     }
     
-    // Ensure ownerId is set for new cards
-    const cardToSave = {
-        ...editingCard,
+    const cardToSave: Omit<BankCard, 'id' | 'createdAt'> = {
+        name: editingCard.name,
+        content: editingCard.content,
         ownerId: user.id,
         type: bankType,
     };
 
     setIsSaving(true);
     try {
-      if (cardToSave.id) {
-        await updateBankCard(cardToSave.id, cardToSave);
+      if (editingCard.id) {
+        await updateBankCard(editingCard.id, cardToSave);
         toast({ title: t.toasts.updateSuccessTitle });
       } else {
-        await createBankCard(cardToSave as Omit<BankCard, 'id' | 'createdAt'>);
+        await createBankCard(cardToSave);
         toast({ title: t.toasts.createSuccessTitle });
       }
       await fetchCards();
