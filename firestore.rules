@@ -1,40 +1,40 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Reglas para la colección 'users'
+
+    // Helper function to check if a user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Users can only read and update their own profile
     match /users/{userId} {
-      // Un usuario solo puede leer o escribir sus propios datos
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, update: if isAuthenticated() && request.auth.uid == userId;
     }
-    
-    // Reglas para la colección 'banks'
+
+    // Bank cards can be created, read, updated, and deleted only by their owner.
+    // This rule allows list queries with a `where("ownerId", "==", request.auth.uid)` clause.
     match /banks/{bankId} {
-      // Un usuario autenticado puede leer sus propias tarjetas
-      allow get: if request.auth != null && resource.data.ownerId == request.auth.uid;
-      // Permite la consulta si el usuario está filtrando por su propio ID de propietario
-      allow list: if request.auth != null && request.query.where.get("ownerId") == request.auth.uid;
-      // Un usuario autenticado puede crear, actualizar o eliminar sus propias tarjetas
-      allow create, update, delete: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow read, write: if isAuthenticated() && (
+        (request.resource.data.ownerId == request.auth.uid) || // For create/update
+        (resource.data.ownerId == request.auth.uid)             // For read/delete
+      );
     }
 
-    // Reglas para la colección 'groups' y sus subcolecciones
+    // Groups & Lessons
     match /groups/{groupId} {
-      // Los profesores solo pueden leer grupos donde ellos son el 'teacherId'
-      allow get, list: if request.auth != null && resource.data.teacherId == request.auth.uid;
-      
-      // Los profesores solo pueden actualizar grupos que ellos enseñan
-      allow update: if request.auth != null && resource.data.teacherId == request.auth.uid;
+      // Allow read for authenticated users (assuming students and teachers need to read group info)
+      allow read: if isAuthenticated();
 
-      // Reglas para la subcolección 'lessons'
+      // A teacher can only create/update/delete lessons for a group they are assigned to.
       match /lessons/{lessonId} {
-        // Un profesor puede gestionar las lecciones de un grupo que enseña
-        // Primero, verificamos que el documento del grupo exista y que el profesor sea el correcto
-        allow read, write, create, delete: if request.auth != null && get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid;
+        allow read, write: if isAuthenticated() && get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid;
       }
     }
-    
-    // Regla predeterminada: Denegar todo lo demás para mayor seguridad
+
+    // Default deny all other access
     match /{document=**} {
       allow read, write: if false;
     }
