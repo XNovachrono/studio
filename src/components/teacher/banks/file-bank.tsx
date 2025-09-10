@@ -1,23 +1,23 @@
 
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { Loader2, PlusCircle, Trash2, Edit, RefreshCw, Upload, Download } from "lucide-react";
+import { useRef, useState } from "react";
+import { Download, Edit, Loader2, PlusCircle, RefreshCw, Trash2, Upload } from "lucide-react";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useToast } from "@/hooks/use-toast";
-import type { User, BankCard } from "@/lib/types";
-import { useLanguage } from "@/context/language-context";
-import { getBankFiles, uploadBankFile, deleteBankFile } from "@/lib/firestore";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/context/language-context";
+import { deleteBankFile, getBankFiles, uploadBankFile } from "@/lib/firestore";
+import type { BankCard, User } from "@/lib/types";
 
 interface FileBankProps {
   user: User;
@@ -37,29 +37,26 @@ export function FileBank({ user, bankType }: FileBankProps) {
   const { toast } = useToast();
   
   const [files, setFiles] = useState<BankCard[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [hasFetched, setHasFetched] = useState(false);
 
   const fetchFiles = async () => {
     setIsLoading(true);
     setError(null);
+    setHasFetched(true);
     try {
       const fetchedFiles = await getBankFiles(user.id, bankType);
       setFiles(fetchedFiles);
-    } catch (err) {
+    } catch (err: any) {
       console.error(`Error fetching ${bankType} bank files:`, err);
-      setError(t.errors.loadError);
+      setError(err.message || t.errors.loadError);
     } finally {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchFiles();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user.id, bankType]);
 
   const handleFileSelect = () => {
     fileInputRef.current?.click();
@@ -97,6 +94,17 @@ export function FileBank({ user, bankType }: FileBankProps) {
 
 
   const renderContent = () => {
+    if (!hasFetched) {
+        return (
+            <div className="text-center p-4">
+                <Button onClick={fetchFiles} disabled={isLoading}>
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                    Cargar archivos
+                </Button>
+            </div>
+        );
+    }
+
     if (isLoading) {
       return <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
     }
