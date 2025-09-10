@@ -82,19 +82,28 @@ export function CardBank({ user, bankType }: CardBankProps) {
       toast({ variant: "destructive", description: t.toasts.nameRequired });
       return;
     }
+    
+    // Ensure ownerId is set for new cards
+    const cardToSave = {
+        ...editingCard,
+        ownerId: user.id,
+        type: bankType,
+    };
+
     setIsSaving(true);
     try {
-      if (editingCard.id) {
-        await updateBankCard(editingCard.id, editingCard);
+      if (cardToSave.id) {
+        await updateBankCard(cardToSave.id, cardToSave);
         toast({ title: t.toasts.updateSuccessTitle });
       } else {
-        await createBankCard(editingCard as Omit<BankCard, 'id' | 'createdAt'>);
+        await createBankCard(cardToSave as Omit<BankCard, 'id' | 'createdAt'>);
         toast({ title: t.toasts.createSuccessTitle });
       }
       await fetchCards();
       setIsModalOpen(false);
       setEditingCard(null);
     } catch (error) {
+      console.error("Error saving card:", error);
       toast({ variant: "destructive", title: t.errors.errorTitle, description: t.errors.saveError });
     } finally {
       setIsSaving(false);
@@ -105,7 +114,7 @@ export function CardBank({ user, bankType }: CardBankProps) {
       try {
           await deleteBankCard(cardId);
           toast({ title: t.toasts.deleteSuccessTitle });
-          await fetchCards();
+          setCards(prev => prev.filter(c => c.id !== cardId));
       } catch (error) {
            toast({ variant: "destructive", title: t.errors.errorTitle, description: t.errors.deleteError });
       }
