@@ -59,7 +59,6 @@ export function ObjectiveBank({ user }: ObjectiveBankProps) {
       setCards(fetchedCards);
     } catch (err) {
       console.error("Error fetching bank cards:", err);
-      // Only set error if there's a real exception
       setError(t_toast.loadError);
     } finally {
       setIsLoading(false);
