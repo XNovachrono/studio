@@ -208,6 +208,7 @@ export const translations = {
                 homework: "Homework",
                 attendance: "Asistencia",
                 importFromBank: "Importar desde banco",
+                retry: "Reintentar",
                 placeholders: {
                      content: "Objetivo general y objetivos específicos de la clase...",
                      classNote: "Escribe tus notas de clase aquí. Usa '/' para ver los comandos...",
@@ -488,6 +489,7 @@ export const translations = {
                 homework: "Homework",
                 attendance: "Attendance",
                 importFromBank: "Import from bank",
+                retry: "Retry",
                 placeholders: {
                     content: "General and specific objectives for the class...",
                     classNote: "Write your class notes here. Use '/' to see commands...",
@@ -561,3 +563,5 @@ export const translations = {
         }
     }
 };
+
+    

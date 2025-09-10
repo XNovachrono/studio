@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import } from "lucide-react";
+import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -48,6 +48,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Editor } from "../common/editor";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 
 interface TeacherDashboardData {
@@ -84,7 +85,7 @@ const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: Student
                         <div key={data.label} className="grid grid-cols-3 gap-2 text-sm">
                             <span className="font-semibold text-muted-foreground">{data.label}:</span>
                             <span className="col-span-2">
-                                {data.isBadge ? <Badge variant="outline" className="capitalize">{data.value}</Badge> : data.value}
+                                {data.isBadge ? <Badge variant="secondary" className="capitalize">{data.value}</Badge> : data.value}
                             </span>
                         </div>
                     ) : null)}
@@ -144,6 +145,7 @@ const BankCardImporter = ({ onSelectCard, ownerId, isOpen, onOpenChange }: { onS
 const GroupLessons = ({ group, studentsById, teacherId }: { group: Group, studentsById: Map<string, StudentProfile>, teacherId: string }) => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.lessons;
@@ -157,11 +159,13 @@ const GroupLessons = ({ group, studentsById, teacherId }: { group: Group, studen
 
     const fetchLessons = async () => {
         setIsLoading(true);
+        setError(null);
         try {
             const groupLessons = await getLessonsForGroup(group.id);
             setLessons(groupLessons);
         } catch (error) {
             console.error("Error fetching lessons:", error);
+            setError(t_toast.lessonError);
             toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.lessonError });
         } finally {
             setIsLoading(false);
@@ -226,6 +230,21 @@ const GroupLessons = ({ group, studentsById, teacherId }: { group: Group, studen
 
     if (isLoading) {
         return <div className="flex justify-center items-center h-40"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+    }
+
+    if (error) {
+        return (
+            <Alert variant="destructive" className="mt-4">
+                <AlertTitle>{t_toast.errorTitle}</AlertTitle>
+                <AlertDescription>
+                    <p>{error}</p>
+                    <Button variant="link" onClick={fetchLessons} className="p-0 mt-2 h-auto text-destructive-foreground">
+                        <RefreshCw className="mr-2 h-4 w-4"/>
+                        {t.retry}
+                    </Button>
+                </AlertDescription>
+            </Alert>
+        );
     }
 
     return (
@@ -511,3 +530,5 @@ export function TeacherDashboardUI() {
     </div>
   );
 }
+
+    
