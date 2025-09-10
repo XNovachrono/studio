@@ -24,7 +24,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import type { User, BankCard, EditorContent, BankType } from "@/lib/types";
+import type { User, BankCard, EditorContent } from "@/lib/types";
 import { useLanguage } from "@/context/language-context";
 import { createBankCard, getBankCards, updateBankCard, deleteBankCard } from "@/lib/firestore";
 import { Editor } from "@/components/common/editor";
@@ -134,8 +134,11 @@ export function CardBank({ user, bankType }: CardBankProps) {
       );
     }
 
-    if (cards.length > 0) {
-      return (
+    if (cards.length === 0) {
+      return <p className="text-center text-muted-foreground">{t.noCards}</p>;
+    }
+
+    return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {cards.map(card => (
             <Card key={card.id}>
@@ -157,9 +160,6 @@ export function CardBank({ user, bankType }: CardBankProps) {
           ))}
         </div>
       );
-    }
-    
-    return <p className="text-center text-muted-foreground">{t.noCards}</p>;
   };
 
   return (
@@ -167,8 +167,8 @@ export function CardBank({ user, bankType }: CardBankProps) {
       <CardHeader>
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle>{t_specifics.title}</CardTitle>
-            <CardDescription>{t_specifics.description}</CardDescription>
+            <CardTitle>{t_specifics?.title}</CardTitle>
+            <CardDescription>{t_specifics?.description}</CardDescription>
           </div>
           <Button onClick={() => handleOpenModal()}>
             <PlusCircle className="mr-2 h-4 w-4" />
