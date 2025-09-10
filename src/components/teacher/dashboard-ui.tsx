@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand } from "lucide-react";
+import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import {
@@ -18,7 +18,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User, StudentProfile, Group, Lesson, EditorContent, BankCard } from "@/lib/types";
-import { getTeacherDataForDashboard, getLessonsForGroup, createLessonForGroup, updateLesson, getBankCards } from "@/lib/firestore";
+import { getTeacherDataForDashboard, getLessonsForGroup, createLessonForGroup, updateLesson, getBankCards, addContentToGroup } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -37,6 +37,12 @@ import {
 import { Editor } from "../common/editor";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { BanksDashboardUI } from "./banks/dashboard-ui";
+import { Label } from "../ui/label";
+import { Input } from "../ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Calendar } from "../ui/calendar";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 
 interface TeacherDashboardData {
@@ -133,11 +139,10 @@ const BankCardImporter = ({ onSelectCard, ownerId, isOpen, onOpenChange }: { onS
 }
 
 
-const GroupLessons = ({ group, studentsById, teacherId }: { group: Group, studentsById: Map<string, StudentProfile>, teacherId: string }) => {
+const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { group: Group, studentsById: Map<string, StudentProfile>, teacherId: string, onLessonCreated: () => void }) => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [isCreating, setIsCreating] = useState(false);
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.lessons;
     const t_toast = translations.teacherDashboard.toasts;
@@ -166,23 +171,8 @@ const GroupLessons = ({ group, studentsById, teacherId }: { group: Group, studen
     useEffect(() => {
         fetchLessons();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [group.id]);
+    }, [group.id, onLessonCreated]);
 
-    const handleCreateLesson = async () => {
-        setIsCreating(true);
-        try {
-            const groupStudents = group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[];
-            await createLessonForGroup(group.id, group.name, groupStudents);
-            toast({ title: t_toast.lessonCreatedTitle, description: t_toast.lessonCreatedDescription });
-            await fetchLessons(); // Refresh lessons
-        } catch (error) {
-            console.error("Error creating lesson:", error);
-            toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.createLessonError });
-        } finally {
-            setIsCreating(false);
-        }
-    };
-    
     const handleSaveLesson = async (lessonId: string) => {
       if (!editedContent[lessonId]) return;
       setIsSaving(lessonId);
@@ -246,12 +236,6 @@ const GroupLessons = ({ group, studentsById, teacherId }: { group: Group, studen
                     handleImportFromBank(activeLessonId, content);
                  }
             }} />
-            <div className="flex justify-end">
-                <Button onClick={handleCreateLesson} disabled={isCreating}>
-                    {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-                    {t.newLesson}
-                </Button>
-            </div>
              {lessons.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full">
                     {lessons.map(lesson => (
@@ -329,11 +313,113 @@ const GroupLessons = ({ group, studentsById, teacherId }: { group: Group, studen
     );
 };
 
+const GroupCommunication = ({ group, studentsById, onClassScheduled }: { group: Group, studentsById: Map<string, StudentProfile>, onClassScheduled: () => void }) => {
+    const { translations } = useLanguage();
+    const t = translations.teacherDashboard.communication;
+    const t_toast = translations.teacherDashboard.toasts;
+    const { toast } = useToast();
+    const [link, setLink] = useState("");
+    const [date, setDate] = useState<Date | undefined>(new Date());
+    const [time, setTime] = useState("18:00");
+    const [isScheduling, setIsScheduling] = useState(false);
+
+    const handleScheduleClass = async () => {
+        if (!link || !date || !time) {
+            toast({ variant: "destructive", description: t_toast.scheduleClassError });
+            return;
+        }
+        setIsScheduling(true);
+
+        const [hours, minutes] = time.split(':').map(Number);
+        const scheduledDateTime = new Date(date);
+        scheduledDateTime.setHours(hours, minutes);
+
+        try {
+            await addContentToGroup(group.id, 'scheduledClass', { link, time: scheduledDateTime });
+            
+            const groupStudents = group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[];
+            await createLessonForGroup(group.id, group.name, groupStudents);
+
+            toast({ title: t_toast.scheduleClassSuccessTitle, description: t_toast.scheduleClassSuccessDescription });
+            setLink("");
+            setDate(new Date());
+            setTime("18:00");
+            onClassScheduled(); // This will trigger a refresh in the lessons tab
+        } catch (error) {
+            console.error("Error scheduling class:", error);
+            toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.genericError });
+        } finally {
+            setIsScheduling(false);
+        }
+    };
+
+    return (
+        <div className="space-y-8">
+            <Card>
+                <CardHeader>
+                    <CardTitle>{t.scheduleClass.title}</CardTitle>
+                    <CardDescription>{t.scheduleClass.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="class-link">{t.scheduleClass.link}</Label>
+                        <Input id="class-link" placeholder="https://meet.google.com/..." value={link} onChange={(e) => setLink(e.target.value)} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>{t.scheduleClass.date}</Label>
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {date ? format(date, "PPP", { locale: es }) : <span>{t.scheduleClass.selectDate}</span>}
+                                </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={date}
+                                    onSelect={setDate}
+                                    initialFocus
+                                />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="class-time">{t.scheduleClass.time}</Label>
+                            <Input id="class-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+                        </div>
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button onClick={handleScheduleClass} disabled={isScheduling}>
+                        {isScheduling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {t.scheduleClass.button}
+                    </Button>
+                </CardFooter>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>{t.sendReminder.title}</CardTitle>
+                    <CardDescription>{t.sendReminder.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground">{t.sendReminder.placeholder}</p>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
 
 const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, teacherId }: { group: Group | null; studentsById: Map<string, StudentProfile>; isOpen: boolean; onOpenChange: (open: boolean) => void; teacherId: string }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.groups;
     const [studentToView, setStudentToView] = useState<StudentProfile | null>(null);
+    const [refreshLessonKey, setRefreshLessonKey] = useState(0);
 
     if (!group) return null;
 
@@ -352,9 +438,10 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, teacher
                     <TabsList className="shrink-0">
                         <TabsTrigger value="lessons"><BookOpen className="mr-2 h-4 w-4"/>Lecciones</TabsTrigger>
                         <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Miembros</TabsTrigger>
+                        <TabsTrigger value="communication"><Send className="mr-2 h-4 w-4"/>Comunicación</TabsTrigger>
                     </TabsList>
                     <TabsContent value="lessons" className="flex-grow overflow-auto p-4">
-                       <GroupLessons group={group} studentsById={studentsById} teacherId={teacherId} />
+                       <GroupLessons key={refreshLessonKey} group={group} studentsById={studentsById} teacherId={teacherId} onLessonCreated={() => setRefreshLessonKey(k => k + 1)} />
                     </TabsContent>
                     <TabsContent value="members" className="flex-grow overflow-auto p-4">
                          <ScrollArea className="h-full">
@@ -370,6 +457,9 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, teacher
                                 ))}
                             </ul>
                         </ScrollArea>
+                    </TabsContent>
+                     <TabsContent value="communication" className="flex-grow overflow-auto p-4">
+                        <GroupCommunication group={group} studentsById={studentsById} onClassScheduled={() => setRefreshLessonKey(k => k + 1)} />
                     </TabsContent>
                 </Tabs>
             </DialogContent>
@@ -543,7 +633,7 @@ export function TeacherDashboardUI() {
                 </Button>
             </DialogHeader>
             <div className="flex-1 overflow-auto">
-                 <BanksDashboardUI user={user} isModal={true} />
+                 <BanksDashboardUI isModal={true} />
             </div>
         </DialogContent>
       </Dialog>

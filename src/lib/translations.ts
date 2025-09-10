@@ -266,6 +266,22 @@ export const translations = {
                 recordingPlaceholder: "Aquí podrás añadir el link de la grabación.",
                 attendancePlaceholder: "Aquí podrás registrar la asistencia.",
             },
+             communication: {
+                scheduleClass: {
+                    title: "Programar Clase",
+                    description: "Envía un enlace de clase a los estudiantes. Esto creará automáticamente una nueva lección.",
+                    link: "Enlace de la clase",
+                    date: "Fecha",
+                    time: "Hora",
+                    selectDate: "Seleccionar fecha",
+                    button: "Programar Clase y Crear Lección"
+                },
+                sendReminder: {
+                    title: "Enviar Recordatorio",
+                    description: "Envía un mensaje rápido a todos los miembros del grupo.",
+                    placeholder: "Funcionalidad de recordatorios próximamente."
+                }
+            },
             bankImporter: {
                 title: "Importar desde Banco de Objetivos",
                 import: "Importar",
@@ -293,6 +309,10 @@ export const translations = {
                  lessonSavedTitle: "Lección Guardada",
                  lessonSavedDescription: "Los cambios han sido guardados.",
                  saveLessonError: "No se pudo guardar la lección.",
+                 scheduleClassError: "Por favor, completa todos los campos para programar la clase.",
+                 scheduleClassSuccessTitle: "Clase Programada",
+                 scheduleClassSuccessDescription: "La clase ha sido programada y se ha creado una nueva lección.",
+                 genericError: "Ocurrió un error. Por favor, inténtalo de nuevo."
             }
         },
         onboardingWizard: {
@@ -595,6 +615,22 @@ export const translations = {
                 recordingPlaceholder: "Here you can add the recording link.",
                 attendancePlaceholder: "Here you can record attendance.",
             },
+             communication: {
+                scheduleClass: {
+                    title: "Schedule Class",
+                    description: "Send a class link to students. This will automatically create a new lesson.",
+                    link: "Class Link",
+                    date: "Date",
+                    time: "Time",
+                    selectDate: "Select date",
+                    button: "Schedule Class & Create Lesson"
+                },
+                sendReminder: {
+                    title: "Send Reminder",
+                    description: "Send a quick message to all group members.",
+                    placeholder: "Reminder functionality coming soon."
+                }
+            },
              bankImporter: {
                 title: "Import from Objectives Bank",
                 import: "Import",
@@ -622,6 +658,10 @@ export const translations = {
                  lessonSavedTitle: "Lesson Saved",
                  lessonSavedDescription: "The changes have been saved.",
                  saveLessonError: "Could not save the lesson.",
+                 scheduleClassError: "Please fill all fields to schedule the class.",
+                 scheduleClassSuccessTitle: "Class Scheduled",
+                 scheduleClassSuccessDescription: "The class has been scheduled and a new lesson has been created.",
+                 genericError: "An error occurred. Please try again."
             }
         },
          onboardingWizard: {
