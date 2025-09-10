@@ -520,15 +520,16 @@ export function TeacherDashboardUI({ user }: TeacherDashboardUIProps) {
 
       <Dialog open={isBanksModalOpen} onOpenChange={setIsBanksModalOpen}>
         <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
-            <div className="p-6 pb-0 relative">
+            <DialogHeader className="p-6 pb-0 relative">
+                 <DialogTitle>{t.banks.title}</DialogTitle>
+                <DialogDescription>{t.banks.description}</DialogDescription>
                  <Button variant="ghost" size="icon" className="absolute top-4 right-16" asChild>
                     <Link href="/teacher/banks">
                         <Expand className="h-5 w-5" />
                         <span className="sr-only">Ver en pantalla completa</span>
                     </Link>
                 </Button>
-            </div>
-            {/* The BanksDashboardUI doesn't need its own header inside the modal */}
+            </DialogHeader>
             <div className="flex-1 overflow-auto">
                  <BanksDashboardUI user={user} isModal={true} />
             </div>
