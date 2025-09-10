@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,8 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogClose,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "../ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
@@ -34,26 +31,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import { Editor } from "../common/editor";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 
 interface TeacherDashboardData {
-  teacher: User | null;
   groups: Group[];
+  allStudents: StudentProfile[];
+}
+
+interface TeacherDashboardUIProps {
+  user: User;
 }
 
 const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: StudentProfile | null; isOpen: boolean; onOpenChange: (open: boolean) => void }) => {
@@ -447,16 +436,13 @@ const GroupSection = ({ title, groups, studentsById, onView }: { title: string; 
   );
 };
 
-export function TeacherDashboardUI() {
-  const router = useRouter();
+export function TeacherDashboardUI({ user }: TeacherDashboardUIProps) {
   const { toast } = useToast();
   const { translations } = useLanguage();
   const t = translations.teacherDashboard;
   const t_toast = translations.teacherDashboard.toasts;
   
-  const [user, setUser] = useState<User | null>(null);
   const [data, setData] = useState<TeacherDashboardData | null>(null);
-  const [allStudents, setAllStudents] = useState<StudentProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   const [groupToView, setGroupToView] = useState<Group | null>(null);
@@ -465,8 +451,7 @@ export function TeacherDashboardUI() {
       setIsLoading(true);
       try {
         const teacherData = await getTeacherDataForDashboard(teacherId);
-        setData({ teacher: user, groups: teacherData.groups });
-        setAllStudents(teacherData.allStudents);
+        setData(teacherData);
       } catch (error) {
           console.error("Error fetching teacher data:", error);
           toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
@@ -476,29 +461,20 @@ export function TeacherDashboardUI() {
   };
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("uncoverly-user");
-    if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        if (parsedUser.role !== 'teacher') {
-            router.push('/login');
-            return;
-        }
-        setUser(parsedUser);
-        fetchDashboardData(parsedUser.id);
-    } else {
-        router.push("/login");
+    if (user) {
+        fetchDashboardData(user.id);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router]);
+  }, [user]);
 
-  const studentsById = useMemo(() => new Map(allStudents.map(s => [s.id, s])), [allStudents]);
+  const studentsById = useMemo(() => new Map(data?.allStudents.map(s => [s.id, s])), [data?.allStudents]);
   
   const privateGroups = useMemo(() => data?.groups.filter(g => g.type === 'privado') || [], [data?.groups]);
   const smallGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo pequeño') || [], [data?.groups]);
   const largeGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo grande') || [], [data?.groups]);
 
 
-  if (isLoading || !user) {
+  if (isLoading || !data) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -530,5 +506,3 @@ export function TeacherDashboardUI() {
     </div>
   );
 }
-
-    

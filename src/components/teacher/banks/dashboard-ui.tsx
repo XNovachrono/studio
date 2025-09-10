@@ -1,9 +1,6 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
 import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User } from "@/lib/types";
 import { useLanguage } from "@/context/language-context";
@@ -11,36 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CardBank } from "./card-bank";
 import { FileBank } from "./file-bank";
 
-export function BanksDashboardUI() {
-  const router = useRouter();
+interface BanksDashboardUIProps {
+  user: User;
+}
+
+export function BanksDashboardUI({ user }: BanksDashboardUIProps) {
   const { translations } = useLanguage();
   const t = translations.banksDashboard;
-  
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem("uncoverly-user");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      if (parsedUser.role !== 'teacher' && parsedUser.role !== 'admin') {
-        router.push('/login');
-        return;
-      }
-      setUser(parsedUser);
-    } else {
-      router.push("/login");
-    }
-    setIsLoading(false);
-  }, [router]);
-
-  if (isLoading || !user) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-screen flex-col">
