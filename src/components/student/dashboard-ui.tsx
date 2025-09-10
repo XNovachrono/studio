@@ -16,6 +16,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "../ui/button";
+import { Editor } from "../common/editor";
 
 interface StudentDashboardData {
     user: StudentProfile;
@@ -112,8 +113,8 @@ export function StudentDashboardUI() {
                                     {/* Content */}
                                     <Card>
                                         <CardHeader><CardTitle>{t.lessons.content}</CardTitle></CardHeader>
-                                        <CardContent className="space-y-4">
-                                            <div className="prose dark:prose-invert max-w-none">{typeof lesson.content === 'string' ? lesson.content : 'Contenido no disponible'}</div>
+                                        <CardContent>
+                                            <Editor content={lesson.content} onChange={() => {}} editable={false} />
                                         </CardContent>
                                     </Card>
                                     
@@ -121,7 +122,7 @@ export function StudentDashboardUI() {
                                     <Card>
                                         <CardHeader><CardTitle>{t.notes.title}</CardTitle></CardHeader>
                                         <CardContent>
-                                             <div className="prose dark:prose-invert max-w-none">{typeof lesson.classNote === 'string' ? lesson.classNote : 'Contenido no disponible'}</div>
+                                            <Editor content={lesson.classNote} onChange={() => {}} editable={false} />
                                         </CardContent>
                                     </Card>
                                     
@@ -130,9 +131,7 @@ export function StudentDashboardUI() {
                                         <CardHeader><CardTitle>{t.lessons.homework}</CardTitle></CardHeader>
                                         <CardContent>
                                             <p className="font-semibold mb-2">{t.lessons.instructions}</p>
-                                             <div className="prose dark:prose-invert max-w-none">
-                                                {typeof lesson.homework === 'string' ? lesson.homework : 'Instrucciones no disponibles'}
-                                             </div>
+                                            <Editor content={lesson.homework} onChange={() => {}} editable={false} />
                                             <div className="p-4 border rounded-lg bg-secondary/50 mt-6">
                                                 <p className="text-center font-semibold">{t.lessons.yourSubmission}</p>
                                                 <p className="text-center text-muted-foreground text-sm">{t.lessons.noSubmission}</p>

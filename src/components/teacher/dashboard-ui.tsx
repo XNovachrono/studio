@@ -16,7 +16,7 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, StudentProfile, Group, Lesson } from "@/lib/types";
+import type { User, StudentProfile, Group, Lesson, EditorContent } from "@/lib/types";
 import { getTeacherDataForDashboard, getLessonsForGroup, createLessonForGroup, updateLesson } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "../ui/textarea";
+import { Editor } from "../common/editor";
 
 
 interface TeacherDashboardData {
@@ -192,27 +193,33 @@ const GroupLessons = ({ group, studentsById }: { group: Group, studentsById: Map
                                 <Card>
                                     <CardHeader><CardTitle>{t.content}</CardTitle></CardHeader>
                                     <CardContent>
-                                      <Textarea 
-                                        defaultValue={typeof lesson.content === 'string' ? lesson.content : ''}
-                                        onChange={(e) => handleContentChange(lesson.id, 'content', e.target.value)} 
+                                      <Editor
+                                        content={lesson.content}
+                                        onChange={(newContent) => handleContentChange(lesson.id, 'content', newContent)}
+                                        editable
+                                        placeholder="Objetivo general y objetivos específicos de la clase..."
                                       />
                                     </CardContent>
                                 </Card>
                                 <Card>
                                     <CardHeader><CardTitle>{t.classNote}</CardTitle></CardHeader>
                                     <CardContent>
-                                       <Textarea 
-                                        defaultValue={typeof lesson.classNote === 'string' ? lesson.classNote : ''}
-                                        onChange={(e) => handleContentChange(lesson.id, 'classNote', e.target.value)} 
+                                       <Editor
+                                        content={lesson.classNote}
+                                        onChange={(newContent) => handleContentChange(lesson.id, 'classNote', newContent)}
+                                        editable
+                                        placeholder="Escribe tus notas de clase aquí. Usa '/' para ver los comandos..."
                                       />
                                     </CardContent>
                                 </Card>
                                 <Card>
                                     <CardHeader><CardTitle>{t.homework}</CardTitle></CardHeader>
                                      <CardContent>
-                                      <Textarea 
-                                        defaultValue={typeof lesson.homework === 'string' ? lesson.homework : ''}
-                                        onChange={(e) => handleContentChange(lesson.id, 'homework', e.target.value)} 
+                                      <Editor
+                                        content={lesson.homework}
+                                        onChange={(newContent) => handleContentChange(lesson.id, 'homework', newContent)}
+                                        editable
+                                        placeholder="Detalla las instrucciones de la tarea..."
                                       />
                                     </CardContent>
                                 </Card>

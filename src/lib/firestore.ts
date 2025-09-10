@@ -167,6 +167,16 @@ export const getLessonsForGroup = async (groupId: string): Promise<Lesson[]> => 
     return querySnapshot.docs.map(lessonFromDoc);
 };
 
+const defaultContent: EditorContent = {
+  type: "doc",
+  content: [
+    {
+      type: "paragraph",
+      content: [],
+    },
+  ],
+};
+
 // Create a new lesson for a group
 export const createLessonForGroup = async (groupId: string, groupName: string, students: StudentProfile[]): Promise<void> => {
     const lessonsRef = collection(db, "groups", groupId, "lessons");
@@ -185,9 +195,9 @@ export const createLessonForGroup = async (groupId: string, groupName: string, s
         number: lessonNumber,
         createdAt: Timestamp.now() as any,
         recording: { link: "" },
-        content: "",
-        classNote: "",
-        homework: "",
+        content: defaultContent,
+        classNote: defaultContent,
+        homework: defaultContent,
         attendance: {},
     };
 

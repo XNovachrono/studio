@@ -94,9 +94,9 @@ export interface Lesson {
   recording: {
     link: string;
   };
-  content: string; // Storing as simple string for now
-  classNote: string;
-  homework: string;
+  content: EditorContent;
+  classNote: EditorContent;
+  homework: EditorContent;
   attendance: Record<string, 'present' | 'absent' | 'late'>; // Key: studentId
 }
 
