@@ -4,39 +4,26 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user is authenticated
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // Users can only read and update their own profile
+    // Regla para la colección de usuarios
     match /users/{userId} {
-      allow read, update: if isAuthenticated() && request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Bank cards can be created, read, updated, and deleted only by their owner.
-    // This rule allows list queries with a `where("ownerId", "==", request.auth.uid)` clause.
-    match /banks/{bankId} {
-      allow read, write: if isAuthenticated() && (
-        (request.resource.data.ownerId == request.auth.uid) || // For create/update
-        (resource.data.ownerId == request.auth.uid)             // For read/delete
-      );
+    // Reglas para la colección de bancos de contenido
+    match /banks/{cardId} {
+      // Permite la lectura de la colección para que las consultas con 'where' funcionen
+      allow list: if request.auth != null;
+      // Permite el acceso a un documento específico solo si el usuario es el propietario
+      allow get, create, update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
     }
 
-    // Groups & Lessons
+    // Reglas para la colección de grupos y sus lecciones
     match /groups/{groupId} {
-      // Allow read for authenticated users (assuming students and teachers need to read group info)
-      allow read: if isAuthenticated();
+      allow read, write: if request.auth != null && resource.data.teacherId == request.auth.uid;
 
-      // A teacher can only create/update/delete lessons for a group they are assigned to.
       match /lessons/{lessonId} {
-        allow read, write: if isAuthenticated() && get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid;
+        allow read, write: if request.auth != null; // Se hereda la restricción del grupo
       }
-    }
-
-    // Default deny all other access
-    match /{document=**} {
-      allow read, write: if false;
     }
   }
 }
