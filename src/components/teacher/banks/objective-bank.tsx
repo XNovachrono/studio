@@ -57,9 +57,9 @@ export function ObjectiveBank({ user }: ObjectiveBankProps) {
     try {
       const fetchedCards = await getBankCards(user.id, 'objective');
       setCards(fetchedCards);
-    } catch (error) {
-      console.error("Error fetching bank cards:", error);
-      // We set an error state, but the render logic will decide what to show
+    } catch (err) {
+      console.error("Error fetching bank cards:", err);
+      // Only set error if there's a real exception
       setError(t_toast.loadError);
     } finally {
       setIsLoading(false);
@@ -118,9 +118,8 @@ export function ObjectiveBank({ user }: ObjectiveBankProps) {
     if (isLoading) {
       return <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
     }
-    // Only show error if loading is finished, there are no cards, and an error exists.
-    // This avoids showing an error for an empty list. We will treat empty as a valid state.
-    if (error && cards.length === 0 && !isLoading) {
+
+    if (error) {
        return (
         <Alert variant="destructive">
           <AlertTitle>{t_toast.errorTitle}</AlertTitle>
@@ -160,7 +159,6 @@ export function ObjectiveBank({ user }: ObjectiveBankProps) {
       );
     }
     
-    // This is now the default state if not loading and no cards are present.
     return <p className="text-center text-muted-foreground">{t.noCards}</p>;
   };
 
