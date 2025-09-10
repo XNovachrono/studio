@@ -60,14 +60,6 @@ export function DashboardHeader({ user, title }: DashboardHeaderProps) {
         </div>
         
         <div className="flex items-center gap-4">
-          {user?.role === 'teacher' && (
-             <nav className="hidden md:flex items-center gap-2">
-                <Button variant="ghost" asChild>
-                    <Link href={getDashboardUrl()}><Home className="mr-2"/>{translations.dashboardHeader.dashboard}</Link>
-                </Button>
-            </nav>
-          )}
-
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

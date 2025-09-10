@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight } from "lucide-react";
+import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import {
@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Editor } from "../common/editor";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { BanksDashboardUI } from "./banks/dashboard-ui";
 
 
 interface TeacherDashboardData {
@@ -447,6 +448,7 @@ export function TeacherDashboardUI({ user }: TeacherDashboardUIProps) {
   const [isLoading, setIsLoading] = useState(true);
   
   const [groupToView, setGroupToView] = useState<Group | null>(null);
+  const [isBanksModalOpen, setIsBanksModalOpen] = useState(false);
 
   const fetchDashboardData = async (teacherId: string) => {
       setIsLoading(true);
@@ -507,10 +509,8 @@ export function TeacherDashboardUI({ user }: TeacherDashboardUIProps) {
                 <CardDescription>{t.banks.description}</CardDescription>
             </CardHeader>
             <CardFooter>
-                 <Button asChild>
-                    <Link href="/teacher/banks">
-                       {t.banks.button} <ChevronRight className="ml-2 h-4 w-4" />
-                    </Link>
+                 <Button onClick={() => setIsBanksModalOpen(true)}>
+                    {t.banks.button} <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
             </CardFooter>
         </Card>
@@ -518,6 +518,22 @@ export function TeacherDashboardUI({ user }: TeacherDashboardUIProps) {
       
       <GroupDetailsDialog group={groupToView} studentsById={studentsById} isOpen={!!groupToView} onOpenChange={() => setGroupToView(null)} teacherId={user.id} />
 
+      <Dialog open={isBanksModalOpen} onOpenChange={setIsBanksModalOpen}>
+        <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
+            <div className="p-6 pb-0 relative">
+                 <Button variant="ghost" size="icon" className="absolute top-4 right-16" asChild>
+                    <Link href="/teacher/banks">
+                        <Expand className="h-5 w-5" />
+                        <span className="sr-only">Ver en pantalla completa</span>
+                    </Link>
+                </Button>
+            </div>
+            {/* The BanksDashboardUI doesn't need its own header inside the modal */}
+            <div className="flex-1 overflow-auto">
+                 <BanksDashboardUI user={user} isModal={true} />
+            </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

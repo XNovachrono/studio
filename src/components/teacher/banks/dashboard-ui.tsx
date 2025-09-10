@@ -10,17 +10,19 @@ import { FileBank } from "./file-bank";
 
 interface BanksDashboardUIProps {
   user: User;
+  isModal?: boolean;
 }
 
-export function BanksDashboardUI({ user }: BanksDashboardUIProps) {
+export function BanksDashboardUI({ user, isModal = false }: BanksDashboardUIProps) {
   const { translations } = useLanguage();
   const t = translations.banksDashboard;
 
   return (
-    <div className="flex h-screen flex-col">
-      <DashboardHeader user={user} title={t.title} />
-      <main className="flex-1 overflow-auto p-4 md:p-8">
-        <Tabs defaultValue="objectives">
+    <div className={!isModal ? "flex h-screen flex-col" : ""}>
+      {!isModal && <DashboardHeader user={user} title={t.title} />}
+      <main className={!isModal ? "flex-1 overflow-auto p-4 md:p-8" : "p-4 md:p-6 pt-0"}>
+         <Tabs defaultValue="objectives">
+          {!isModal && <h1 className="text-3xl font-headline mb-4">{t.title}</h1>}
           <TabsList>
             <TabsTrigger value="objectives">{t.tabs.objectives}</TabsTrigger>
             <TabsTrigger value="classes">{t.tabs.classes}</TabsTrigger>
