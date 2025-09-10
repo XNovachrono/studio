@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -44,7 +45,6 @@ interface TeacherDashboardData {
 }
 
 interface TeacherDashboardUIProps {
-  user: User;
 }
 
 const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: StudentProfile | null; isOpen: boolean; onOpenChange: (open: boolean) => void }) => {
@@ -438,12 +438,14 @@ const GroupSection = ({ title, groups, studentsById, onView }: { title: string; 
   );
 };
 
-export function TeacherDashboardUI({ user }: TeacherDashboardUIProps) {
+export function TeacherDashboardUI() {
+  const router = useRouter();
   const { toast } = useToast();
   const { translations } = useLanguage();
   const t = translations.teacherDashboard;
   const t_toast = translations.teacherDashboard.toasts;
   
+  const [user, setUser] = useState<User | null>(null);
   const [data, setData] = useState<TeacherDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -451,23 +453,34 @@ export function TeacherDashboardUI({ user }: TeacherDashboardUIProps) {
   const [isBanksModalOpen, setIsBanksModalOpen] = useState(false);
 
   useEffect(() => {
-    const fetchDashboardData = async (teacherId: string) => {
-        setIsLoading(true);
-        try {
-          const teacherData = await getTeacherDataForDashboard(teacherId);
-          setData(teacherData);
-        } catch (error) {
-            console.error("Error fetching teacher data:", error);
-            toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
-        } finally {
-            setIsLoading(false);
+    const storedUser = localStorage.getItem("uncoverly-user");
+    if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser.role !== 'teacher') {
+            router.push('/login');
+            return;
         }
-    };
-    if (user) {
-        fetchDashboardData(user.id);
+        setUser(parsedUser);
+        
+        const fetchDashboardData = async (teacherId: string) => {
+            setIsLoading(true);
+            try {
+              const teacherData = await getTeacherDataForDashboard(teacherId);
+              setData(teacherData);
+            } catch (error) {
+                console.error("Error fetching teacher data:", error);
+                toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchDashboardData(parsedUser.id);
+
+    } else {
+        router.push("/login");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [router]);
 
   const studentsById = useMemo(() => new Map(data?.allStudents.map(s => [s.id, s])), [data?.allStudents]);
   
@@ -476,7 +489,7 @@ export function TeacherDashboardUI({ user }: TeacherDashboardUIProps) {
   const largeGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo grande') || [], [data?.groups]);
 
 
-  if (isLoading || !data) {
+  if (isLoading || !data || !user) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

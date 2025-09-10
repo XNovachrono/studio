@@ -3,27 +3,26 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can only read and write to their own user document.
+    // Users can only read and update their own profile.
     match /users/{userId} {
       allow read, update: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Any authenticated user can read groups and their subcollections (like lessons).
-    // Writes are also allowed for authenticated users.
-    // The application logic ensures that only the correct users (teachers) can perform these actions.
-    match /groups/{groupId}/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Users can only read, create, update, or delete bank cards that they own.
+    // Bank cards can only be accessed by their owner.
     match /bank_cards/{cardId} {
-      allow read, delete, update: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow read, update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
       allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
     }
 
-    // Fallback rule: deny all other access
-    match /{document=**} {
-      allow read, write: if false;
+    // Teachers can access groups they are assigned to.
+    match /groups/{groupId} {
+      allow read, update, delete: if request.auth != null && resource.data.teacherId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.teacherId == request.auth.uid;
+
+      // Teachers can access lessons within the groups they are assigned to.
+      match /lessons/{lessonId} {
+        allow read, create, update, delete: if request.auth != null && get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid;
+      }
     }
   }
 }
