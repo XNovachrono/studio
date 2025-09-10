@@ -1,5 +1,5 @@
 
-export type UserRole = 'student' | 'teacher';
+export type UserRole = 'student' | 'teacher' | 'admin';
 export type StudentPlan = 'privado' | 'grupo pequeño' | 'grupo grande';
 
 export interface User {
@@ -74,5 +74,3 @@ export interface PQRSMessage {
     isAnonymous: boolean;
     createdAt: string; // ISO date string
 }
-
-    

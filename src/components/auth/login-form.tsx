@@ -78,6 +78,8 @@ export function LoginForm() {
 
         if (userProfile.role === "teacher") {
           router.push("/teacher/dashboard");
+        } else if (userProfile.role === "admin") {
+          router.push("/admin/dashboard");
         } else {
           if (userProfile.hasOnboarded) {
             router.push("/student/dashboard");

@@ -79,45 +79,31 @@ export const submitPQRS = async (pqrsData: Omit<PQRSMessage, 'createdAt'>): Prom
 };
 
 
-// === Teacher Functions ===
+// === Admin Functions ===
 
-export const getTeacherData = async (): Promise<{
-    teacher: User | null,
+export const getAdminData = async (): Promise<{
+    admin: User | null,
     groups: Group[],
     allStudents: StudentProfile[],
+    allTeachers: User[],
 }> => {
-    // 1. Get all users and filter for the teacher
     const usersRef = collection(db, "users");
     const usersSnap = await getDocs(usersRef);
     const allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() })) as User[];
     
-    const teacher = allUsers.find(u => u.role === 'teacher') || null;
+    const admin = allUsers.find(u => u.role === 'admin') || null;
     const allStudents = allUsers.filter(u => u.role === 'student' && u.hasOnboarded) as StudentProfile[];
+    const allTeachers = allUsers.filter(u => u.role === 'teacher');
 
-    // 2. Get all groups
     const groupsRef = collection(db, "groups");
     const groupsSnap = await getDocs(groupsRef);
-    const groups = groupsSnap.docs.map(d => {
-        const groupData = d.data() as Omit<Group, 'id'>;
-         // Convert Timestamps to string dates for serialization
-        if (groupData.content.scheduledClasses) {
-            groupData.content.scheduledClasses = groupData.content.scheduledClasses.map(c => ({
-                ...c,
-                time: c.time instanceof Timestamp ? c.time.toDate().toISOString() : c.time,
-            }));
-        }
-        return { id: d.id, ...groupData };
-    });
+    const groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
 
-    return {
-        teacher,
-        groups,
-        allStudents,
-    }
+    return { admin, groups, allStudents, allTeachers };
 }
 
-// Function to create a new group
-export const createGroup = async (teacher: User, students: {id: string, name: string}[], plan: StudentPlan) => {
+
+export const createGroupWithTeacher = async (teacher: User, students: {id: string, name: string}[], plan: StudentPlan) => {
     const studentIds = students.map(s => s.id);
     const studentNames = students.map(s => s.name);
     const groupName = studentNames.join(', ');
@@ -137,6 +123,27 @@ export const createGroup = async (teacher: User, students: {id: string, name: st
         },
     });
 };
+
+
+
+// === Teacher Functions ===
+export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
+    groups: Group[],
+    allStudents: StudentProfile[], // We still need all students to populate group member names
+}> => {
+    // 1. Get all groups assigned to this teacher
+    const groupsRef = collection(db, "groups");
+    const q = query(groupsRef, where("teacherId", "==", teacherId));
+    const groupsSnap = await getDocs(q);
+    const groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
+
+    // 2. Get all students to resolve names
+    const usersRef = collection(db, "users");
+    const studentsSnap = await getDocs(query(usersRef, where('role', '==', 'student')));
+    const allStudents = studentsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as StudentProfile[];
+
+    return { groups, allStudents };
+}
 
 
 // Function to add content to a group
@@ -251,5 +258,3 @@ export const updateStudentDetails = async (studentId: string, data: { level: str
         courseDuration: data.courseDuration,
     });
 };
-
-    
