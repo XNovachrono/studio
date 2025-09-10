@@ -4,7 +4,17 @@ import {
     doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc, arrayRemove, addDoc, orderBy
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder, Lesson } from "./types";
+import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder, Lesson, EditorContent } from "./types";
+
+// Helper to convert Firestore Timestamps in lesson objects
+const lessonFromDoc = (doc: any): Lesson => {
+    const data = doc.data();
+    return {
+        id: doc.id,
+        ...data,
+        createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
+    } as Lesson;
+};
 
 // Function to get a user profile
 export const getUserProfile = async (userId: string): Promise<User | null> => {
@@ -154,14 +164,7 @@ export const getLessonsForGroup = async (groupId: string): Promise<Lesson[]> => 
     const q = query(lessonsRef, orderBy("number", "asc"));
     const querySnapshot = await getDocs(q);
     
-    return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-            id: doc.id,
-            ...data,
-            createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
-        } as Lesson;
-    });
+    return querySnapshot.docs.map(lessonFromDoc);
 };
 
 // Create a new lesson for a group
@@ -182,13 +185,19 @@ export const createLessonForGroup = async (groupId: string, groupName: string, s
         number: lessonNumber,
         createdAt: Timestamp.now() as any,
         recording: { link: "" },
-        content: { generalObjective: "", specificObjectives: "" },
+        content: "",
         classNote: "",
-        homework: { instructions: "" },
+        homework: "",
         attendance: {},
     };
 
     await addDoc(lessonsRef, newLesson);
+};
+
+// Update an existing lesson
+export const updateLesson = async (groupId: string, lessonId: string, data: Partial<Lesson>): Promise<void> => {
+    const lessonRef = doc(db, "groups", groupId, "lessons", lessonId);
+    await updateDoc(lessonRef, data);
 };
 
 

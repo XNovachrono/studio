@@ -77,6 +77,14 @@ export interface PQRSMessage {
 
 
 // --- New Lesson System Types ---
+
+// The content for the editor is a JSON object
+export type EditorContent = {
+  type: "doc";
+  content: any[];
+};
+
+
 export interface Lesson {
   id: string;
   groupId: string;
@@ -86,14 +94,9 @@ export interface Lesson {
   recording: {
     link: string;
   };
-  content: {
-    generalObjective: string;
-    specificObjectives: string;
-  };
-  classNote: string; // For now, simple text. Will evolve to rich content.
-  homework: {
-    instructions: string;
-  };
+  content: string; // Storing as simple string for now
+  classNote: string;
+  homework: string;
   attendance: Record<string, 'present' | 'absent' | 'late'>; // Key: studentId
 }
 
@@ -104,4 +107,3 @@ export interface HomeworkSubmission {
   files: { name: string; url: string }[];
   submittedAt: string; // ISO date string
 }
-

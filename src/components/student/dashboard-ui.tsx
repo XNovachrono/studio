@@ -101,7 +101,7 @@ export function StudentDashboardUI() {
                                     <Card>
                                         <CardHeader><CardTitle>{t.lessons.recording}</CardTitle></CardHeader>
                                         <CardContent>
-                                            {lesson.recording.link ? (
+                                            {lesson.recording?.link ? (
                                                 <a href={lesson.recording.link} target="_blank" rel="noopener noreferrer">
                                                     <Button>{t.lessons.viewRecording}</Button>
                                                 </a>
@@ -113,14 +113,7 @@ export function StudentDashboardUI() {
                                     <Card>
                                         <CardHeader><CardTitle>{t.lessons.content}</CardTitle></CardHeader>
                                         <CardContent className="space-y-4">
-                                            <div>
-                                                <h4 className="font-semibold">{t.lessons.generalObjective}</h4>
-                                                <p className="text-muted-foreground whitespace-pre-wrap">{lesson.content.generalObjective || t.lessons.notDefined}</p>
-                                            </div>
-                                            <div>
-                                                <h4 className="font-semibold">{t.lessons.specificObjectives}</h4>
-                                                <p className="text-muted-foreground whitespace-pre-wrap">{lesson.content.specificObjectives || t.lessons.notDefined}</p>
-                                            </div>
+                                            <div className="prose dark:prose-invert max-w-none">{typeof lesson.content === 'string' ? lesson.content : 'Contenido no disponible'}</div>
                                         </CardContent>
                                     </Card>
                                     
@@ -128,7 +121,7 @@ export function StudentDashboardUI() {
                                     <Card>
                                         <CardHeader><CardTitle>{t.notes.title}</CardTitle></CardHeader>
                                         <CardContent>
-                                            <p className="text-muted-foreground whitespace-pre-wrap">{lesson.classNote || t.notes.noNotes}</p>
+                                             <div className="prose dark:prose-invert max-w-none">{typeof lesson.classNote === 'string' ? lesson.classNote : 'Contenido no disponible'}</div>
                                         </CardContent>
                                     </Card>
                                     
@@ -137,9 +130,10 @@ export function StudentDashboardUI() {
                                         <CardHeader><CardTitle>{t.lessons.homework}</CardTitle></CardHeader>
                                         <CardContent>
                                             <p className="font-semibold mb-2">{t.lessons.instructions}</p>
-                                             <p className="text-muted-foreground whitespace-pre-wrap mb-4">{lesson.homework.instructions || t.lessons.noInstructions}</p>
-                                            {/* TODO: Homework submission UI will go here */}
-                                            <div className="p-4 border rounded-lg bg-secondary/50">
+                                             <div className="prose dark:prose-invert max-w-none">
+                                                {typeof lesson.homework === 'string' ? lesson.homework : 'Instrucciones no disponibles'}
+                                             </div>
+                                            <div className="p-4 border rounded-lg bg-secondary/50 mt-6">
                                                 <p className="text-center font-semibold">{t.lessons.yourSubmission}</p>
                                                 <p className="text-center text-muted-foreground text-sm">{t.lessons.noSubmission}</p>
                                             </div>
