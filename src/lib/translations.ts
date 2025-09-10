@@ -18,26 +18,38 @@ export const translations = {
                 videos: "Banco de Vídeos",
                 audios: "Banco de Audios",
             },
-            objectiveBank: {
-                title: "Banco de Objetivos",
-                description: "Crea, edita y gestiona tarjetas de objetivos reutilizables para tus clases.",
+            cardBank: {
+                objectives: {
+                    title: "Banco de Objetivos",
+                    description: "Crea, edita y gestiona tarjetas de objetivos reutilizables para tus clases.",
+                },
+                classes: {
+                     title: "Banco de Clases",
+                    description: "Crea, edita y gestiona tarjetas de clases reutilizables.",
+                },
+                homework: {
+                    title: "Banco de Tareas",
+                    description: "Crea, edita y gestiona tarjetas de tareas reutilizables.",
+                },
                 newCard: "Nueva Tarjeta",
                 editCard: "Editar Tarjeta",
                 createdAt: "Creado",
-                noCards: "Aún no has creado ninguna tarjeta de objetivos.",
+                noCards: "Aún no has creado ninguna tarjeta.",
                 cardName: "Nombre de la tarjeta",
                 cardContent: "Contenido",
                 cancel: "Cancelar",
                 save: "Guardar",
                 toasts: {
-                    errorTitle: "Error",
-                    loadError: "No se pudieron cargar las tarjetas.",
-                    saveError: "No se pudo guardar la tarjeta.",
-                    deleteError: "No se pudo eliminar la tarjeta.",
                     nameRequired: "El nombre de la tarjeta es obligatorio.",
                     createSuccessTitle: "Tarjeta creada",
                     updateSuccessTitle: "Tarjeta actualizada",
                     deleteSuccessTitle: "Tarjeta eliminada",
+                },
+                errors: {
+                    errorTitle: "Error",
+                    loadError: "No se pudieron cargar las tarjetas.",
+                    saveError: "No se pudo guardar la tarjeta.",
+                    deleteError: "No se pudo eliminar la tarjeta.",
                 }
             }
         },
@@ -299,26 +311,38 @@ export const translations = {
                 videos: "Video Bank",
                 audios: "Audio Bank",
             },
-            objectiveBank: {
-                title: "Objectives Bank",
-                description: "Create, edit, and manage reusable objective cards for your classes.",
+            cardBank: {
+                objectives: {
+                    title: "Objectives Bank",
+                    description: "Create, edit, and manage reusable objective cards for your classes.",
+                },
+                classes: {
+                    title: "Classes Bank",
+                    description: "Create, edit, and manage reusable class cards.",
+                },
+                homework: {
+                    title: "Homework Bank",
+                    description: "Create, edit, and manage reusable homework cards.",
+                },
                 newCard: "New Card",
                 editCard: "Edit Card",
                 createdAt: "Created at",
-                noCards: "You haven't created any objective cards yet.",
+                noCards: "You haven't created any cards yet.",
                 cardName: "Card name",
                 cardContent: "Content",
                 cancel: "Cancel",
                 save: "Save",
                 toasts: {
-                    errorTitle: "Error",
-                    loadError: "Could not load cards.",
-                    saveError: "Could not save the card.",
-                    deleteError: "Could not delete the card.",
                     nameRequired: "The card name is required.",
                     createSuccessTitle: "Card created",
                     updateSuccessTitle: "Card updated",
                     deleteSuccessTitle: "Card deleted",
+                },
+                errors: {
+                    errorTitle: "Error",
+                    loadError: "Could not load cards.",
+                    saveError: "Could not save the card.",
+                    deleteError: "Could not delete the card.",
                 }
             }
         },

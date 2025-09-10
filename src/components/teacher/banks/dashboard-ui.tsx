@@ -8,7 +8,7 @@ import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User } from "@/lib/types";
 import { useLanguage } from "@/context/language-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ObjectiveBank } from "./objective-bank";
+import { CardBank } from "./card-bank";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const NotImplemented = ({ title }: { title: string }) => (
@@ -18,7 +18,7 @@ const NotImplemented = ({ title }: { title: string }) => (
             <CardDescription>Esta sección estará disponible próximamente.</CardDescription>
         </CardHeader>
         <CardContent>
-            <p className="text-center text-muted-foreground">Próximamente...</p>
+            <p className="text-center text-muted-foreground">Aún no se han subido archivos.</p>
         </CardContent>
     </Card>
 )
@@ -69,13 +69,13 @@ export function BanksDashboardUI() {
             <TabsTrigger value="audios">{t.tabs.audios}</TabsTrigger>
           </TabsList>
           <TabsContent value="objectives" className="mt-4">
-            <ObjectiveBank user={user} />
+            <CardBank user={user} bankType="objective" />
           </TabsContent>
            <TabsContent value="classes" className="mt-4">
-            <NotImplemented title={t.tabs.classes} />
+             <CardBank user={user} bankType="class" />
           </TabsContent>
            <TabsContent value="homework" className="mt-4">
-            <NotImplemented title={t.tabs.homework} />
+            <CardBank user={user} bankType="homework" />
           </TabsContent>
            <TabsContent value="images" className="mt-4">
             <NotImplemented title={t.tabs.images} />

@@ -24,7 +24,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import type { User, BankCard, EditorContent } from "@/lib/types";
+import type { User, BankCard, EditorContent, BankType } from "@/lib/types";
 import { useLanguage } from "@/context/language-context";
 import { createBankCard, getBankCards, updateBankCard, deleteBankCard } from "@/lib/firestore";
 import { Editor } from "@/components/common/editor";
@@ -34,14 +34,15 @@ const defaultContent: EditorContent = {
   content: [{ type: "paragraph" }],
 };
 
-interface ObjectiveBankProps {
+interface CardBankProps {
   user: User;
+  bankType: 'objective' | 'class' | 'homework';
 }
 
-export function ObjectiveBank({ user }: ObjectiveBankProps) {
+export function CardBank({ user, bankType }: CardBankProps) {
   const { translations } = useLanguage();
-  const t = translations.banksDashboard.objectiveBank;
-  const t_toast = t.toasts;
+  const t = translations.banksDashboard.cardBank;
+  const t_specifics = translations.banksDashboard.cardBank[bankType];
   const { toast } = useToast();
 
   const [cards, setCards] = useState<BankCard[]>([]);
@@ -55,10 +56,10 @@ export function ObjectiveBank({ user }: ObjectiveBankProps) {
     setIsLoading(true);
     setError(null);
     try {
-      const fetchedCards = await getBankCards(user.id, 'objective');
+      const fetchedCards = await getBankCards(user.id, bankType);
       setCards(fetchedCards);
     } catch (err) {
-      console.error("Error fetching bank cards:", err);
+      console.error(`Error fetching ${bankType} bank cards:`, err);
       setError(t.errors.loadError);
     } finally {
       setIsLoading(false);
@@ -68,36 +69,36 @@ export function ObjectiveBank({ user }: ObjectiveBankProps) {
   useEffect(() => {
     fetchCards();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user.id]);
+  }, [user.id, bankType]);
 
   const handleOpenModal = (card: BankCard | null = null) => {
     if (card) {
       setEditingCard({ ...card });
     } else {
-      setEditingCard({ name: "", content: defaultContent, type: 'objective', ownerId: user.id });
+      setEditingCard({ name: "", content: defaultContent, type: bankType, ownerId: user.id });
     }
     setIsModalOpen(true);
   };
 
   const handleSaveCard = async () => {
     if (!editingCard || !editingCard.name || !editingCard.content) {
-      toast({ variant: "destructive", description: t_toast.nameRequired });
+      toast({ variant: "destructive", description: t.toasts.nameRequired });
       return;
     }
     setIsSaving(true);
     try {
       if (editingCard.id) {
         await updateBankCard(editingCard.id, editingCard);
-        toast({ title: t_toast.updateSuccessTitle });
+        toast({ title: t.toasts.updateSuccessTitle });
       } else {
         await createBankCard(editingCard as Omit<BankCard, 'id' | 'createdAt'>);
-        toast({ title: t_toast.createSuccessTitle });
+        toast({ title: t.toasts.createSuccessTitle });
       }
       await fetchCards();
       setIsModalOpen(false);
       setEditingCard(null);
     } catch (error) {
-      toast({ variant: "destructive", title: t_toast.errorTitle, description: t.errors.saveError });
+      toast({ variant: "destructive", title: t.errors.errorTitle, description: t.errors.saveError });
     } finally {
       setIsSaving(false);
     }
@@ -106,10 +107,10 @@ export function ObjectiveBank({ user }: ObjectiveBankProps) {
   const handleDeleteCard = async (cardId: string) => {
       try {
           await deleteBankCard(cardId);
-          toast({ title: t_toast.deleteSuccessTitle });
+          toast({ title: t.toasts.deleteSuccessTitle });
           await fetchCards();
       } catch (error) {
-           toast({ variant: "destructive", title: t_toast.errorTitle, description: t.errors.deleteError });
+           toast({ variant: "destructive", title: t.errors.errorTitle, description: t.errors.deleteError });
       }
   }
 
@@ -166,8 +167,8 @@ export function ObjectiveBank({ user }: ObjectiveBankProps) {
       <CardHeader>
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle>{t.title}</CardTitle>
-            <CardDescription>{t.description}</CardDescription>
+            <CardTitle>{t_specifics.title}</CardTitle>
+            <CardDescription>{t_specifics.description}</CardDescription>
           </div>
           <Button onClick={() => handleOpenModal()}>
             <PlusCircle className="mr-2 h-4 w-4" />
