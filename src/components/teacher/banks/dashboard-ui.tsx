@@ -9,20 +9,7 @@ import type { User } from "@/lib/types";
 import { useLanguage } from "@/context/language-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CardBank } from "./card-bank";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-const NotImplemented = ({ title }: { title: string }) => (
-    <Card>
-        <CardHeader>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>Esta sección estará disponible próximamente.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <p className="text-center text-muted-foreground">Aún no se han subido archivos.</p>
-        </CardContent>
-    </Card>
-)
-
+import { FileBank } from "./file-bank";
 
 export function BanksDashboardUI() {
   const router = useRouter();
@@ -78,13 +65,13 @@ export function BanksDashboardUI() {
             <CardBank user={user} bankType="homework" />
           </TabsContent>
            <TabsContent value="images" className="mt-4">
-            <NotImplemented title={t.tabs.images} />
+            <FileBank user={user} bankType="image" />
           </TabsContent>
            <TabsContent value="videos" className="mt-4">
-            <NotImplemented title={t.tabs.videos} />
+            <FileBank user={user} bankType="video" />
           </TabsContent>
            <TabsContent value="audios" className="mt-4">
-            <NotImplemented title={t.tabs.audios} />
+            <FileBank user={user} bankType="audio" />
           </TabsContent>
         </Tabs>
       </main>

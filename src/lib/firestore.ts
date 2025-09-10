@@ -1,9 +1,13 @@
 
+
 import { 
     doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc, arrayRemove, addDoc, orderBy
 } from "firebase/firestore";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { db } from "./firebase";
 import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder, Lesson, EditorContent, BankCard, BankType } from "./types";
+
+const storage = getStorage();
 
 // Helper to convert Firestore Timestamps in lesson objects
 const lessonFromDoc = (doc: any): Lesson => {
@@ -230,6 +234,14 @@ export const getBankCards = async (ownerId: string, type: BankType): Promise<Ban
     return querySnapshot.docs.map(bankCardFromDoc);
 };
 
+// Get all bank files for a user (teacher/admin) of a specific type
+export const getBankFiles = async (ownerId: string, type: 'image' | 'video' | 'audio'): Promise<BankCard[]> => {
+     const bankRef = collection(db, "banks");
+    const q = query(bankRef, where("ownerId", "==", ownerId), where("type", "==", type), orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(bankCardFromDoc);
+}
+
 // Create a new bank card
 export const createBankCard = async (data: Omit<BankCard, 'id' | 'createdAt'>): Promise<string> => {
     const bankRef = collection(db, "banks");
@@ -251,6 +263,54 @@ export const deleteBankCard = async (cardId: string): Promise<void> => {
     const cardRef = doc(db, "banks", cardId);
     await deleteDoc(cardRef);
 };
+
+// Upload a file to a bank
+export const uploadBankFile = (ownerId: string, type: BankType, file: File, onProgress: (progress: number) => void): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const filePath = `${ownerId}/${type}/${Date.now()}_${file.name}`;
+    const storageRef = ref(storage, filePath);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        onProgress(progress);
+      },
+      (error) => {
+        console.error("Upload failed:", error);
+        reject(error);
+      },
+      async () => {
+        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+        
+        // Save file metadata to Firestore
+        const bankRef = collection(db, "banks");
+        await addDoc(bankRef, {
+            ownerId,
+            type,
+            name: file.name,
+            fileUrl: downloadURL,
+            filePath: filePath,
+            createdAt: Timestamp.now(),
+        });
+
+        resolve();
+      }
+    );
+  });
+};
+
+// Delete a bank file from Storage and Firestore
+export const deleteBankFile = async (cardId: string, filePath: string): Promise<void> => {
+    // Delete from Firestore
+    const cardRef = doc(db, "banks", cardId);
+    await deleteDoc(cardRef);
+
+    // Delete from Storage
+    const storageRef = ref(storage, filePath);
+    await deleteObject(storageRef);
+}
 
 
 // Function to add content to a group

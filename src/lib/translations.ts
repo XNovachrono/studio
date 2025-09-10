@@ -1,4 +1,5 @@
 
+
 export const translations = {
     es: {
         dashboardHeader: {
@@ -23,7 +24,7 @@ export const translations = {
                     title: "Banco de Objetivos",
                     description: "Crea, edita y gestiona tarjetas de objetivos reutilizables para tus clases.",
                 },
-                class: {
+                classes: {
                      title: "Banco de Clases",
                     description: "Crea, edita y gestiona tarjetas de clases reutilizables.",
                 },
@@ -50,6 +51,37 @@ export const translations = {
                     loadError: "No se pudieron cargar las tarjetas.",
                     saveError: "No se pudo guardar la tarjeta.",
                     deleteError: "No se pudo eliminar la tarjeta.",
+                }
+            },
+            fileBank: {
+                image: {
+                    title: "Banco de Imágenes",
+                    description: "Sube y gestiona imágenes para usar en tus clases.",
+                },
+                video: {
+                     title: "Banco de Vídeos",
+                    description: "Sube y gestiona vídeos para usar en tus clases.",
+                },
+                audio: {
+                    title: "Banco de Audios",
+                    description: "Sube y gestiona audios para usar en tus clases.",
+                },
+                common: {
+                    createdAt: "Subido",
+                    noFiles: "Aún no has subido ningún archivo.",
+                    uploadButton: "Subir archivo",
+                    retry: "Reintentar",
+                    uploading: "Subiendo... {progress}%",
+                    toasts: {
+                        uploadSuccessTitle: "Archivo subido",
+                        deleteSuccessTitle: "Archivo eliminado",
+                    },
+                    errors: {
+                        errorTitle: "Error",
+                        loadError: "No se pudieron cargar los archivos.",
+                        uploadError: "No se pudo subir el archivo.",
+                        deleteError: "No se pudo eliminar el archivo.",
+                    }
                 }
             }
         },
@@ -316,7 +348,7 @@ export const translations = {
                     title: "Objectives Bank",
                     description: "Create, edit, and manage reusable objective cards for your classes.",
                 },
-                class: {
+                classes: {
                     title: "Classes Bank",
                     description: "Create, edit, and manage reusable class cards.",
                 },
@@ -343,6 +375,37 @@ export const translations = {
                     loadError: "Could not load cards.",
                     saveError: "Could not save the card.",
                     deleteError: "Could not delete the card.",
+                }
+            },
+            fileBank: {
+                image: {
+                    title: "Image Bank",
+                    description: "Upload and manage images for use in your classes.",
+                },
+                video: {
+                     title: "Video Bank",
+                    description: "Upload and manage videos for use in your classes.",
+                },
+                audio: {
+                    title: "Audio Bank",
+                    description: "Upload and manage audio files for use in your classes.",
+                },
+                common: {
+                    createdAt: "Uploaded",
+                    noFiles: "You haven't uploaded any files yet.",
+                    uploadButton: "Upload file",
+                    retry: "Retry",
+                    uploading: "Uploading... {progress}%",
+                    toasts: {
+                        uploadSuccessTitle: "File uploaded",
+                        deleteSuccessTitle: "File deleted",
+                    },
+                    errors: {
+                        errorTitle: "Error",
+                        loadError: "Could not load files.",
+                        uploadError: "Could not upload the file.",
+                        deleteError: "Could not delete the file.",
+                    }
                 }
             }
         },
@@ -587,6 +650,3 @@ export const translations = {
         }
     }
 };
-
-    
-

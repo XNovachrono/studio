@@ -1,28 +1,30 @@
 
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Regla para la colección de usuarios
+    // Users can read and update their own profile.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, update: if request.auth.uid == userId;
     }
 
-    // Reglas para la colección de bancos de contenido
+    // Teachers can manage their own content banks.
+    // The 'list' permission on the collection is needed for queries with 'where' clauses to work.
+    // The more specific 'read'/'write' on the document ensures they can only access their own content.
     match /banks/{cardId} {
-      // Permite la lectura de la colección para que las consultas con 'where' funcionen
       allow list: if request.auth != null;
-      // Permite el acceso a un documento específico solo si el usuario es el propietario
-      allow get, create, update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow read, create, update, delete: if request.auth.uid == request.resource.data.ownerId   // For creates
+                                          || request.auth.uid == resource.data.ownerId; // For updates, reads, deletes
     }
-
-    // Reglas para la colección de grupos y sus lecciones
+    
+    // Teachers can read groups they are assigned to. Students can read groups they are members of.
     match /groups/{groupId} {
-      allow read, write: if request.auth != null && resource.data.teacherId == request.auth.uid;
+      allow read: if request.auth.uid == resource.data.teacherId 
+                  || request.auth.uid in resource.data.studentIds;
 
+      // Teachers can read and write lessons for groups they are assigned to.
       match /lessons/{lessonId} {
-        allow read, write: if request.auth != null; // Se hereda la restricción del grupo
+         allow read, create, update, delete: if request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId;
       }
     }
   }

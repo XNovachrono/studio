@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'student' | 'teacher' | 'admin';
 export type StudentPlan = 'privado' | 'grupo pequeño' | 'grupo grande';
 
@@ -115,7 +116,11 @@ export interface BankCard {
     id: string;
     type: BankType;
     name: string;
-    content: EditorContent;
     ownerId: string; // Teacher or Admin ID
     createdAt: string; // ISO date string
+    // For cards with rich text content
+    content?: EditorContent; 
+    // For file-based cards
+    fileUrl?: string;
+    filePath?: string;
 }
