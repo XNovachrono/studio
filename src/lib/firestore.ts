@@ -229,17 +229,21 @@ export const updateLesson = async (groupId: string, lessonId: string, data: Part
 // Get all bank cards for a user (teacher/admin) of a specific type
 export const getBankCards = async (ownerId: string, type: BankType): Promise<BankCard[]> => {
     const bankRef = collection(db, "banks");
-    const q = query(bankRef, where("ownerId", "==", ownerId), where("type", "==", type), orderBy("createdAt", "desc"));
+    const q = query(bankRef, where("ownerId", "==", ownerId), where("type", "==", type));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(bankCardFromDoc);
+    const cards = querySnapshot.docs.map(bankCardFromDoc);
+    // Sort manually in code
+    return cards.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 };
 
 // Get all bank files for a user (teacher/admin) of a specific type
 export const getBankFiles = async (ownerId: string, type: 'image' | 'video' | 'audio'): Promise<BankCard[]> => {
      const bankRef = collection(db, "banks");
-    const q = query(bankRef, where("ownerId", "==", ownerId), where("type", "==", type), orderBy("createdAt", "desc"));
+    const q = query(bankRef, where("ownerId", "==", ownerId), where("type", "==", type));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(bankCardFromDoc);
+    const files = querySnapshot.docs.map(bankCardFromDoc);
+    // Sort manually in code
+    return files.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 // Create a new bank card
