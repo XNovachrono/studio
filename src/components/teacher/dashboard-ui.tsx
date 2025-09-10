@@ -450,20 +450,19 @@ export function TeacherDashboardUI({ user }: TeacherDashboardUIProps) {
   const [groupToView, setGroupToView] = useState<Group | null>(null);
   const [isBanksModalOpen, setIsBanksModalOpen] = useState(false);
 
-  const fetchDashboardData = async (teacherId: string) => {
-      setIsLoading(true);
-      try {
-        const teacherData = await getTeacherDataForDashboard(teacherId);
-        setData(teacherData);
-      } catch (error) {
-          console.error("Error fetching teacher data:", error);
-          toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
-      } finally {
-          setIsLoading(false);
-      }
-  };
-
   useEffect(() => {
+    const fetchDashboardData = async (teacherId: string) => {
+        setIsLoading(true);
+        try {
+          const teacherData = await getTeacherDataForDashboard(teacherId);
+          setData(teacherData);
+        } catch (error) {
+            console.error("Error fetching teacher data:", error);
+            toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
+        } finally {
+            setIsLoading(false);
+        }
+    };
     if (user) {
         fetchDashboardData(user.id);
     }
