@@ -105,21 +105,29 @@ export const translations = {
         },
         studentDashboard: {
             title: "Panel de Estudiante",
-            scheduledClasses: {
-                title: "Clases Programadas",
-                joinButton: "Unirse a la clase",
-                classLink: "Link de la clase",
-                noClasses: "No hay clases programadas."
+            lessons: {
+                title: "Mis Lecciones",
+                description: "Aquí encontrarás todas las lecciones de tu grupo.",
+                noLessons: "Aún no hay lecciones disponibles para tu grupo.",
+                recording: "Recording",
+                viewRecording: "Ver Grabación",
+                noRecording: "La grabación aún no está disponible.",
+                content: "Contenido",
+                generalObjective: "Objetivo General",
+                specificObjectives: "Objetivos Específicos",
+                notDefined: "No definido.",
+                homework: "Homework",
+                instructions: "Instrucciones",
+                noInstructions: "No hay instrucciones para esta tarea.",
+                yourSubmission: "Tu Entrega",
+                noSubmission: "Aún no has entregado esta tarea.",
+                attendance: "Asistencia",
+                yourStatus: "Tu estado",
+                notRegistered: "No registrado"
             },
             notes: {
-                title: "Notas",
-                fullScreenTitle: "Notas de Clase",
-                viewButton: "Ver Nota",
-                noNotes: "No hay notas disponibles."
-            },
-            reminders: {
-                title: "Recordatorios",
-                noReminders: "No hay recordatorios del profesor."
+                title: "Class Note",
+                noNotes: "No hay notas para esta clase."
             },
             pqrs: {
                 title: "PQRS",
@@ -152,9 +160,23 @@ export const translations = {
                 small: "Grupos Pequeños",
                 large: "Grupos Grandes",
                 noGroups: "Aún no se te han asignado grupos.",
-                members: "Miembros:",
+                members: "Miembros",
                 unknown: "Desconocido",
                 viewData: "Ver datos",
+            },
+            lessons: {
+                newLesson: "Nueva Lección",
+                noLessons: "No hay lecciones para este grupo. ¡Crea la primera!",
+                recording: "Recording",
+                content: "Contenido",
+                classNote: "Class Note",
+                homework: "Homework",
+                attendance: "Asistencia",
+                recordingPlaceholder: "Aquí podrás añadir el link de la grabación.",
+                contentPlaceholder: "Aquí podrás definir los objetivos de la clase.",
+                classNotePlaceholder: "Aquí podrás crear la nota de la clase.",
+                homeworkPlaceholder: "Aquí podrás definir la tarea y ver las entregas.",
+                attendancePlaceholder: "Aquí podrás registrar la asistencia.",
             },
             studentDataDialog: {
                 title: "Datos de {studentName}",
@@ -171,6 +193,10 @@ export const translations = {
             toasts: {
                  errorTitle: "Error",
                  dataError: "No se pudieron cargar los datos.",
+                 lessonError: "No se pudieron cargar las lecciones.",
+                 lessonCreatedTitle: "Lección Creada",
+                 lessonCreatedDescription: "La nueva lección ha sido añadida al grupo.",
+                 createLessonError: "No se pudo crear la lección.",
             }
         },
         onboardingWizard: {
@@ -313,21 +339,29 @@ export const translations = {
         },
         studentDashboard: {
             title: "Student Dashboard",
-            scheduledClasses: {
-                title: "Scheduled Classes",
-                joinButton: "Join class",
-                classLink: "Class link",
-                noClasses: "No scheduled classes."
+            lessons: {
+                title: "My Lessons",
+                description: "Here you will find all the lessons for your group.",
+                noLessons: "There are no lessons available for your group yet.",
+                recording: "Recording",
+                viewRecording: "View Recording",
+                noRecording: "Recording is not yet available.",
+                content: "Content",
+                generalObjective: "General Objective",
+                specificObjectives: "Specific Objectives",
+                notDefined: "Not defined.",
+                homework: "Homework",
+                instructions: "Instructions",
+                noInstructions: "No instructions for this assignment.",
+                yourSubmission: "Your Submission",
+                noSubmission: "You have not submitted this assignment yet.",
+                attendance: "Attendance",
+                yourStatus: "Your status",
+                notRegistered: "Not registered"
             },
             notes: {
-                title: "Notes",
-                fullScreenTitle: "Class Notes",
-                viewButton: "View Note",
-                noNotes: "No notes available."
-            },
-             reminders: {
-                title: "Reminders",
-                noReminders: "No reminders from the teacher."
+                title: "Class Note",
+                noNotes: "No notes for this class."
             },
             pqrs: {
                 title: "PQRS",
@@ -364,6 +398,20 @@ export const translations = {
                 unknown: "Unknown",
                 viewData: "View data",
             },
+            lessons: {
+                newLesson: "New Lesson",
+                noLessons: "No lessons for this group. Create the first one!",
+                recording: "Recording",
+                content: "Content",
+                classNote: "Class Note",
+                homework: "Homework",
+                attendance: "Attendance",
+                recordingPlaceholder: "Here you can add the recording link.",
+                contentPlaceholder: "Here you can define the class objectives.",
+                classNotePlaceholder: "Here you can create the class note.",
+                homeworkPlaceholder: "Here you can define the homework and see submissions.",
+                attendancePlaceholder: "Here you can record attendance.",
+            },
             studentDataDialog: {
                 title: "Data for {studentName}",
                 name: "Name",
@@ -379,6 +427,10 @@ export const translations = {
             toasts: {
                  errorTitle: "Error",
                  dataError: "Could not load data.",
+                 lessonError: "Could not load lessons.",
+                 lessonCreatedTitle: "Lesson Created",
+                 lessonCreatedDescription: "The new lesson has been added to the group.",
+                 createLessonError: "Could not create the lesson.",
             }
         },
          onboardingWizard: {

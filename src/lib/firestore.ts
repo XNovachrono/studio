@@ -1,10 +1,10 @@
 
 
 import { 
-    doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc, arrayRemove, addDoc
+    doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc, arrayRemove, addDoc, orderBy
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder } from "./types";
+import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder, Lesson } from "./types";
 
 // Function to get a user profile
 export const getUserProfile = async (userId: string): Promise<User | null> => {
@@ -106,6 +106,7 @@ export const getAdminData = async (): Promise<{
 export const createGroupWithTeacher = async (teacher: User, students: {id: string, name: string}[], plan: StudentPlan) => {
     const studentIds = students.map(s => s.id);
     const studentNames = students.map(s => s.name);
+    // Create group name from student names
     const groupName = studentNames.join(', ');
 
     const newGroupRef = doc(collection(db, "groups"));
@@ -144,6 +145,51 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
 
     return { groups, allStudents };
 }
+
+// === Lesson Functions ===
+
+// Get all lessons for a specific group
+export const getLessonsForGroup = async (groupId: string): Promise<Lesson[]> => {
+    const lessonsRef = collection(db, "groups", groupId, "lessons");
+    const q = query(lessonsRef, orderBy("number", "asc"));
+    const querySnapshot = await getDocs(q);
+    
+    return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
+        } as Lesson;
+    });
+};
+
+// Create a new lesson for a group
+export const createLessonForGroup = async (groupId: string, groupName: string, students: StudentProfile[]): Promise<void> => {
+    const lessonsRef = collection(db, "groups", groupId, "lessons");
+    const lessonsSnap = await getDocs(lessonsRef);
+    const lessonNumber = lessonsSnap.size + 1;
+
+    // Calculate average level
+    const levels = students.map(s => s.level).filter(Boolean) as string[];
+    const avgLevel = levels.length > 0 ? levels[0] : 'N/A'; // Placeholder for actual average calculation
+    
+    const newLessonName = `L${lessonNumber.toString().padStart(2, '0')}.${groupName}.${avgLevel}`;
+
+    const newLesson: Omit<Lesson, 'id'> = {
+        groupId,
+        name: newLessonName,
+        number: lessonNumber,
+        createdAt: Timestamp.now() as any,
+        recording: { link: "" },
+        content: { generalObjective: "", specificObjectives: "" },
+        classNote: "",
+        homework: { instructions: "" },
+        attendance: {},
+    };
+
+    await addDoc(lessonsRef, newLesson);
+};
 
 
 // Function to add content to a group

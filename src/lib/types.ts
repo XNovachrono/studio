@@ -32,7 +32,7 @@ export interface StudentProfile extends User {
 }
 
 export interface Group {
-  id: string; // 7-digit unique ID
+  id: string;
   name: string;
   type: StudentPlan;
   studentIds: string[];
@@ -74,3 +74,34 @@ export interface PQRSMessage {
     isAnonymous: boolean;
     createdAt: string; // ISO date string
 }
+
+
+// --- New Lesson System Types ---
+export interface Lesson {
+  id: string;
+  groupId: string;
+  name: string;
+  number: number;
+  createdAt: string; // ISO date string
+  recording: {
+    link: string;
+  };
+  content: {
+    generalObjective: string;
+    specificObjectives: string;
+  };
+  classNote: string; // For now, simple text. Will evolve to rich content.
+  homework: {
+    instructions: string;
+  };
+  attendance: Record<string, 'present' | 'absent' | 'late'>; // Key: studentId
+}
+
+export interface HomeworkSubmission {
+  id: string;
+  lessonId: string;
+  studentId: string;
+  files: { name: string; url: string }[];
+  submittedAt: string; // ISO date string
+}
+

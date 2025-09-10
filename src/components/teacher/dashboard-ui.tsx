@@ -3,8 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Lightbulb, Calendar, FilePlus, Loader2, MoreVertical, Notebook, PlusCircle, Trash2, UserPlus, UserX, Users, Edit, Eye } from "lucide-react";
-
+import { BookOpen, Eye, Loader2, PlusCircle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,31 +12,26 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "../ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, StudentProfile, Group, StudentPlan } from "@/lib/types";
-import { getTeacherDataForDashboard } from "@/lib/firestore";
+import type { User, StudentProfile, Group, Lesson } from "@/lib/types";
+import { getTeacherDataForDashboard, getLessonsForGroup, createLessonForGroup } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
-import { ScrollArea } from "../ui/scroll-area";
 import { useLanguage } from "@/context/language-context";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Textarea } from "../ui/textarea";
 
 interface TeacherDashboardData {
   teacher: User | null;
   groups: Group[];
-}
-
-interface GroupSectionProps {
-  title: string;
-  groups: Group[];
-  studentsById: Map<string, StudentProfile>;
-  onView: (group: Group) => void;
 }
 
 const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: StudentProfile | null; isOpen: boolean; onOpenChange: (open: boolean) => void }) => {
@@ -79,6 +73,99 @@ const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: Student
     );
 };
 
+const GroupLessons = ({ group, studentsById }: { group: Group, studentsById: Map<string, StudentProfile> }) => {
+    const [lessons, setLessons] = useState<Lesson[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isCreating, setIsCreating] = useState(false);
+    const { translations } = useLanguage();
+    const t = translations.teacherDashboard.lessons;
+    const t_toast = translations.teacherDashboard.toasts;
+    const { toast } = useToast();
+
+    const fetchLessons = async () => {
+        setIsLoading(true);
+        try {
+            const groupLessons = await getLessonsForGroup(group.id);
+            setLessons(groupLessons);
+        } catch (error) {
+            console.error("Error fetching lessons:", error);
+            toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.lessonError });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchLessons();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [group.id]);
+
+    const handleCreateLesson = async () => {
+        setIsCreating(true);
+        try {
+            const groupStudents = group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[];
+            await createLessonForGroup(group.id, group.name, groupStudents);
+            toast({ title: t_toast.lessonCreatedTitle, description: t_toast.lessonCreatedDescription });
+            await fetchLessons(); // Refresh lessons
+        } catch (error) {
+            console.error("Error creating lesson:", error);
+            toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.createLessonError });
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-40"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+    }
+
+    return (
+        <div className="space-y-4">
+            <div className="flex justify-end">
+                <Button onClick={handleCreateLesson} disabled={isCreating}>
+                    {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+                    {t.newLesson}
+                </Button>
+            </div>
+             {lessons.length > 0 ? (
+                <Accordion type="single" collapsible className="w-full">
+                    {lessons.map(lesson => (
+                         <AccordionItem value={lesson.id} key={lesson.id}>
+                            <AccordionTrigger className="font-semibold text-lg hover:no-underline">{lesson.name}</AccordionTrigger>
+                            <AccordionContent className="space-y-6 pl-2">
+                                {/* TODO: Teacher-specific lesson content editing will go here */}
+                                <Card>
+                                    <CardHeader><CardTitle>{t.recording}</CardTitle></CardHeader>
+                                    <CardContent><p className="text-muted-foreground">{t.recordingPlaceholder}</p></CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader><CardTitle>{t.content}</CardTitle></CardHeader>
+                                    <CardContent><p className="text-muted-foreground">{t.contentPlaceholder}</p></CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader><CardTitle>{t.classNote}</CardTitle></CardHeader>
+                                    <CardContent><p className="text-muted-foreground">{t.classNotePlaceholder}</p></CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader><CardTitle>{t.homework}</CardTitle></CardHeader>
+                                    <CardContent><p className="text-muted-foreground">{t.homeworkPlaceholder}</p></CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader><CardTitle>{t.attendance}</CardTitle></CardHeader>
+                                    <CardContent><p className="text-muted-foreground">{t.attendancePlaceholder}</p></CardContent>
+                                </Card>
+                            </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                </Accordion>
+            ) : (
+                <p className="p-4 text-center text-muted-foreground">{t.noLessons}</p>
+            )}
+        </div>
+    );
+};
+
+
 const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange }: { group: Group | null; studentsById: Map<string, StudentProfile>; isOpen: boolean; onOpenChange: (open: boolean) => void; }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.groups;
@@ -90,29 +177,37 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange }: { gro
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>{group.name}</DialogTitle>
                      <DialogDescription>
                       <Badge variant="secondary" className="capitalize">{group.type}</Badge>
                     </DialogDescription>
                 </DialogHeader>
-                <div className="py-4">
-                    <h4 className="font-semibold text-md mb-2">{t.members}:</h4>
-                    <ScrollArea className="h-72">
-                        <ul className="space-y-2 pr-4">
-                            {groupMembers.map(student => (
-                                <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
-                                    <span className="text-sm">{student.name}</span>
-                                    <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
-                                        <Eye className="mr-2 h-4 w-4" />
-                                        {t.viewData}
-                                    </Button>
-                                </li>
-                            ))}
-                        </ul>
-                    </ScrollArea>
-                </div>
+                <Tabs defaultValue="lessons" className="flex-grow flex flex-col overflow-hidden">
+                    <TabsList className="shrink-0">
+                        <TabsTrigger value="lessons"><BookOpen className="mr-2 h-4 w-4"/>Lecciones</TabsTrigger>
+                        <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Miembros</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="lessons" className="flex-grow overflow-auto p-4">
+                       <GroupLessons group={group} studentsById={studentsById} />
+                    </TabsContent>
+                    <TabsContent value="members" className="flex-grow overflow-auto p-4">
+                         <ScrollArea className="h-full">
+                            <ul className="space-y-2 pr-4">
+                                {groupMembers.map(student => (
+                                    <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
+                                        <span className="text-sm">{student.name}</span>
+                                        <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
+                                            <Eye className="mr-2 h-4 w-4" />
+                                            {t.viewData}
+                                        </Button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </ScrollArea>
+                    </TabsContent>
+                </Tabs>
             </DialogContent>
             <StudentDataDialog student={studentToView} isOpen={!!studentToView} onOpenChange={() => setStudentToView(null)} />
         </Dialog>
@@ -120,7 +215,7 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange }: { gro
 };
 
 
-const GroupSection = ({ title, groups, studentsById, onView }: GroupSectionProps) => {
+const GroupSection = ({ title, groups, studentsById, onView }: { title: string; groups: Group[]; studentsById: Map<string, StudentProfile>; onView: (group: Group) => void; }) => {
   const { translations } = useLanguage();
   const t = translations.teacherDashboard.groups;
 
