@@ -1,12 +1,38 @@
 
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Allow authenticated users to read and write to most collections
+    // Default deny all reads and writes
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
+    }
+
+    // Allow users to read and write their own user document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rules for banks collection
+    match /banks/{bankId} {
+      // Allow read/list if the query is filtering by the user's own ID
+      allow list, get: if request.auth != null && request.query.resource.data.ownerId == request.auth.uid;
+      
+      // Allow creating a card if the ownerId matches the user's ID
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+
+      // Allow updating/deleting if the user is the owner of the existing card
+      allow update, delete: if request.auth != null && get(/databases/$(database)/documents/banks/$(bankId)).data.ownerId == request.auth.uid;
+    }
+
+    // Rules for groups and lessons
+    match /groups/{groupId} {
+      allow read: if request.auth != null && (resource.data.teacherId == request.auth.uid || request.auth.uid in resource.data.studentIds);
+      allow create, update: if request.auth != null && request.resource.data.teacherId == request.auth.uid;
+
+      match /lessons/{lessonId} {
+        allow read: if request.auth != null && (get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.axuth.uid || request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.studentIds);
+        allow create, update, delete: if request.auth != null && get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid;
+      }
     }
   }
 }
