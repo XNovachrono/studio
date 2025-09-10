@@ -228,7 +228,7 @@ export const updateLesson = async (groupId: string, lessonId: string, data: Part
 
 // Get all bank cards for a user (teacher/admin) of a specific type
 export const getBankCards = async (ownerId: string, type: BankType): Promise<BankCard[]> => {
-    const bankRef = collection(db, "banks");
+    const bankRef = collection(db, "bank_cards");
     const q = query(bankRef, where("ownerId", "==", ownerId), where("type", "==", type));
     const querySnapshot = await getDocs(q);
     const cards = querySnapshot.docs.map(bankCardFromDoc);
@@ -238,7 +238,7 @@ export const getBankCards = async (ownerId: string, type: BankType): Promise<Ban
 
 // Get all bank files for a user (teacher/admin) of a specific type
 export const getBankFiles = async (ownerId: string, type: 'image' | 'video' | 'audio'): Promise<BankCard[]> => {
-     const bankRef = collection(db, "banks");
+    const bankRef = collection(db, "bank_cards");
     const q = query(bankRef, where("ownerId", "==", ownerId), where("type", "==", type));
     const querySnapshot = await getDocs(q);
     const files = querySnapshot.docs.map(bankCardFromDoc);
@@ -248,7 +248,7 @@ export const getBankFiles = async (ownerId: string, type: 'image' | 'video' | 'a
 
 // Create a new bank card
 export const createBankCard = async (data: Omit<BankCard, 'id' | 'createdAt'>): Promise<string> => {
-    const bankRef = collection(db, "banks");
+    const bankRef = collection(db, "bank_cards");
     const newCardRef = await addDoc(bankRef, {
         ...data,
         createdAt: Timestamp.now(),
@@ -258,13 +258,13 @@ export const createBankCard = async (data: Omit<BankCard, 'id' | 'createdAt'>): 
 
 // Update a bank card
 export const updateBankCard = async (cardId: string, data: Partial<BankCard>): Promise<void> => {
-    const cardRef = doc(db, "banks", cardId);
+    const cardRef = doc(db, "bank_cards", cardId);
     await updateDoc(cardRef, data);
 };
 
 // Delete a bank card
 export const deleteBankCard = async (cardId: string): Promise<void> => {
-    const cardRef = doc(db, "banks", cardId);
+    const cardRef = doc(db, "bank_cards", cardId);
     await deleteDoc(cardRef);
 };
 
@@ -289,7 +289,7 @@ export const uploadBankFile = (ownerId: string, type: BankType, file: File, onPr
         const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
         
         // Save file metadata to Firestore
-        const bankRef = collection(db, "banks");
+        const bankRef = collection(db, "bank_cards");
         await addDoc(bankRef, {
             ownerId,
             type,
@@ -308,7 +308,7 @@ export const uploadBankFile = (ownerId: string, type: BankType, file: File, onPr
 // Delete a bank file from Storage and Firestore
 export const deleteBankFile = async (cardId: string, filePath: string): Promise<void> => {
     // Delete from Firestore
-    const cardRef = doc(db, "banks", cardId);
+    const cardRef = doc(db, "bank_cards", cardId);
     await deleteDoc(cardRef);
 
     // Delete from Storage
@@ -429,3 +429,5 @@ export const updateStudentDetails = async (studentId: string, data: { level: str
         courseDuration: data.courseDuration,
     });
 };
+
+    

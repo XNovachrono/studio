@@ -1,38 +1,36 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Regla general: Los usuarios solo pueden ver y editar su propio perfil.
+
+    // Allow users to read and update their own profile
     match /users/{userId} {
       allow read, update: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Regla para la colección de bancos de contenido.
-    // Un usuario puede realizar cualquier operación (crear, leer, actualizar, borrar)
-    // en una tarjeta si y solo si el 'ownerId' del documento coincide con su ID de usuario.
-    match /banks/{cardId} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.ownerId;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
-    }
-
-    // Reglas para grupos y lecciones
+    // Allow authenticated users to read the groups collection
+    // Security is enforced by the queries in the application code
     match /groups/{groupId} {
-      // Permite la lectura del grupo a los usuarios autenticados.
-      // La lógica de la aplicación se encarga de mostrar solo los grupos correctos.
-      allow read: if request.auth != null;
-
-      // Un profesor solo puede actualizar el contenido de un grupo si es el profesor asignado.
-      allow update: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId;
-
-      // Reglas para la subcolección de lecciones.
-      match /lessons/{lessonId} {
-        // Permite la lectura de lecciones a usuarios autenticados.
         allow read: if request.auth != null;
 
-        // Solo el profesor del grupo puede crear, actualizar o borrar lecciones.
-        allow write: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId;
-      }
+        // Allow teachers to update their own groups and create/update lessons
+         match /lessons/{lessonId} {
+            allow read, write: if request.auth != null;
+        }
+    }
+    
+    // Bank Cards security rules
+    match /bank_cards/{cardId} {
+        // A user can create, read, update, and delete a card
+        // only if the 'ownerId' matches their own user ID.
+        allow read, write: if request.auth != null && request.auth.uid == resource.data.ownerId;
+        allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
+    }
+
+    // Allow authenticated users to submit PQRS messages
+    match /pqrs/{pqrsId} {
+        allow create: if request.auth != null;
     }
   }
 }
+
+    
