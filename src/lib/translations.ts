@@ -1,6 +1,46 @@
 
 export const translations = {
     es: {
+        dashboardHeader: {
+            dashboard: "Panel",
+            banks: "Bancos",
+            themes: "Temas",
+            logout: "Cerrar sesión",
+            dataSettings: "Ajuste de datos",
+        },
+        banksDashboard: {
+            title: "Bancos de Contenido",
+            tabs: {
+                objectives: "Banco de Objetivos",
+                classes: "Banco de Clases",
+                homework: "Banco de Tareas",
+                images: "Banco de Imágenes",
+                videos: "Banco de Vídeos",
+                audios: "Banco de Audios",
+            },
+            objectiveBank: {
+                title: "Banco de Objetivos",
+                description: "Crea, edita y gestiona tarjetas de objetivos reutilizables para tus clases.",
+                newCard: "Nueva Tarjeta",
+                editCard: "Editar Tarjeta",
+                createdAt: "Creado",
+                noCards: "Aún no has creado ninguna tarjeta de objetivos.",
+                cardName: "Nombre de la tarjeta",
+                cardContent: "Contenido",
+                cancel: "Cancelar",
+                save: "Guardar",
+                toasts: {
+                    errorTitle: "Error",
+                    loadError: "No se pudieron cargar las tarjetas.",
+                    saveError: "No se pudo guardar la tarjeta.",
+                    deleteError: "No se pudo eliminar la tarjeta.",
+                    nameRequired: "El nombre de la tarjeta es obligatorio.",
+                    createSuccessTitle: "Tarjeta creada",
+                    updateSuccessTitle: "Tarjeta actualizada",
+                    deleteSuccessTitle: "Tarjeta eliminada",
+                }
+            }
+        },
         adminDashboard: {
             title: "Panel de Administrador",
             tabs: {
@@ -68,11 +108,6 @@ export const translations = {
             errorInvalidEmail: "El formato del correo electrónico no es válido.",
             errorUserNotFound: "No se encontró el perfil de usuario.",
             errorUnexpected: "Ha ocurrido un error inesperado.",
-        },
-        dashboardHeader: {
-            themes: "Temas",
-            logout: "Cerrar sesión",
-            dataSettings: "Ajuste de datos",
         },
         studentDataSettings: {
             title: "Ajuste de Datos",
@@ -160,8 +195,8 @@ export const translations = {
                 members: "Miembros",
                 unknown: "Desconocido",
                 viewData: "Ver datos",
-                viewGroup: "Ver grupo",
-                editGroup: "Editar grupo",
+                viewGroup: "Ver lecciones",
+                editGroup: "Gestionar miembros",
             },
             lessons: {
                 newLesson: "Nueva Lección",
@@ -172,8 +207,19 @@ export const translations = {
                 classNote: "Class Note",
                 homework: "Homework",
                 attendance: "Asistencia",
+                importFromBank: "Importar desde banco",
+                placeholders: {
+                     content: "Objetivo general y objetivos específicos de la clase...",
+                     classNote: "Escribe tus notas de clase aquí. Usa '/' para ver los comandos...",
+                     homework: "Detalla las instrucciones de la tarea...",
+                },
                 recordingPlaceholder: "Aquí podrás añadir el link de la grabación.",
                 attendancePlaceholder: "Aquí podrás registrar la asistencia.",
+            },
+            bankImporter: {
+                title: "Importar desde Banco de Objetivos",
+                import: "Importar",
+                noCards: "No hay tarjetas en el banco de objetivos."
             },
             studentDataDialog: {
                 title: "Datos de {studentName}",
@@ -235,6 +281,46 @@ export const translations = {
         }
     },
     en: {
+        dashboardHeader: {
+            dashboard: "Dashboard",
+            banks: "Banks",
+            themes: "Themes",
+            logout: "Log out",
+            dataSettings: "Data Settings",
+        },
+        banksDashboard: {
+            title: "Content Banks",
+            tabs: {
+                objectives: "Objectives Bank",
+                classes: "Classes Bank",
+                homework: "Homework Bank",
+                images: "Image Bank",
+                videos: "Video Bank",
+                audios: "Audio Bank",
+            },
+            objectiveBank: {
+                title: "Objectives Bank",
+                description: "Create, edit, and manage reusable objective cards for your classes.",
+                newCard: "New Card",
+                editCard: "Edit Card",
+                createdAt: "Created at",
+                noCards: "You haven't created any objective cards yet.",
+                cardName: "Card name",
+                cardContent: "Content",
+                cancel: "Cancel",
+                save: "Save",
+                toasts: {
+                    errorTitle: "Error",
+                    loadError: "Could not load cards.",
+                    saveError: "Could not save the card.",
+                    deleteError: "Could not delete the card.",
+                    nameRequired: "The card name is required.",
+                    createSuccessTitle: "Card created",
+                    updateSuccessTitle: "Card updated",
+                    deleteSuccessTitle: "Card deleted",
+                }
+            }
+        },
         adminDashboard: {
             title: "Admin Dashboard",
             tabs: {
@@ -302,11 +388,6 @@ export const translations = {
             errorInvalidEmail: "The email format is not valid.",
             errorUserNotFound: "User profile not found.",
             errorUnexpected: "An unexpected error has occurred.",
-        },
-        dashboardHeader: {
-            themes: "Themes",
-            logout: "Log out",
-            dataSettings: "Data Settings",
         },
         studentDataSettings: {
             title: "Data Settings",
@@ -391,11 +472,11 @@ export const translations = {
                 small: "Small Groups",
                 large: "Large Groups",
                 noGroups: "No groups have been assigned to you yet.",
-                members: "Members:",
+                members: "Members",
                 unknown: "Unknown",
                 viewData: "View data",
-                viewGroup: "View group",
-                editGroup: "Edit group",
+                viewGroup: "View lessons",
+                editGroup: "Manage members",
             },
             lessons: {
                 newLesson: "New Lesson",
@@ -406,8 +487,19 @@ export const translations = {
                 classNote: "Class Note",
                 homework: "Homework",
                 attendance: "Attendance",
+                importFromBank: "Import from bank",
+                placeholders: {
+                    content: "General and specific objectives for the class...",
+                    classNote: "Write your class notes here. Use '/' to see commands...",
+                    homework: "Detail the homework instructions...",
+                },
                 recordingPlaceholder: "Here you can add the recording link.",
                 attendancePlaceholder: "Here you can record attendance.",
+            },
+             bankImporter: {
+                title: "Import from Objectives Bank",
+                import: "Import",
+                noCards: "No cards in the objectives bank."
             },
             studentDataDialog: {
                 title: "Data for {studentName}",

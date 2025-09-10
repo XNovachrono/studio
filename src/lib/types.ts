@@ -107,3 +107,15 @@ export interface HomeworkSubmission {
   files: { name: string; url: string }[];
   submittedAt: string; // ISO date string
 }
+
+// --- Bank System Types ---
+export type BankType = 'objective' | 'class' | 'homework' | 'image' | 'video' | 'audio';
+
+export interface BankCard {
+    id: string;
+    type: BankType;
+    name: string;
+    content: EditorContent;
+    ownerId: string; // Teacher or Admin ID
+    createdAt: string; // ISO date string
+}

@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save } from "lucide-react";
+import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -12,12 +12,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogClose,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "../ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, StudentProfile, Group, Lesson, EditorContent } from "@/lib/types";
-import { getTeacherDataForDashboard, getLessonsForGroup, createLessonForGroup, updateLesson } from "@/lib/firestore";
+import type { User, StudentProfile, Group, Lesson, EditorContent, BankCard } from "@/lib/types";
+import { getTeacherDataForDashboard, getLessonsForGroup, createLessonForGroup, updateLesson, getBankCards } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -32,8 +34,19 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Textarea } from "../ui/textarea";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Editor } from "../common/editor";
 
 
@@ -81,7 +94,54 @@ const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: Student
     );
 };
 
-const GroupLessons = ({ group, studentsById }: { group: Group, studentsById: Map<string, StudentProfile> }) => {
+const BankCardImporter = ({ onSelectCard, ownerId, isOpen, onOpenChange }: { onSelectCard: (content: EditorContent) => void; ownerId: string; isOpen: boolean; onOpenChange: (open: boolean) => void; }) => {
+    const [cards, setCards] = useState<BankCard[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const { translations } = useLanguage();
+    const t = translations.teacherDashboard.bankImporter;
+
+    useEffect(() => {
+        if (isOpen) {
+            const fetchCards = async () => {
+                setIsLoading(true);
+                const fetchedCards = await getBankCards(ownerId, 'objective');
+                setCards(fetchedCards);
+                setIsLoading(false);
+            };
+            fetchCards();
+        }
+    }, [isOpen, ownerId]);
+
+    const handleSelect = (card: BankCard) => {
+        onSelectCard(card.content);
+        onOpenChange(false);
+    }
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader><DialogTitle>{t.title}</DialogTitle></DialogHeader>
+                {isLoading ? (
+                    <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin"/></div>
+                ) : (
+                    <ScrollArea className="max-h-[60vh]">
+                        <div className="space-y-2 pr-4">
+                        {cards.length > 0 ? cards.map(card => (
+                            <div key={card.id} className="flex justify-between items-center p-2 border rounded-md">
+                                <span className="font-medium">{card.name}</span>
+                                <Button size="sm" onClick={() => handleSelect(card)}>{t.import}</Button>
+                            </div>
+                        )) : <p className="text-center text-muted-foreground">{t.noCards}</p>}
+                        </div>
+                    </ScrollArea>
+                )}
+            </DialogContent>
+        </Dialog>
+    )
+}
+
+
+const GroupLessons = ({ group, studentsById, teacherId }: { group: Group, studentsById: Map<string, StudentProfile>, teacherId: string }) => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
@@ -89,7 +149,8 @@ const GroupLessons = ({ group, studentsById }: { group: Group, studentsById: Map
     const t = translations.teacherDashboard.lessons;
     const t_toast = translations.teacherDashboard.toasts;
     const { toast } = useToast();
-    const [isSaving, setIsSaving] = useState(false);
+    const [isSaving, setIsSaving] = useState<string | null>(null); // Store saving lesson ID
+    const [isBankImporterOpen, setBankImporterOpen] = useState(false);
 
     // State for edited lesson content
     const [editedContent, setEditedContent] = useState<Record<string, Partial<Lesson>>>({});
@@ -129,14 +190,12 @@ const GroupLessons = ({ group, studentsById }: { group: Group, studentsById: Map
     
     const handleSaveLesson = async (lessonId: string) => {
       if (!editedContent[lessonId]) return;
-      setIsSaving(true);
+      setIsSaving(lessonId);
       try {
         await updateLesson(group.id, lessonId, editedContent[lessonId]);
         toast({ title: t_toast.lessonSavedTitle, description: t_toast.lessonSavedDescription });
         
-        // Optimistically update local state
         setLessons(prev => prev.map(l => l.id === lessonId ? {...l, ...editedContent[lessonId]} : l));
-        // Clear edited state for this lesson
         setEditedContent(prev => {
             const newState = {...prev};
             delete newState[lessonId];
@@ -147,7 +206,7 @@ const GroupLessons = ({ group, studentsById }: { group: Group, studentsById: Map
         console.error("Error saving lesson:", error);
         toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.saveLessonError });
       } finally {
-        setIsSaving(false);
+        setIsSaving(null);
       }
     };
 
@@ -160,7 +219,10 @@ const GroupLessons = ({ group, studentsById }: { group: Group, studentsById: Map
             }
         }));
     };
-
+    
+    const handleImportFromBank = (lessonId: string, content: EditorContent) => {
+        handleContentChange(lessonId, 'content', content);
+    }
 
     if (isLoading) {
         return <div className="flex justify-center items-center h-40"><Loader2 className="h-6 w-6 animate-spin" /></div>;
@@ -168,6 +230,12 @@ const GroupLessons = ({ group, studentsById }: { group: Group, studentsById: Map
 
     return (
         <div className="space-y-4">
+             <BankCardImporter ownerId={teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={(content) => {
+                 const activeLessonId = lessons.find(l => document.querySelector(`[data-accordion-item-id="${l.id}"]`))?.id;
+                 if (activeLessonId) {
+                    handleImportFromBank(activeLessonId, content);
+                 }
+            }} />
             <div className="flex justify-end">
                 <Button onClick={handleCreateLesson} disabled={isCreating}>
                     {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
@@ -177,12 +245,12 @@ const GroupLessons = ({ group, studentsById }: { group: Group, studentsById: Map
              {lessons.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full">
                     {lessons.map(lesson => (
-                         <AccordionItem value={lesson.id} key={lesson.id}>
+                         <AccordionItem value={lesson.id} key={lesson.id} data-accordion-item-id={lesson.id}>
                             <AccordionTrigger className="font-semibold text-lg hover:no-underline">{lesson.name}</AccordionTrigger>
                             <AccordionContent className="space-y-6 pl-2">
-                                <div className="flex justify-end sticky top-0 bg-background/80 backdrop-blur-sm z-10 py-2">
-                                   <Button onClick={() => handleSaveLesson(lesson.id)} disabled={isSaving || !editedContent[lesson.id]}>
-                                      {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                <div className="flex justify-end sticky top-16 bg-background/80 backdrop-blur-sm z-10 py-2 -mt-4">
+                                   <Button onClick={() => handleSaveLesson(lesson.id)} disabled={isSaving === lesson.id || !editedContent[lesson.id]}>
+                                      {isSaving === lesson.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                                       {t.saveChanges}
                                    </Button>
                                 </div>
@@ -191,13 +259,26 @@ const GroupLessons = ({ group, studentsById }: { group: Group, studentsById: Map
                                     <CardContent><p className="text-muted-foreground">{t.recordingPlaceholder}</p></CardContent>
                                 </Card>
                                 <Card>
-                                    <CardHeader><CardTitle>{t.content}</CardTitle></CardHeader>
+                                    <CardHeader className="flex flex-row items-center justify-between">
+                                        <CardTitle>{t.content}</CardTitle>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4"/></Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem onClick={() => setBankImporterOpen(true)}>
+                                                    <Import className="mr-2 h-4 w-4" />
+                                                    {t.importFromBank}
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </CardHeader>
                                     <CardContent>
                                       <Editor
-                                        content={lesson.content}
+                                        content={editedContent[lesson.id]?.content || lesson.content}
                                         onChange={(newContent) => handleContentChange(lesson.id, 'content', newContent)}
                                         editable
-                                        placeholder="Objetivo general y objetivos específicos de la clase..."
+                                        placeholder={t.placeholders.content}
                                       />
                                     </CardContent>
                                 </Card>
@@ -205,10 +286,10 @@ const GroupLessons = ({ group, studentsById }: { group: Group, studentsById: Map
                                     <CardHeader><CardTitle>{t.classNote}</CardTitle></CardHeader>
                                     <CardContent>
                                        <Editor
-                                        content={lesson.classNote}
+                                        content={editedContent[lesson.id]?.classNote || lesson.classNote}
                                         onChange={(newContent) => handleContentChange(lesson.id, 'classNote', newContent)}
                                         editable
-                                        placeholder="Escribe tus notas de clase aquí. Usa '/' para ver los comandos..."
+                                        placeholder={t.placeholders.classNote}
                                       />
                                     </CardContent>
                                 </Card>
@@ -216,10 +297,10 @@ const GroupLessons = ({ group, studentsById }: { group: Group, studentsById: Map
                                     <CardHeader><CardTitle>{t.homework}</CardTitle></CardHeader>
                                      <CardContent>
                                       <Editor
-                                        content={lesson.homework}
+                                        content={editedContent[lesson.id]?.homework || lesson.homework}
                                         onChange={(newContent) => handleContentChange(lesson.id, 'homework', newContent)}
                                         editable
-                                        placeholder="Detalla las instrucciones de la tarea..."
+                                        placeholder={t.placeholders.homework}
                                       />
                                     </CardContent>
                                 </Card>
@@ -239,7 +320,7 @@ const GroupLessons = ({ group, studentsById }: { group: Group, studentsById: Map
 };
 
 
-const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange }: { group: Group | null; studentsById: Map<string, StudentProfile>; isOpen: boolean; onOpenChange: (open: boolean) => void; }) => {
+const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, teacherId }: { group: Group | null; studentsById: Map<string, StudentProfile>; isOpen: boolean; onOpenChange: (open: boolean) => void; teacherId: string }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.groups;
     const [studentToView, setStudentToView] = useState<StudentProfile | null>(null);
@@ -263,7 +344,7 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange }: { gro
                         <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Miembros</TabsTrigger>
                     </TabsList>
                     <TabsContent value="lessons" className="flex-grow overflow-auto p-4">
-                       <GroupLessons group={group} studentsById={studentsById} />
+                       <GroupLessons group={group} studentsById={studentsById} teacherId={teacherId} />
                     </TabsContent>
                     <TabsContent value="members" className="flex-grow overflow-auto p-4">
                          <ScrollArea className="h-full">
@@ -291,8 +372,7 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange }: { gro
 const GroupSection = ({ title, groups, studentsById, onView }: { title: string; groups: Group[]; studentsById: Map<string, StudentProfile>; onView: (group: Group) => void; }) => {
   const { translations } = useLanguage();
   const t = translations.teacherDashboard.groups;
-  const [activeGroup, setActiveGroup] = useState<string | null>(null);
-
+  
   if (groups.length === 0) {
     return null;
   }
@@ -304,7 +384,7 @@ const GroupSection = ({ title, groups, studentsById, onView }: { title: string; 
           <Card key={group.id} className="flex flex-col">
              <div onClick={() => onView(group)} className="flex-grow cursor-pointer hover:bg-accent/50 transition-colors rounded-t-lg">
                 <CardHeader>
-                    <CardTitle>{group.name}</CardTitle>
+                    <CardTitle className="truncate">{group.name}</CardTitle>
                     <CardDescription>
                       <Badge variant="secondary" className="capitalize">{group.type}</Badge>
                     </CardDescription>
@@ -323,17 +403,19 @@ const GroupSection = ({ title, groups, studentsById, onView }: { title: string; 
                <div className="text-xs text-muted-foreground">
                     {group.studentIds.length} {t.members.toLowerCase()}
                </div>
-                <DropdownMenu onOpenChange={(isOpen) => setActiveGroup(isOpen ? group.id : null)} >
+                <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenuItem onClick={(e) => {e.stopPropagation(); onView(group);}}>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onView(group)}>
+                        <BookOpen className="mr-2 h-4 w-4"/>
                         {t.viewGroup}
                     </DropdownMenuItem>
                     <DropdownMenuItem>
+                        <Users className="mr-2 h-4 w-4"/>
                         {t.editGroup}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -397,7 +479,7 @@ export function TeacherDashboardUI() {
   const largeGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo grande') || [], [data?.groups]);
 
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -424,7 +506,7 @@ export function TeacherDashboardUI() {
         </Card>
       </main>
       
-      <GroupDetailsDialog group={groupToView} studentsById={studentsById} isOpen={!!groupToView} onOpenChange={() => setGroupToView(null)} />
+      <GroupDetailsDialog group={groupToView} studentsById={studentsById} isOpen={!!groupToView} onOpenChange={() => setGroupToView(null)} teacherId={user.id} />
 
     </div>
   );

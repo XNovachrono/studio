@@ -1,10 +1,9 @@
 
-
 import { 
     doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc, arrayRemove, addDoc, orderBy
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder, Lesson, EditorContent } from "./types";
+import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder, Lesson, EditorContent, BankCard, BankType } from "./types";
 
 // Helper to convert Firestore Timestamps in lesson objects
 const lessonFromDoc = (doc: any): Lesson => {
@@ -14,6 +13,16 @@ const lessonFromDoc = (doc: any): Lesson => {
         ...data,
         createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
     } as Lesson;
+};
+
+// Helper to convert Firestore Timestamps in bank card objects
+const bankCardFromDoc = (doc: any): BankCard => {
+    const data = doc.data();
+    return {
+        id: doc.id,
+        ...data,
+        createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
+    } as BankCard;
 };
 
 // Function to get a user profile
@@ -208,6 +217,39 @@ export const createLessonForGroup = async (groupId: string, groupName: string, s
 export const updateLesson = async (groupId: string, lessonId: string, data: Partial<Lesson>): Promise<void> => {
     const lessonRef = doc(db, "groups", groupId, "lessons", lessonId);
     await updateDoc(lessonRef, data);
+};
+
+
+// === Bank Functions ===
+
+// Get all bank cards for a user (teacher/admin) of a specific type
+export const getBankCards = async (ownerId: string, type: BankType): Promise<BankCard[]> => {
+    const bankRef = collection(db, "banks");
+    const q = query(bankRef, where("ownerId", "==", ownerId), where("type", "==", type), orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(bankCardFromDoc);
+};
+
+// Create a new bank card
+export const createBankCard = async (data: Omit<BankCard, 'id' | 'createdAt'>): Promise<string> => {
+    const bankRef = collection(db, "banks");
+    const newCardRef = await addDoc(bankRef, {
+        ...data,
+        createdAt: Timestamp.now(),
+    });
+    return newCardRef.id;
+};
+
+// Update a bank card
+export const updateBankCard = async (cardId: string, data: Partial<BankCard>): Promise<void> => {
+    const cardRef = doc(db, "banks", cardId);
+    await updateDoc(cardRef, data);
+};
+
+// Delete a bank card
+export const deleteBankCard = async (cardId: string): Promise<void> => {
+    const cardRef = doc(db, "banks", cardId);
+    await deleteDoc(cardRef);
 };
 
 

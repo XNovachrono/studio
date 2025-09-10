@@ -3,7 +3,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Palette, User as UserIcon, Settings } from "lucide-react";
+import { LogOut, Palette, User as UserIcon, Settings, Library, Home } from "lucide-react";
+import Link from 'next/link';
 import { Logo } from "./logo";
 import {
   DropdownMenu,
@@ -19,6 +20,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { ThemeCustomizer } from "./theme-customizer";
 import { StudentDataSettings } from "@/components/student/student-data-settings";
 import { useLanguage } from "@/context/language-context";
+import { Button } from "../ui/button";
 
 interface DashboardHeaderProps {
   user: User | null;
@@ -35,10 +37,21 @@ export function DashboardHeader({ user, title }: DashboardHeaderProps) {
     localStorage.removeItem("uncoverly-user");
     router.push("/login");
   };
+  
+  const getDashboardUrl = () => {
+    if (!user) return '/login';
+    switch (user.role) {
+      case 'admin': return '/admin/dashboard';
+      case 'teacher': return '/teacher/dashboard';
+      case 'student': return '/student/dashboard';
+      default: return '/login';
+    }
+  }
+
 
   return (
     <Dialog open={isThemeCustomizerOpen} onOpenChange={setIsThemeCustomizerOpen}>
-      <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
+      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
         <div className="flex items-center gap-4">
           <div className="hidden md:block">
               <Logo />
@@ -47,7 +60,17 @@ export function DashboardHeader({ user, title }: DashboardHeaderProps) {
         </div>
         
         <div className="flex items-center gap-4">
-          <p className="hidden text-sm text-muted-foreground md:block">{title}</p>
+          {user?.role === 'teacher' && (
+             <nav className="hidden md:flex items-center gap-2">
+                <Button variant="ghost" asChild>
+                    <Link href={getDashboardUrl()}><Home className="mr-2"/>{translations.dashboardHeader.dashboard}</Link>
+                </Button>
+                <Button variant="ghost" asChild>
+                    <Link href="/teacher/banks"><Library className="mr-2"/>{translations.dashboardHeader.banks}</Link>
+                </Button>
+            </nav>
+          )}
+
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
