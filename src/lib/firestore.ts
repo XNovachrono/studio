@@ -1,6 +1,5 @@
 
 
-
 import { 
     doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc, arrayRemove, addDoc, orderBy
 } from "firebase/firestore";
@@ -111,18 +110,20 @@ export const getAdminData = async (): Promise<{
     allStudents: StudentProfile[],
     allTeachers: User[],
 }> => {
-    const usersRef = collection(db, "users");
-    const usersSnap = await getDocs(usersRef);
-    const allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() })) as User[];
-    
+    // Since Firestore rules can be complex, fetch users first to identify the admin.
+    const allUsersRef = collection(db, "users");
+    const allUsersSnap = await getDocs(allUsersRef);
+    const allUsers = allUsersSnap.docs.map(d => ({ id: d.id, ...d.data() })) as User[];
+
     const admin = allUsers.find(u => u.role === 'admin') || null;
     const allStudents = allUsers.filter(u => u.role === 'student' && u.hasOnboarded) as StudentProfile[];
     const allTeachers = allUsers.filter(u => u.role === 'teacher');
-
+    
+    // Now fetch groups, which admins have read access to.
     const groupsRef = collection(db, "groups");
     const groupsSnap = await getDocs(groupsRef);
     const groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
-
+    
     return { admin, groups, allStudents, allTeachers };
 }
 
@@ -430,5 +431,3 @@ export const updateStudentDetails = async (studentId: string, data: { level: str
         courseDuration: data.courseDuration,
     });
 };
-
-    
