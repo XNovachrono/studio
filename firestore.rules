@@ -1,54 +1,54 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper function to check user role
-    function isRole(role) {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // --- USER PROFILES ---
+    // Rules for the 'users' collection
     match /users/{userId} {
-      // Admins can read any user profile
+      // Admins can read all user profiles
       // Users can read/update their own profile
-      allow read, update: if isRole('admin') || request.auth.uid == userId;
+      allow read, update: if isAdmin() || request.auth.uid == userId;
+      allow create: if request.auth.uid != null;
     }
 
-    // --- BANK CARDS ---
+    // Rules for the 'bank_cards' collection
     match /bank_cards/{cardId} {
-        // Admins can read any card
-        allow read: if isRole('admin');
-        
-        // Users can manage their own cards
-        allow read, write: if request.auth.uid == resource.data.ownerId; // For update/delete
-        allow create: if request.auth.uid == request.resource.data.ownerId; // For create
+      // Admins can read all cards
+      // Users can read/write their own cards
+      allow read: if isAdmin() || request.auth.uid == resource.data.ownerId;
+      allow write: if request.auth.uid == request.resource.data.ownerId;
+    }
+
+    // Rules for the 'groups' collection and its subcollections
+    match /groups/{groupId} {
+      // Admins can manage all groups
+      // Teachers can manage their own groups
+      // Students can read groups they are part of
+      allow read, write: if isAdmin() || request.auth.uid == resource.data.teacherId;
+      allow read: if request.auth.uid in resource.data.studentIds;
+
+      // Rules for the 'lessons' subcollection
+      match /lessons/{lessonId} {
+        // Inherit permissions from the parent group
+        allow read, write: if isAdmin() || request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId;
+        allow read: if request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.studentIds;
+      }
     }
     
-    // --- GROUPS & SUBCOLLECTIONS ---
-    match /groups/{groupId} {
-    
-        // Admins can read any group
-        // Teachers can read groups they are assigned to
-        // Students can read groups they are a member of
-        allow read: if isRole('admin') || 
-                      (isRole('teacher') && resource.data.teacherId == request.auth.uid) ||
-                      (isRole('student') && request.auth.uid in resource.data.studentIds);
-        
-        // Admins can create groups
-        // Teachers can update groups they are assigned to
-        allow write: if isRole('admin') || 
-                       (isRole('teacher') && resource.data.teacherId == request.auth.uid);
-
-        // --- LESSONS SUBCOLLECTION ---
-        match /lessons/{lessonId} {
-            // Permissions inherit from the parent group.
-            // If a user can read the group, they can read its lessons.
-            // If a user can write to the group, they can write to its lessons.
-            allow read, write: if get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid ||
-                                 isRole('admin') ||
-                                 (isRole('student') && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.studentIds);
-        }
+    // Rules for the 'pqrs' collection
+    match /pqrs/{pqrsId} {
+        // Only authenticated users can create PQRS messages
+        allow create: if request.auth.uid != null;
+        // Reading/updating/deleting should be restricted, e.g., to admins or involved parties
+        // For now, keeping it simple
+        allow read, update, delete: if isAdmin();
     }
   }
 }

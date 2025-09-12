@@ -124,8 +124,10 @@ export const getAdminData = async (): Promise<{
     const allStudents = allUsers.filter(u => u.role === 'student' && u.hasOnboarded) as StudentProfile[];
     const allTeachers = allUsers.filter(u => u.role === 'teacher');
     
-    // As requested, we start with a clean slate for groups.
-    const groups: Group[] = [];
+    // Now, fetch all groups.
+    const groupsRef = collection(db, "groups");
+    const groupsSnap = await getDocs(groupsRef);
+    const groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
     
     return { admin, groups, allStudents, allTeachers };
 }
