@@ -2,74 +2,79 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper function to get user role
+
+    // Helper functions to check roles
+    function isAuth() {
+      return request.auth != null;
+    }
+
     function getUserRole(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
-    
-    // Helper function to check if a user is an admin
-    function isAdmin(userId) {
-      return getUserRole(userId) == 'admin';
+
+    function isAdmin() {
+      return isAuth() && getUserRole(request.auth.uid) == 'admin';
     }
-    
-    // Helper function to check if a user is a teacher
-    function isTeacher(userId) {
-      return getUserRole(userId) == 'teacher';
+
+    function isTeacher() {
+      return isAuth() && getUserRole(request.auth.uid) == 'teacher';
+    }
+
+    function isStudent() {
+      return isAuth() && getUserRole(request.auth.uid) == 'student';
     }
 
     // Rules for the 'users' collection
     match /users/{userId} {
-      // Admins can read all user profiles
-      // Users can read and update their own profile
-      allow read: if isAdmin(request.auth.uid) || request.auth.uid == userId;
-      allow update: if request.auth.uid == userId;
-      // Allow creation for any authenticated user (during sign-up)
-      allow create: if request.auth.uid != null;
+      // Admins can read any user profile.
+      // Users can read and update their own profile.
+      allow read: if isAdmin() || request.auth.uid == userId;
+      allow update: if isAdmin() || request.auth.uid == userId;
+      // Only admins can create or delete users through this rule.
+      allow create, delete: if isAdmin();
+    }
+    
+    // Rules for 'bank_cards'
+    match /bank_cards/{cardId} {
+      // Admins can read any card.
+      // Teachers can read cards they own.
+      allow read: if isAdmin() || (isTeacher() && resource.data.ownerId == request.auth.uid);
+      // Teachers can create, update, and delete their own cards. Admins can manage any card.
+      allow write: if isAdmin() || (isTeacher() && request.resource.data.ownerId == request.auth.uid);
     }
 
-    // Rules for the 'groups' collection and its subcollections
+    // Rules for 'groups' and their subcollections
     match /groups/{groupId} {
-      // Admins can manage all groups
-      // Teachers can read groups they are assigned to
-      // Students can read groups they are members of
-      allow read: if isAdmin(request.auth.uid) 
-                  || resource.data.teacherId == request.auth.uid
-                  || request.auth.uid in resource.data.studentIds;
+      // Admins can read any group.
+      // Teachers can read groups they are assigned to.
+      // Students can read groups they are a member of.
+      allow read: if isAdmin() 
+                  || (isTeacher() && resource.data.teacherId == request.auth.uid)
+                  || (isStudent() && request.auth.uid in resource.data.studentIds);
+                  
+      // Admins can create, update, delete any group.
+      // Teachers can update groups they are assigned to.
+      allow write: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
 
-      // Admins can create/update/delete groups
-      // Teachers can update groups they are assigned to (e.g., add content)
-      allow write: if isAdmin(request.auth.uid) 
-                   || (isTeacher(request.auth.uid) && resource.data.teacherId == request.auth.uid);
-
-      // Rules for the 'lessons' subcollection
+      // Rules for 'lessons' subcollection
       match /lessons/{lessonId} {
-        // Permissions inherit from the parent group:
-        // Admins, the group's teacher, and the group's students can read lessons.
-        allow read: if isAdmin(request.auth.uid) 
-                    || get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid
-                    || request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.studentIds;
+        // Same read permissions as the parent group.
+        allow read: if isAdmin()
+                    || (isTeacher() && get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid)
+                    || (isStudent() && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.studentIds);
         
-        // Admins and the group's teacher can write to lessons.
-        allow write: if isAdmin(request.auth.uid) 
-                     || (isTeacher(request.auth.uid) && get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid);
+        // Admins or the assigned teacher can write to lessons.
+        allow write: if isAdmin() 
+                     || (isTeacher() && get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid);
       }
     }
     
-    // Rules for the 'bank_cards' collection (for teachers' content banks)
-    match /bank_cards/{cardId} {
-      // Admins can read all bank cards for moderation/oversight
-      // Users can read, create, update, and delete their own bank cards
-      allow read: if isAdmin(request.auth.uid) || resource.data.ownerId == request.auth.uid;
-      allow create, update, delete: if resource.data.ownerId == request.auth.uid;
-    }
-    
-    // Rules for 'pqrs' collection
+    // Rules for PQRS
     match /pqrs/{pqrsId} {
-      // Only authenticated users can create PQRS messages
-      allow create: if request.auth.uid != null;
-      // Reading/updating/deleting should be restricted to specific roles (e.g., admins) if needed
-      // For now, keeping it simple.
+      // Only students can create PQRS messages.
+      allow create: if isStudent();
+      // Only the receiving teacher or an admin can read/manage them.
+      allow read, update, delete: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
     }
   }
 }

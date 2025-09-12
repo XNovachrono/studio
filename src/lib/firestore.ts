@@ -54,7 +54,7 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
     return null;
 }
 
-// Function to update a user profile (used in onboarding)
+// Function to update a user profile (used in onboarding and by admin)
 export const updateUserProfile = async (userId: string, data: Partial<StudentProfile>): Promise<void> => {
     const userDocRef = doc(db, "users", userId);
     await updateDoc(userDocRef, data);
@@ -121,7 +121,7 @@ export const getAdminData = async (): Promise<{
     const allUsers = allUsersSnap.docs.map(d => ({ id: d.id, ...d.data() })) as User[];
 
     const admin = allUsers.find(u => u.role === 'admin') || null;
-    const allStudents = allUsers.filter(u => u.role === 'student' && u.hasOnboarded) as StudentProfile[];
+    const allStudents = allUsers.filter(u => u.role === 'student') as StudentProfile[]; // Get all students
     const allTeachers = allUsers.filter(u => u.role === 'teacher');
     
     // Now, fetch all groups.
@@ -424,15 +424,5 @@ export const removeStudentsFromGroup = async (groupId: string, studentIds: strin
     const groupRef = doc(db, "groups", groupId);
     await updateDoc(groupRef, {
         studentIds: arrayRemove(...studentIds)
-    });
-};
-
-// Function for teacher to update student details
-export const updateStudentDetails = async (studentId: string, data: { level: string, courseStartDate: string, courseDuration: number }): Promise<void> => {
-    const studentRef = doc(db, "users", studentId);
-    await updateDoc(studentRef, {
-        level: data.level,
-        courseStartDate: data.courseStartDate,
-        courseDuration: data.courseDuration,
     });
 };

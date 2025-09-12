@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -30,7 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User, StudentProfile } from "@/lib/types";
-import { getAdminData, createGroupWithTeacher, updateStudentDetails } from "@/lib/firestore";
+import { getAdminData, createGroupWithTeacher, updateUserProfile } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -66,15 +67,17 @@ const EditStudentDialog = ({ student, isOpen, onOpenChange, onStudentUpdate }: {
         if (!student || !startDate) return;
         setIsSaving(true);
         try {
-            await updateStudentDetails(student.id, {
+            const dataToUpdate: Partial<StudentProfile> = {
                 level,
                 courseStartDate: format(startDate, "yyyy-MM-dd"),
                 courseDuration: duration,
-            });
+            };
+            await updateUserProfile(student.id, dataToUpdate);
             toast({ title: "Estudiante actualizado", description: `Los datos de ${student.name} se guardaron correctamente.` });
             onStudentUpdate();
             onOpenChange(false);
         } catch (error) {
+            console.error(error);
             toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar el estudiante." });
         } finally {
             setIsSaving(false);
