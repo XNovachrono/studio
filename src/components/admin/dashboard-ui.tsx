@@ -51,14 +51,14 @@ const EditStudentDialog = ({ student, isOpen, onOpenChange, onStudentUpdate }: {
     const { toast } = useToast();
     const [level, setLevel] = useState(student?.level || "");
     const [startDate, setStartDate] = useState<Date | undefined>(student?.courseStartDate ? parseISO(student.courseStartDate) : new Date());
-    const [duration, setDuration] = useState(student?.courseDuration || 16);
+    const [duration, setDuration] = useState(student?.courseDuration || 12);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (student) {
             setLevel(student.level || "");
             setStartDate(student.courseStartDate ? parseISO(student.courseStartDate) : new Date());
-            setDuration(student.courseDuration || 16);
+            setDuration(student.courseDuration || 12);
         }
     }, [student]);
 
