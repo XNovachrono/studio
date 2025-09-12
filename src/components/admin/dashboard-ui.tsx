@@ -35,7 +35,7 @@ import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
-import { format, addWeeks, differenceInWeeks } from "date-fns";
+import { format, addWeeks, differenceInWeeks, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface AdminDashboardData {
@@ -50,14 +50,14 @@ const ENGLISH_LEVELS = ["A1", "A1.5", "A2", "A2.5", "B1", "B1.5", "C1", "C1.5", 
 const EditStudentDialog = ({ student, isOpen, onOpenChange, onStudentUpdate }: { student: StudentProfile | null; isOpen: boolean; onOpenChange: (open: boolean) => void; onStudentUpdate: () => void }) => {
     const { toast } = useToast();
     const [level, setLevel] = useState(student?.level || "");
-    const [startDate, setStartDate] = useState<Date | undefined>(student?.courseStartDate ? new Date(student.courseStartDate) : new Date());
+    const [startDate, setStartDate] = useState<Date | undefined>(student?.courseStartDate ? parseISO(student.courseStartDate) : new Date());
     const [duration, setDuration] = useState(student?.courseDuration || 16);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (student) {
             setLevel(student.level || "");
-            setStartDate(student.courseStartDate ? new Date(student.courseStartDate) : new Date());
+            setStartDate(student.courseStartDate ? parseISO(student.courseStartDate) : new Date());
             setDuration(student.courseDuration || 16);
         }
     }, [student]);
@@ -294,33 +294,50 @@ export function AdminDashboardUI() {
                         <TableHead>{t.students.table.level}</TableHead>
                         <TableHead>{t.students.table.plan}</TableHead>
                         <TableHead>{t.students.table.availability}</TableHead>
+                        <TableHead>{t.students.table.startDate}</TableHead>
+                        <TableHead>{t.students.table.duration}</TableHead>
+                        <TableHead>{t.students.table.currentWeek}</TableHead>
                         <TableHead className="text-right">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {ungroupedStudents.map(student => (
-                        <TableRow key={student.id}>
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedStudentIds.includes(student.id)}
-                              onCheckedChange={(checked) => {
-                                setSelectedStudentIds(prev => checked ? [...prev, student.id] : prev.filter(id => id !== student.id));
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium">{student.name}</TableCell>
-                          <TableCell>{student.email || '-'}</TableCell>
-                          <TableCell>{student.phone || '-'}</TableCell>
-                          <TableCell>{student.level || '-'}</TableCell>
-                          <TableCell><Badge variant="outline" className="capitalize">{student.plan || '-'}</Badge></TableCell>
-                          <TableCell>{student.availability || '-'}</TableCell>
-                          <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" onClick={() => setEditingStudent(student)}>
-                                  <Edit className="h-4 w-4" />
-                              </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {ungroupedStudents.map(student => {
+                        const startDate = student.courseStartDate ? parseISO(student.courseStartDate) : null;
+                        let currentWeek: number | string = "N/A";
+                        if (startDate && student.courseDuration) {
+                            const week = differenceInWeeks(new Date(), startDate) + 1;
+                            if (week > 0 && week <= student.courseDuration) {
+                                currentWeek = week;
+                            }
+                        }
+                        
+                        return (
+                          <TableRow key={student.id}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedStudentIds.includes(student.id)}
+                                onCheckedChange={(checked) => {
+                                  setSelectedStudentIds(prev => checked ? [...prev, student.id] : prev.filter(id => id !== student.id));
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">{student.name}</TableCell>
+                            <TableCell>{student.email || '-'}</TableCell>
+                            <TableCell>{student.phone || '-'}</TableCell>
+                            <TableCell>{student.level || '-'}</TableCell>
+                            <TableCell><Badge variant="outline" className="capitalize">{student.plan || '-'}</Badge></TableCell>
+                            <TableCell>{student.availability || '-'}</TableCell>
+                            <TableCell>{startDate ? format(startDate, "P", { locale: es }) : '-'}</TableCell>
+                            <TableCell>{student.courseDuration ? `${student.courseDuration} sem` : '-'}</TableCell>
+                            <TableCell>{currentWeek}</TableCell>
+                            <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" onClick={() => setEditingStudent(student)}>
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
                     </TableBody>
                   </Table>
                 </div>
@@ -387,3 +404,5 @@ export function AdminDashboardUI() {
     </div>
   );
 }
+
+    

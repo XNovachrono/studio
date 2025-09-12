@@ -102,6 +102,9 @@ export const translations = {
                     phone: "Teléfono",
                     level: "Nivel",
                     availability: "Disponibilidad",
+                    startDate: "Fecha Inicio",
+                    duration: "Duración (sem)",
+                    currentWeek: "Semana Actual",
                 }
             },
             groups: {
@@ -455,6 +458,9 @@ export const translations = {
                     phone: "Phone",
                     level: "Level",
                     availability: "Availability",
+                    startDate: "Start Date",
+                    duration: "Duration (wks)",
+                    currentWeek: "Current Week",
                 }
             },
             groups: {
@@ -707,3 +713,5 @@ export const translations = {
         }
     }
 };
+
+    
