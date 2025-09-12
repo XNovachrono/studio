@@ -45,7 +45,7 @@ interface AdminDashboardData {
   allTeachers: User[];
 }
 
-const ENGLISH_LEVELS = ["A1", "A1.5", "A2", "A2.5", "B1", "B1.5", "C1", "C1.5", "C2"];
+const ENGLISH_LEVELS = ["A1", "A1.2", "A2", "A2.2", "B1", "B1.2", "C1", "C1.2", "C2"];
 
 const EditStudentDialog = ({ student, isOpen, onOpenChange, onStudentUpdate }: { student: StudentProfile | null; isOpen: boolean; onOpenChange: (open: boolean) => void; onStudentUpdate: () => void }) => {
     const { toast } = useToast();
@@ -404,5 +404,7 @@ export function AdminDashboardUI() {
     </div>
   );
 }
+
+    
 
     
