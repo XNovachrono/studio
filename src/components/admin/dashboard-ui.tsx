@@ -188,8 +188,11 @@ export function AdminDashboardUI() {
                           />
                         </TableHead>
                         <TableHead>{t.students.table.name}</TableHead>
-                        <TableHead>{t.students.table.age}</TableHead>
+                        <TableHead>{t.students.table.email}</TableHead>
+                        <TableHead>{t.students.table.phone}</TableHead>
+                        <TableHead>{t.students.table.level}</TableHead>
                         <TableHead>{t.students.table.plan}</TableHead>
+                        <TableHead>{t.students.table.availability}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -204,8 +207,11 @@ export function AdminDashboardUI() {
                             />
                           </TableCell>
                           <TableCell className="font-medium">{student.name}</TableCell>
-                          <TableCell>{student.age || '-'}</TableCell>
+                          <TableCell>{student.email || '-'}</TableCell>
+                          <TableCell>{student.phone || '-'}</TableCell>
+                          <TableCell>{student.level || '-'}</TableCell>
                           <TableCell><Badge variant="outline" className="capitalize">{student.plan || '-'}</Badge></TableCell>
+                          <TableCell>{student.availability || '-'}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

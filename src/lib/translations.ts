@@ -1,5 +1,4 @@
 
-
 export const translations = {
     es: {
         dashboardHeader: {
@@ -99,6 +98,10 @@ export const translations = {
                     name: "Nombre",
                     age: "Edad",
                     plan: "Plan",
+                    email: "Email",
+                    phone: "Teléfono",
+                    level: "Nivel",
+                    availability: "Disponibilidad",
                 }
             },
             groups: {
@@ -448,6 +451,10 @@ export const translations = {
                     name: "Name",
                     age: "Age",
                     plan: "Plan",
+                    email: "Email",
+                    phone: "Phone",
+                    level: "Level",
+                    availability: "Availability",
                 }
             },
             groups: {
