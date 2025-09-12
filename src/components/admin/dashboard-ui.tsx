@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, PlusCircle, Users, Edit, Calendar as CalendarIcon, MessageCircle } from "lucide-react";
+import { Loader2, PlusCircle, Users, Edit, Calendar as CalendarIcon, MessageCircle, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,17 @@ import {
   DialogClose,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,7 +42,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User, StudentProfile, PQRSMessage } from "@/lib/types";
-import { getAdminData, createGroupWithTeacher, updateUserProfile } from "@/lib/firestore";
+import { getAdminData, createGroupWithTeacher, updateUserProfile, deletePQRSMessage } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -144,7 +155,7 @@ const EditStudentDialog = ({ student, isOpen, onOpenChange, onStudentUpdate }: {
     )
 };
 
-const PqrsDetailsDialog = ({ student, messages, isOpen, onOpenChange }: { student: StudentProfile | null; messages: PQRSMessage[]; isOpen: boolean; onOpenChange: (open: boolean) => void; }) => {
+const PqrsDetailsDialog = ({ student, messages, isOpen, onOpenChange, onDelete }: { student: StudentProfile | null; messages: PQRSMessage[]; isOpen: boolean; onOpenChange: (open: boolean) => void; onDelete: (messageId: string) => void; }) => {
     const { translations } = useLanguage();
     const t = translations.adminDashboard.pqrs;
 
@@ -162,11 +173,30 @@ const PqrsDetailsDialog = ({ student, messages, isOpen, onOpenChange }: { studen
                     {messages.map(msg => (
                         <Card key={msg.id}>
                            <CardHeader>
-                            <CardTitle className="text-base flex justify-between items-center">
-                                <span>{t.teacherLabel}: {msg.teacherName}</span>
-                                {msg.isAnonymous && <Badge variant="outline">{t.anonymous}</Badge>}
-                            </CardTitle>
-                            <CardDescription>{format(new Date(msg.createdAt), "PPpp", { locale: es })}</CardDescription>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <span>{t.teacherLabel}: {msg.teacherName}</span>
+                                        {msg.isAnonymous && <Badge variant="outline">{t.anonymous}</Badge>}
+                                    </CardTitle>
+                                    <CardDescription>{format(new Date(msg.createdAt), "PPpp", { locale: es })}</CardDescription>
+                                </div>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive shrink-0"><Trash2 className="h-4 w-4"/></Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>{t.deleteDialog.title}</AlertDialogTitle>
+                                            <AlertDialogDescription>{t.deleteDialog.description}</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>{t.deleteDialog.cancel}</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => onDelete(msg.id)}>{t.deleteDialog.confirm}</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
                            </CardHeader>
                            <CardContent>
                             <p className="whitespace-pre-wrap">{msg.message}</p>
@@ -311,6 +341,26 @@ export function AdminDashboardUI() {
         toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.createGroupError });
     } finally {
         setIsCreatingGroup(false);
+    }
+  };
+
+  const handleDeletePqrs = async (messageId: string) => {
+    try {
+        await deletePQRSMessage(messageId);
+        toast({ title: t_toast.pqrsDeletedTitle });
+        // Refresh local state to remove the message
+        setData(prevData => {
+            if (!prevData) return null;
+            const newPqrsMessages = prevData.pqrsMessages.filter(msg => msg.id !== messageId);
+            // Close the dialog if it was the last message for that student
+            if (newPqrsMessages.filter(m => m.studentId === selectedPqrsStudent?.id).length === 0) {
+              setSelectedPqrsStudent(null);
+            }
+            return { ...prevData, pqrsMessages: newPqrsMessages };
+        });
+    } catch (error) {
+        console.error("Error deleting PQRS:", error);
+        toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.pqrsDeleteError });
     }
   };
 
@@ -511,12 +561,8 @@ export function AdminDashboardUI() {
         messages={pqrsByStudent.find(item => item.student?.id === selectedPqrsStudent?.id)?.messages || []}
         isOpen={!!selectedPqrsStudent}
         onOpenChange={() => setSelectedPqrsStudent(null)}
+        onDelete={handleDeletePqrs}
       />
     </div>
   );
 }
-
-    
-
-    
-

@@ -31,12 +31,14 @@ const bankCardFromDoc = (doc: any): BankCard => {
 // Helper to convert Firestore Timestamps in PQRS objects
 const pqrsFromDoc = (doc: any): PQRSMessage => {
     const data = doc.data();
+    const teacherName = data.teacherName || "N/A";
     return {
         id: doc.id,
         ...data,
         // The studentEmail might be missing in some docs if they were created before the field was added
         studentEmail: data.studentEmail || 'No proporcionado',
         createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
+        teacherName: teacherName,
     } as PQRSMessage;
 }
 
@@ -124,6 +126,12 @@ export const getAllPqrsMessages = async (): Promise<PQRSMessage[]> => {
     return querySnapshot.docs.map(pqrsFromDoc);
 };
 
+// Delete a PQRS message
+export const deletePQRSMessage = async (messageId: string): Promise<void> => {
+    const pqrsDocRef = doc(db, "pqrs", messageId);
+    await deleteDoc(pqrsDocRef);
+};
+
 
 export const getAdminData = async (): Promise<{
     admin: User | null,
@@ -159,15 +167,24 @@ export const createGroupWithTeacher = async (teacher: User, students: {id: strin
     
     // For each student, add an interaction with this teacher
     const batch = writeBatch(db);
-    const interaction: TeacherInteraction = {
+    const interaction: Omit<TeacherInteraction, 'lastInteraction'> = {
       teacherId: teacher.id,
       teacherName: teacher.name,
-      lastInteraction: Timestamp.now() as any, // Will be converted by Firestore
     };
 
     studentIds.forEach(studentId => {
       const studentRef = doc(db, "users", studentId);
-      batch.update(studentRef, { teacherInteractions: arrayUnion(interaction) });
+       // Check if an interaction with this teacher already exists
+        // This part needs access to student data, which we don't have here.
+        // It's safer to just add the interaction, and rely on UI logic to display it correctly.
+        // Or handle duplicates with a more complex cloud function.
+        // For now, we union to avoid exact duplicates but might add multiple interactions if lastInteraction differs.
+        batch.update(studentRef, {
+            teacherInteractions: arrayUnion({
+                ...interaction,
+                lastInteraction: Timestamp.now()
+            })
+        });
     });
     
     // Create the group
@@ -370,7 +387,7 @@ export const deleteBankFile = async (cardId: string, filePath: string): Promise<
 // Function to add content to a group
 export const addContentToGroup = async (
     groupId: string, 
-    type: 'scheduledClass' | 'note' | 'reminder',
+    type: 'scheduledClass',
     data: any,
 ) => {
     const groupRef = doc(db, "groups", groupId);
@@ -383,25 +400,6 @@ export const addContentToGroup = async (
                  link: data.link, 
                  time: Timestamp.fromDate(classDate) 
             })
-        });
-
-    } else if (type === 'note') {
-        await updateDoc(groupRef, {
-            'content.notes': arrayUnion({ ...data, id: `n${Date.now()}` })
-        });
-    } else if (type === 'reminder') {
-        const groupSnap = await getDoc(groupRef);
-        if (!groupSnap.exists()) {
-            throw new Error("Group not found!");
-        }
-        const groupData = groupSnap.data() as Group;
-        const newReminder: Omit<Reminder, 'id'> = {
-            message: data.message,
-            teacherName: groupData.teacherName,
-            sentAt: Timestamp.now() as any,
-        };
-        await updateDoc(groupRef, {
-            'content.reminders': arrayUnion({ ...newReminder, id: `r${Date.now()}` })
         });
     }
 };
@@ -427,5 +425,3 @@ export const removeStudentsFromGroup = async (groupId: string, studentIds: strin
         studentIds: arrayRemove(...studentIds)
     });
 };
-
-    

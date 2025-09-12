@@ -124,6 +124,12 @@ export const translations = {
                     student: "Estudiante",
                     email: "Email",
                     messages: "Mensajes"
+                },
+                deleteDialog: {
+                    title: "¿Estás seguro?",
+                    description: "Esta acción no se puede deshacer. El mensaje PQRS será eliminado permanentemente.",
+                    cancel: "Cancelar",
+                    confirm: "Eliminar",
                 }
             },
             createGroupDialog: {
@@ -145,6 +151,8 @@ export const translations = {
                  groupCreatedTitle: "Grupo Creado y Asignado",
                  groupCreatedDescription: "El grupo ha sido creado y asignado al docente.",
                  createGroupError: "No se pudo crear el grupo.",
+                 pqrsDeletedTitle: "PQRS Eliminado",
+                 pqrsDeleteError: "No se pudo eliminar el mensaje PQRS.",
             }
         },
         themeCustomizer: {
@@ -500,6 +508,12 @@ export const translations = {
                     student: "Student",
                     email: "Email",
                     messages: "Messages"
+                },
+                deleteDialog: {
+                    title: "Are you sure?",
+                    description: "This action cannot be undone. The PQRS message will be permanently deleted.",
+                    cancel: "Cancel",
+                    confirm: "Delete",
                 }
             },
             createGroupDialog: {
@@ -521,6 +535,8 @@ export const translations = {
                  groupCreatedTitle: "Group Created and Assigned",
                  groupCreatedDescription: "The group has been created and assigned to the teacher.",
                  createGroupError: "Could not create the group.",
+                 pqrsDeletedTitle: "PQRS Deleted",
+                 pqrsDeleteError: "Could not delete the PQRS message.",
             }
         },
         themeCustomizer: {
@@ -753,5 +769,3 @@ export const translations = {
         }
     }
 };
-
-    
