@@ -1,10 +1,9 @@
 
-
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, PlusCircle, Users, Edit, Calendar as CalendarIcon, MessageCircle, Trash2 } from "lucide-react";
+import { Loader2, PlusCircle, Users, Edit, Calendar as CalendarIcon, MessageCircle, Trash2, Eye, BookOpen, Library } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -41,7 +40,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, StudentProfile, PQRSMessage } from "@/lib/types";
+import type { User, StudentProfile, PQRSMessage, Group, BankCard } from "@/lib/types";
 import { getAdminData, createGroupWithTeacher, updateUserProfile, deletePQRSMessage } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
@@ -50,6 +49,7 @@ import { Calendar } from "../ui/calendar";
 import { format, addWeeks, differenceInWeeks, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { ScrollArea } from "../ui/scroll-area";
+import { BanksDashboardUI } from "../teacher/banks/dashboard-ui";
 
 interface AdminDashboardData {
   admin: User | null;
@@ -57,6 +57,7 @@ interface AdminDashboardData {
   allStudents: StudentProfile[];
   allTeachers: User[];
   pqrsMessages: PQRSMessage[];
+  bankCards: BankCard[];
 }
 
 const ENGLISH_LEVELS = ["A1", "A1.2", "A2", "A2.2", "B1", "B1.2", "C1", "C1.2", "C2"];
@@ -210,6 +211,73 @@ const PqrsDetailsDialog = ({ student, messages, isOpen, onOpenChange, onDelete }
     )
 }
 
+const TeacherDetailsDialog = ({ teacher, groups, pqrs, bankCards, isOpen, onOpenChange }: { teacher: User | null; groups: Group[]; pqrs: PQRSMessage[]; bankCards: BankCard[]; isOpen: boolean; onOpenChange: (open: boolean) => void; }) => {
+    const { translations } = useLanguage();
+    const t = translations.adminDashboard.teachers.details;
+    if (!teacher) return null;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+                <DialogHeader>
+                    <DialogTitle>{t.title}: {teacher.name}</DialogTitle>
+                    <DialogDescription>
+                        <p><strong>{t.contact}</strong></p>
+                        <p>{t.email}: {teacher.email}</p>
+                        <p>{t.phone}: {(teacher as any).phone || t.noPhone}</p>
+                    </DialogDescription>
+                </DialogHeader>
+                <Tabs defaultValue="groups" className="flex-grow flex flex-col overflow-hidden">
+                    <TabsList className="shrink-0">
+                        <TabsTrigger value="groups"><Users className="mr-2 h-4 w-4"/>{t.tabs.groups}</TabsTrigger>
+                        <TabsTrigger value="banks"><Library className="mr-2 h-4 w-4"/>{t.tabs.banks}</TabsTrigger>
+                        <TabsTrigger value="pqrs"><MessageCircle className="mr-2 h-4 w-4"/>{t.tabs.pqrs}</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="groups" className="flex-grow overflow-auto p-4">
+                        {groups.length > 0 ? (
+                             <div className="grid gap-4 md:grid-cols-2">
+                                {groups.map(group => (
+                                    <Card key={group.id}>
+                                        <CardHeader>
+                                            <CardTitle>{group.name}</CardTitle>
+                                            <CardDescription><Badge variant="outline" className="capitalize">{group.type}</Badge></CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <p className="text-sm"><strong>Miembros:</strong> {group.studentIds.length}</p>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : <p className="text-center text-muted-foreground">Este docente no tiene grupos asignados.</p>}
+                    </TabsContent>
+                    <TabsContent value="banks" className="flex-grow overflow-auto">
+                        <BanksDashboardUI isModal={true} user={teacher} />
+                    </TabsContent>
+                    <TabsContent value="pqrs" className="flex-grow overflow-auto p-4">
+                         {pqrs.length > 0 ? (
+                            <ScrollArea className="h-full">
+                                <div className="space-y-4 pr-4">
+                                    {pqrs.map(msg => (
+                                        <Card key={msg.id}>
+                                        <CardHeader>
+                                            <CardTitle className="text-base">{msg.isAnonymous ? "Anónimo" : "Estudiante"}</CardTitle>
+                                            <CardDescription>{format(new Date(msg.createdAt), "PPpp", { locale: es })}</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <p className="whitespace-pre-wrap">{msg.message}</p>
+                                        </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                         ) : <p className="text-center text-muted-foreground">Este docente no ha recibido mensajes PQRS.</p>}
+                    </TabsContent>
+                </Tabs>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 
 export function AdminDashboardUI() {
   const router = useRouter();
@@ -233,6 +301,9 @@ export function AdminDashboardUI() {
   
   // PQRS state
   const [selectedPqrsStudent, setSelectedPqrsStudent] = useState<StudentProfile | null>(null);
+  
+  // Teacher details state
+  const [selectedTeacher, setSelectedTeacher] = useState<User | null>(null);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -286,6 +357,17 @@ export function AdminDashboardUI() {
       messages,
     })).filter(item => !!item.student);
   }, [data, studentsById]);
+
+  const groupsByTeacher = useMemo(() => {
+      const grouped: Record<string, Group[]> = {};
+      data?.groups.forEach(group => {
+          if(!grouped[group.teacherId]) {
+              grouped[group.teacherId] = [];
+          }
+          grouped[group.teacherId].push(group);
+      });
+      return grouped;
+  }, [data?.groups]);
 
   const handleCreateGroupClick = () => {
     if (selectedStudentIds.length === 0) {
@@ -365,7 +447,7 @@ export function AdminDashboardUI() {
   };
 
 
-  if (isLoading) {
+  if (isLoading || !data) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -378,8 +460,9 @@ export function AdminDashboardUI() {
       <DashboardHeader user={user} title={t.title} />
       <main className="flex-1 overflow-auto p-4 md:p-8">
         <Tabs defaultValue="students" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="students"><Users className="mr-2 h-4 w-4" />{t.tabs.students}</TabsTrigger>
+            <TabsTrigger value="teachers"><Users className="mr-2 h-4 w-4" />{t.tabs.teachers}</TabsTrigger>
             <TabsTrigger value="groups"><Users className="mr-2 h-4 w-4" />{t.tabs.groups}</TabsTrigger>
             <TabsTrigger value="pqrs"><MessageCircle className="mr-2 h-4 w-4" />{t.tabs.pqrs}</TabsTrigger>
           </TabsList>
@@ -439,7 +522,7 @@ export function AdminDashboardUI() {
                             </TableCell>
                             <TableCell className="font-medium">{student.name}</TableCell>
                             <TableCell>{student.email || '-'}</TableCell>
-                            <TableCell>{student.phone || '-'}</TableCell>
+                            <TableCell>{(student as any).phone || '-'}</TableCell>
                             <TableCell>{student.level || '-'}</TableCell>
                             <TableCell><Badge variant="outline" className="capitalize">{student.plan || '-'}</Badge></TableCell>
                             <TableCell>{student.availability || '-'}</TableCell>
@@ -462,6 +545,41 @@ export function AdminDashboardUI() {
                   <PlusCircle className="mr-2 h-4 w-4" /> {t.students.createGroupButton}
                 </Button>
               </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="teachers">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline">{t.teachers.title}</CardTitle>
+                    <CardDescription>{t.teachers.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>{t.teachers.table.name}</TableHead>
+                                    <TableHead>{t.teachers.table.groups}</TableHead>
+                                    <TableHead className="text-right">{t.teachers.table.actions}</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {data.allTeachers.map(teacher => (
+                                    <TableRow key={teacher.id}>
+                                        <TableCell className="font-medium">{teacher.name}</TableCell>
+                                        <TableCell>{(groupsByTeacher[teacher.id] || []).length}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="sm" onClick={() => setSelectedTeacher(teacher)}>
+                                                <Eye className="mr-2 h-4 w-4" /> Ver Detalles
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
             </Card>
           </TabsContent>
 
@@ -562,6 +680,16 @@ export function AdminDashboardUI() {
         isOpen={!!selectedPqrsStudent}
         onOpenChange={() => setSelectedPqrsStudent(null)}
         onDelete={handleDeletePqrs}
+      />
+      
+      {/* Dialog for Teacher Details */}
+      <TeacherDetailsDialog
+        teacher={selectedTeacher}
+        groups={groupsByTeacher[selectedTeacher?.id || ''] || []}
+        pqrs={data.pqrsMessages.filter(p => p.teacherId === selectedTeacher?.id)}
+        bankCards={data.bankCards.filter(c => c.ownerId === selectedTeacher?.id)}
+        isOpen={!!selectedTeacher}
+        onOpenChange={() => setSelectedTeacher(null)}
       />
     </div>
   );

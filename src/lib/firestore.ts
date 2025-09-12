@@ -64,10 +64,11 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
 }
 
 // Function to update a user profile (used in onboarding and by admin)
-export const updateUserProfile = async (userId: string, data: Partial<StudentProfile>): Promise<void> => {
+export const updateUserProfile = async (userId: string, data: Partial<StudentProfile | User>): Promise<void> => {
     const userDocRef = doc(db, "users", userId);
     await updateDoc(userDocRef, data);
 }
+
 
 // === Student Functions ===
 
@@ -145,6 +146,7 @@ export const getAdminData = async (): Promise<{
     allStudents: StudentProfile[],
     allTeachers: User[],
     pqrsMessages: PQRSMessage[],
+    bankCards: BankCard[],
 }> => {
     const allUsersRef = collection(db, "users");
     const allUsersSnap = await getDocs(allUsersRef);
@@ -159,8 +161,12 @@ export const getAdminData = async (): Promise<{
     const groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
 
     const pqrsMessages = await getAllPqrsMessages();
+
+    const bankCardsRef = collection(db, "bank_cards");
+    const bankCardsSnap = await getDocs(bankCardsRef);
+    const bankCards = bankCardsSnap.docs.map(bankCardFromDoc);
     
-    return { admin, groups, allStudents, allTeachers, pqrsMessages };
+    return { admin, groups, allStudents, allTeachers, pqrsMessages, bankCards };
 }
 
 
@@ -210,16 +216,23 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
     // 3. Fetch all student profiles based on the IDs.
     let allStudents: StudentProfile[] = [];
     if (studentIds.length > 0) {
-        const usersRef = collection(db, "users");
         // Firestore 'in' query is limited to 30 elements. We need to chunk the array.
         const studentChunks: string[][] = [];
         for (let i = 0; i < studentIds.length; i += 30) {
             studentChunks.push(studentIds.slice(i, i + 30));
         }
 
-        const studentQuery = query(usersRef, where('role', '==', 'student'));
-        const studentsSnap = await getDocs(studentQuery);
-        allStudents = studentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
+        const studentPromises = studentChunks.map(chunk => 
+            getDocs(query(collection(db, "users"), where("__name__", "in", chunk)))
+        );
+        
+        const studentSnapshots = await Promise.all(studentPromises);
+        
+        studentSnapshots.forEach(snapshot => {
+            snapshot.forEach(doc => {
+                 allStudents.push({ id: doc.id, ...doc.data() } as StudentProfile);
+            });
+        });
     }
 
     return { groups, allStudents };

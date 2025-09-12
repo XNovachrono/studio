@@ -19,6 +19,7 @@ import type { User } from "@/lib/types";
 import { Dialog } from "@/components/ui/dialog";
 import { ThemeCustomizer } from "./theme-customizer";
 import { StudentDataSettings } from "@/components/student/student-data-settings";
+import { TeacherDataSettings } from "@/components/teacher/teacher-data-settings";
 import { useLanguage } from "@/context/language-context";
 import { Button } from "../ui/button";
 
@@ -90,7 +91,7 @@ export function DashboardHeader({ user, title }: DashboardHeaderProps) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {user.role === 'student' && (
+                {(user.role === 'student' || user.role === 'teacher') && (
                   <DropdownMenuItem onSelect={() => setIsDataSettingsOpen(true)} className="cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>{translations.dashboardHeader.dataSettings}</span>
@@ -112,6 +113,7 @@ export function DashboardHeader({ user, title }: DashboardHeaderProps) {
       </header>
       <ThemeCustomizer />
       {user?.role === 'student' && <StudentDataSettings user={user} isOpen={isDataSettingsOpen} onOpenChange={setIsDataSettingsOpen} />}
+      {user?.role === 'teacher' && <TeacherDataSettings user={user} isOpen={isDataSettingsOpen} onOpenChange={setIsDataSettingsOpen} />}
     </Dialog>
   );
 }

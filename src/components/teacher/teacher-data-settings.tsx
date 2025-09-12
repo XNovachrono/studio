@@ -18,13 +18,13 @@ import { useToast } from '@/hooks/use-toast';
 import { updateUserProfile } from '@/lib/firestore';
 import { updateUserCredentials } from '@/lib/firebase';
 
-interface StudentDataSettingsProps {
+interface TeacherDataSettingsProps {
     user: User;
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
 }
 
-export function StudentDataSettings({ user, isOpen, onOpenChange }: StudentDataSettingsProps) {
+export function TeacherDataSettings({ user, isOpen, onOpenChange }: TeacherDataSettingsProps) {
     const { language, translations } = useLanguage();
     const { toast } = useToast();
     const t = translations.dataSettings;

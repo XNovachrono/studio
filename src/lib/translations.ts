@@ -90,6 +90,7 @@ export const translations = {
                 students: "Estudiantes",
                 groups: "Grupos",
                 pqrs: "PQRS",
+                teachers: "Docentes",
             },
             students: {
                 title: "Lista de Estudiantes Individuales",
@@ -112,6 +113,27 @@ export const translations = {
                 title: "Grupos Creados",
                 description: "Gestiona los grupos existentes, asigna docentes y administra los integrantes.",
                 noGroups: "Aún no se han creado grupos.",
+            },
+            teachers: {
+                title: "Lista de Docentes",
+                description: "Gestiona los docentes, revisa sus grupos, bancos de contenido y PQRS.",
+                table: {
+                    name: "Nombre",
+                    groups: "Grupos Asignados",
+                    actions: "Acciones",
+                },
+                details: {
+                    title: "Detalles del Docente",
+                    tabs: {
+                        groups: "Grupos",
+                        banks: "Bancos",
+                        pqrs: "PQRS",
+                    },
+                    contact: "Información de Contacto",
+                    email: "Email",
+                    phone: "Teléfono",
+                    noPhone: "No registrado",
+                }
             },
             pqrs: {
                 title: "Gestión de PQRS",
@@ -181,7 +203,7 @@ export const translations = {
             errorUserNotFound: "No se encontró el perfil de usuario.",
             errorUnexpected: "Ha ocurrido un error inesperado.",
         },
-        studentDataSettings: {
+        dataSettings: {
             title: "Ajuste de Datos",
             description: "Actualiza tu información personal y credenciales.",
             tabs: {
@@ -474,6 +496,7 @@ export const translations = {
                 students: "Students",
                 groups: "Groups",
                 pqrs: "PQRS",
+                teachers: "Teachers",
             },
             students: {
                 title: "Individual Students List",
@@ -496,6 +519,27 @@ export const translations = {
                 title: "Created Groups",
                 description: "Manage existing groups, assign teachers, and administer members.",
                 noGroups: "No groups have been created yet.",
+            },
+            teachers: {
+                title: "Teachers List",
+                description: "Manage teachers, review their groups, content banks, and PQRS.",
+                table: {
+                    name: "Name",
+                    groups: "Assigned Groups",
+                    actions: "Actions",
+                },
+                details: {
+                    title: "Teacher Details",
+                    tabs: {
+                        groups: "Groups",
+                        banks: "Banks",
+                        pqrs: "PQRS",
+                    },
+                    contact: "Contact Information",
+                    email: "Email",
+                    phone: "Phone",
+                    noPhone: "Not registered",
+                }
             },
             pqrs: {
                 title: "PQRS Management",
@@ -565,7 +609,7 @@ export const translations = {
             errorUserNotFound: "User profile not found.",
             errorUnexpected: "An unexpected error has occurred.",
         },
-        studentDataSettings: {
+        dataSettings: {
             title: "Data Settings",
             description: "Update your personal information and credentials.",
             tabs: {
