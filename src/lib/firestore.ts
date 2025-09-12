@@ -172,23 +172,20 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
     // 3. Fetch only the student profiles needed for those groups
     let allStudents: StudentProfile[] = [];
     if (studentIds.length > 0) {
+        const usersRef = collection(db, "users");
         // Firestore 'in' queries are limited to 30 elements. We need to batch them.
         const studentChunks: string[][] = [];
         for (let i = 0; i < studentIds.length; i += 30) {
             studentChunks.push(studentIds.slice(i, i + 30));
         }
 
-        const studentPromises = studentChunks.map(chunk => {
-            const qStudents = query(collection(db, "users"), where("id", "in", chunk));
-            return getDocs(qStudents);
-        });
-        
-        const studentSnaps = await Promise.all(studentPromises);
-        studentSnaps.forEach(snap => {
-            snap.docs.forEach(doc => {
+        for (const chunk of studentChunks) {
+            const qStudents = query(usersRef, where('__name__', 'in', chunk));
+            const studentSnaps = await getDocs(qStudents);
+            studentSnaps.forEach(doc => {
                  allStudents.push({ id: doc.id, ...doc.data() } as StudentProfile)
             });
-        });
+        }
     }
 
     return { groups, allStudents };
