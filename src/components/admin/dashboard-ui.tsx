@@ -1,4 +1,5 @@
 
+      
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -222,9 +223,9 @@ const TeacherDetailsDialog = ({ teacher, groups, pqrs, bankCards, isOpen, onOpen
                 <DialogHeader>
                     <DialogTitle>{t.title}: {teacher.name}</DialogTitle>
                     <DialogDescription>
-                        <p><strong>{t.contact}</strong></p>
-                        <p>{t.email}: {teacher.email}</p>
-                        <p>{t.phone}: {(teacher as any).phone || t.noPhone}</p>
+                        <div><strong>{t.contact}</strong></div>
+                        <div>{t.email}: {teacher.email}</div>
+                        <div>{t.phone}: {(teacher as any).phone || t.noPhone}</div>
                     </DialogDescription>
                 </DialogHeader>
                 <Tabs defaultValue="groups" className="flex-grow flex flex-col overflow-hidden">
@@ -524,7 +525,7 @@ export function AdminDashboardUI() {
                             <TableCell>{student.email || '-'}</TableCell>
                             <TableCell>{(student as any).phone || '-'}</TableCell>
                             <TableCell>{student.level || '-'}</TableCell>
-                            <TableCell><Badge variant="outline" className="capitalize">{student.plan || '-'}</Badge></TableCell>
+                            <TableCell><Badge variant="outline" className="capitalize">{student.plan || '-'}</TableCell>
                             <TableCell>{student.availability || '-'}</TableCell>
                             <TableCell>{startDate ? format(startDate, "P", { locale: es }) : '-'}</TableCell>
                             <TableCell>{student.courseDuration ? `${student.courseDuration} sem` : '-'}</TableCell>
