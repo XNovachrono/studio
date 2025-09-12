@@ -242,16 +242,16 @@ export const translations = {
                 title: "PQRS",
                 description: "Contacta a tus profesores.",
                 contactButton: "Contactar",
-                noInteractions: "Aún no has interactuado con profesores."
+                noInteractions: "Aún no tienes un profesor asignado."
             },
             pqrsDialog: {
                 title: "Enviar PQRS a {teacherName}",
+                description: "Tu mensaje será enviado directamente a tu profesor.",
                 messageLabel: "Tu mensaje",
                 messagePlaceholder: "Escribe tu petición, queja, reclamo o sugerencia aquí...",
                 anonymousLabel: "Enviar como anónimo",
                 cancelButton: "Cancelar",
                 submitButton: "Enviar Mensaje",
-                lastInteraction: "Última interacción: {time}",
                 teacherPrefix: "Profesor",
             },
             toasts: {
@@ -626,16 +626,16 @@ export const translations = {
                 title: "PQRS",
                 description: "Contact your teachers.",
                 contactButton: "Contact",
-                noInteractions: "You haven't interacted with any teachers yet."
+                noInteractions: "You don't have an assigned teacher yet."
             },
             pqrsDialog: {
                 title: "Send PQRS to {teacherName}",
+                description: "Your message will be sent directly to your teacher.",
                 messageLabel: "Your message",
                 messagePlaceholder: "Write your petition, complaint, claim or suggestion here...",
                 anonymousLabel: "Send anonymously",
                 cancelButton: "Cancel",
                 submitButton: "Send Message",
-                lastInteraction: "Last interaction: {time}",
                 teacherPrefix: "Teacher",
             },
             toasts: {

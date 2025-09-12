@@ -71,6 +71,7 @@ export interface PQRSMessage {
     studentId: string;
     studentEmail: string;
     teacherId: string;
+    teacherName: string;
     message: string;
     isAnonymous: boolean;
     createdAt: string; // ISO date string
@@ -124,5 +125,3 @@ export interface BankCard {
     fileUrl?: string;
     filePath?: string;
 }
-
-    

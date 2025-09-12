@@ -70,7 +70,7 @@ export function PqrsDialog({ isOpen, onOpenChange, student, teacher }: PqrsDialo
         <DialogHeader>
           <DialogTitle>{t.title.replace('{teacherName}', teacher.teacherName)}</DialogTitle>
           <DialogDescription>
-            {t.lastInteraction.replace('{time}', new Date(teacher.lastInteraction).toLocaleDateString())}
+            {t.description}
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4">
@@ -109,5 +109,3 @@ export function PqrsDialog({ isOpen, onOpenChange, student, teacher }: PqrsDialo
     </Dialog>
   );
 }
-
-    

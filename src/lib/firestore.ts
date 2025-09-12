@@ -107,10 +107,16 @@ export const getStudentData = async (userId: string): Promise<{ user: StudentPro
 
 
 // Function to submit a PQRS message
-export const submitPQRS = async (pqrsData: Omit<PQRSMessage, 'createdAt' | 'id'>): Promise<void> => {
+export const submitPQRS = async (pqrsData: Omit<PQRSMessage, 'createdAt' | 'id' | 'teacherName'>): Promise<void> => {
+    const teacherProfile = await getUserProfile(pqrsData.teacherId);
+    if (!teacherProfile) {
+        throw new Error("Teacher not found");
+    }
+
     const pqrsCollectionRef = collection(db, 'pqrs');
     await addDoc(pqrsCollectionRef, {
         ...pqrsData,
+        teacherName: teacherProfile.name,
         createdAt: Timestamp.now(),
     });
 };
@@ -167,26 +173,7 @@ export const createGroupWithTeacher = async (teacher: User, students: {id: strin
     
     // For each student, add an interaction with this teacher
     const batch = writeBatch(db);
-    const interaction: Omit<TeacherInteraction, 'lastInteraction'> = {
-      teacherId: teacher.id,
-      teacherName: teacher.name,
-    };
 
-    studentIds.forEach(studentId => {
-      const studentRef = doc(db, "users", studentId);
-       // Check if an interaction with this teacher already exists
-        // This part needs access to student data, which we don't have here.
-        // It's safer to just add the interaction, and rely on UI logic to display it correctly.
-        // Or handle duplicates with a more complex cloud function.
-        // For now, we union to avoid exact duplicates but might add multiple interactions if lastInteraction differs.
-        batch.update(studentRef, {
-            teacherInteractions: arrayUnion({
-                ...interaction,
-                lastInteraction: Timestamp.now()
-            })
-        });
-    });
-    
     // Create the group
     batch.set(newGroupRef, {
         name: groupName,
@@ -230,13 +217,9 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
             studentChunks.push(studentIds.slice(i, i + 30));
         }
 
-        for (const chunk of studentChunks) {
-             const qStudents = query(usersRef, where('__name__', 'in', chunk));
-             const studentsSnap = await getDocs(qStudents);
-             studentsSnap.forEach(doc => {
-                 allStudents.push({ id: doc.id, ...doc.data() } as StudentProfile);
-             });
-        }
+        const studentQuery = query(usersRef, where('role', '==', 'student'));
+        const studentsSnap = await getDocs(studentQuery);
+        allStudents = studentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
     }
 
     return { groups, allStudents };

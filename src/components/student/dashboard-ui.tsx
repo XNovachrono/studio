@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { BookOpen, ChevronRight, Loader2, MessageCircleQuestion, Video } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, Group, StudentProfile, Lesson, ScheduledClass } from "@/lib/types";
+import type { User, Group, StudentProfile, Lesson, ScheduledClass, TeacherInteraction } from "@/lib/types";
 import { getStudentData, getLessonsForGroup } from "@/lib/firestore";
 import { useLanguage } from "@/context/language-context";
 import {
@@ -37,7 +37,7 @@ export function StudentDashboardUI() {
   const { translations } = useLanguage();
   const t = translations.studentDashboard;
   const [isPqrsDialogOpen, setPqrsDialogOpen] = useState(false);
-  const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
+  const [selectedTeacher, setSelectedTeacher] = useState<TeacherInteraction | null>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("uncoverly-user");
@@ -74,7 +74,7 @@ export function StudentDashboardUI() {
     }
   }, [router]);
 
-  const handlePqrsClick = (teacher: any) => {
+  const handlePqrsClick = (teacher: TeacherInteraction) => {
     setSelectedTeacher(teacher);
     setPqrsDialogOpen(true);
   }
@@ -88,6 +88,17 @@ export function StudentDashboardUI() {
       (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
     );
     return sortedClasses[0];
+  }, [data?.group]);
+
+  const currentTeacher = useMemo((): TeacherInteraction | null => {
+    if (!data?.group?.teacherId || !data.group.teacherName) {
+      return null;
+    }
+    return {
+      teacherId: data.group.teacherId,
+      teacherName: data.group.teacherName,
+      lastInteraction: new Date().toISOString(), // This can be a placeholder or fetched if needed
+    };
   }, [data?.group]);
   
   if (isLoading) {
@@ -141,23 +152,19 @@ export function StudentDashboardUI() {
                     <CardDescription>{t.pqrs.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {user?.teacherInteractions && user.teacherInteractions.length > 0 ? (
-                      <ul className="space-y-2">
-                        {user.teacherInteractions.map(teacher => (
-                           <li key={teacher.teacherId} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
-                                <div className="flex items-center gap-3">
-                                    <Avatar className="h-9 w-9">
-                                        <AvatarFallback><UserIcon className="h-5 w-5"/></AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <p className="font-semibold">{teacher.teacherName}</p>
-                                        <p className="text-xs text-muted-foreground">{t.pqrsDialog.teacherPrefix}</p>
-                                    </div>
-                                </div>
-                               <Button variant="outline" onClick={() => handlePqrsClick(teacher)}>{t.pqrs.contactButton}</Button>
-                           </li>
-                        ))}
-                      </ul>
+                    {currentTeacher ? (
+                      <div className="flex items-center justify-between p-2 rounded-md">
+                           <div className="flex items-center gap-3">
+                               <Avatar className="h-9 w-9">
+                                   <AvatarFallback><UserIcon className="h-5 w-5"/></AvatarFallback>
+                               </Avatar>
+                               <div>
+                                   <p className="font-semibold">{currentTeacher.teacherName}</p>
+                                   <p className="text-xs text-muted-foreground">{t.pqrsDialog.teacherPrefix}</p>
+                               </div>
+                           </div>
+                          <Button variant="outline" onClick={() => handlePqrsClick(currentTeacher)}>{t.pqrs.contactButton}</Button>
+                      </div>
                     ) : (
                        <p className="p-4 text-center text-muted-foreground">{t.pqrs.noInteractions}</p>
                     )}
@@ -254,5 +261,3 @@ export function StudentDashboardUI() {
     </div>
   );
 }
-
-    
