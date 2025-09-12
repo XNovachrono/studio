@@ -1,7 +1,7 @@
 
 
 import { 
-    doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc, arrayRemove, addDoc, orderBy
+    doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc, arrayRemove, addDoc, orderBy, collectionGroup
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { db } from "./firebase";
@@ -115,16 +115,14 @@ export const getAdminData = async (): Promise<{
     allStudents: StudentProfile[],
     allTeachers: User[],
 }> => {
-    // Since Firestore rules can be complex, fetch users first to identify the admin.
     const allUsersRef = collection(db, "users");
     const allUsersSnap = await getDocs(allUsersRef);
     const allUsers = allUsersSnap.docs.map(d => ({ id: d.id, ...d.data() })) as User[];
 
     const admin = allUsers.find(u => u.role === 'admin') || null;
-    const allStudents = allUsers.filter(u => u.role === 'student') as StudentProfile[]; // Get all students
+    const allStudents = allUsers.filter(u => u.role === 'student') as StudentProfile[];
     const allTeachers = allUsers.filter(u => u.role === 'teacher');
     
-    // Now, fetch all groups.
     const groupsRef = collection(db, "groups");
     const groupsSnap = await getDocs(groupsRef);
     const groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
@@ -160,18 +158,38 @@ export const createGroupWithTeacher = async (teacher: User, students: {id: strin
 // === Teacher Functions ===
 export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
     groups: Group[],
-    allStudents: StudentProfile[], // We still need all students to populate group member names
+    allStudents: StudentProfile[],
 }> => {
     // 1. Get all groups assigned to this teacher
     const groupsRef = collection(db, "groups");
-    const q = query(groupsRef, where("teacherId", "==", teacherId));
-    const groupsSnap = await getDocs(q);
+    const qGroups = query(groupsRef, where("teacherId", "==", teacherId));
+    const groupsSnap = await getDocs(qGroups);
     const groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
 
-    // 2. Get all students to resolve names
-    const usersRef = collection(db, "users");
-    const studentsSnap = await getDocs(query(usersRef, where('role', '==', 'student')));
-    const allStudents = studentsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as StudentProfile[];
+    // 2. Collect all unique student IDs from the teacher's groups
+    const studentIds = [...new Set(groups.flatMap(g => g.studentIds))];
+
+    // 3. Fetch only the student profiles needed for those groups
+    let allStudents: StudentProfile[] = [];
+    if (studentIds.length > 0) {
+        // Firestore 'in' queries are limited to 30 elements. We need to batch them.
+        const studentChunks: string[][] = [];
+        for (let i = 0; i < studentIds.length; i += 30) {
+            studentChunks.push(studentIds.slice(i, i + 30));
+        }
+
+        const studentPromises = studentChunks.map(chunk => {
+            const qStudents = query(collection(db, "users"), where("id", "in", chunk));
+            return getDocs(qStudents);
+        });
+        
+        const studentSnaps = await Promise.all(studentPromises);
+        studentSnaps.forEach(snap => {
+            snap.docs.forEach(doc => {
+                 allStudents.push({ id: doc.id, ...doc.data() } as StudentProfile)
+            });
+        });
+    }
 
     return { groups, allStudents };
 }
@@ -429,3 +447,6 @@ export const removeStudentsFromGroup = async (groupId: string, studentIds: strin
         studentIds: arrayRemove(...studentIds)
     });
 };
+
+
+    
