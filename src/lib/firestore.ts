@@ -355,37 +355,40 @@ export const addContentToGroup = async (
         }
 
         const batch = writeBatch(db);
-        const newInteraction: Omit<TeacherInteraction, 'lastInteraction'> = {
+        const newInteractionPayload = {
             teacherId: groupData.teacherId,
-            teacherName: teacherProfile.name, // Use the fetched teacher's name
+            teacherName: teacherProfile.name,
+            lastInteraction: Timestamp.now(),
         };
 
-        const studentsSnap = await getDocs(query(collection(db, 'users'), where('__name__', 'in', groupData.studentIds)));
-        
-        studentsSnap.forEach(studentDoc => {
-            const studentData = studentDoc.data() as StudentProfile;
-            let interactions = studentData.teacherInteractions || [];
-            
-            const existingInteractionIndex = interactions.findIndex(i => i.teacherId === newInteraction.teacherId);
-            
-            if (existingInteractionIndex > -1) {
-                // Update existing interaction's timestamp
-                interactions[existingInteractionIndex].lastInteraction = Timestamp.now() as any;
-            } else {
-                // Add new interaction
-                interactions.push({ ...newInteraction, lastInteraction: Timestamp.now() as any });
+        const studentDocsToUpdate = await Promise.all(
+            groupData.studentIds.map(id => getDoc(doc(db, 'users', id)))
+        );
+
+        studentDocsToUpdate.forEach(studentDoc => {
+            if (studentDoc.exists()) {
+                const studentData = studentDoc.data() as StudentProfile;
+                let interactions = studentData.teacherInteractions || [];
+                
+                const existingInteractionIndex = interactions.findIndex(i => i.teacherId === newInteractionPayload.teacherId);
+
+                if (existingInteractionIndex > -1) {
+                    interactions[existingInteractionIndex].lastInteraction = newInteractionPayload.lastInteraction as any;
+                } else {
+                    interactions.push(newInteractionPayload as any);
+                }
+
+                interactions.sort((a, b) => {
+                    const timeA = a.lastInteraction instanceof Timestamp ? a.lastInteraction.toMillis() : new Date(a.lastInteraction).getTime();
+                    const timeB = b.lastInteraction instanceof Timestamp ? b.lastInteraction.toMillis() : new Date(b.lastInteraction).getTime();
+                    return timeB - timeA;
+                });
+
+                const updatedInteractions = interactions.slice(0, 5);
+                batch.update(studentDoc.ref, { teacherInteractions: updatedInteractions });
             }
-
-            // Keep only the 5 most recent interactions by sorting
-            interactions.sort((a, b) => {
-                const timeA = a.lastInteraction instanceof Timestamp ? a.lastInteraction.toMillis() : new Date(a.lastInteraction).getTime();
-                const timeB = b.lastInteraction instanceof Timestamp ? b.lastInteraction.toMillis() : new Date(b.lastInteraction).getTime();
-                return timeB - timeA;
-            });
-            const updatedInteractions = interactions.slice(0, 5);
-
-            batch.update(studentDoc.ref, { teacherInteractions: updatedInteractions });
         });
+        
         await batch.commit();
 
 
