@@ -1,5 +1,4 @@
 
-
 import { 
     doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc, arrayRemove, addDoc, orderBy, collectionGroup
 } from "firebase/firestore";
@@ -36,11 +35,7 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
 
     if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
-        // Check for admin role to grant full access, otherwise perform specific checks
-        if (userData.role === 'admin') {
-            return { id: userDocSnap.id, ...userData } as User;
-        }
-
+        // Convert Timestamps for teacherInteractions
         if (userData.teacherInteractions) {
             userData.teacherInteractions = userData.teacherInteractions.map((interaction: any) => ({
                 ...interaction,
@@ -98,7 +93,7 @@ export const getStudentData = async (userId: string): Promise<{ user: StudentPro
 
 
 // Function to submit a PQRS message
-export const submitPQRS = async (pqrsData: Omit<PQRSMessage, 'createdAt'>): Promise<void> => {
+export const submitPQRS = async (pqrsData: Omit<PQRSMessage, 'createdAt' | 'id'>): Promise<void> => {
     const pqrsCollectionRef = collection(db, 'pqrs');
     await addDoc(pqrsCollectionRef, {
         ...pqrsData,
@@ -134,12 +129,25 @@ export const getAdminData = async (): Promise<{
 export const createGroupWithTeacher = async (teacher: User, students: {id: string, name: string}[], plan: StudentPlan) => {
     const studentIds = students.map(s => s.id);
     const studentNames = students.map(s => s.name);
-    // Create group name from student names
     const groupName = studentNames.join(', ');
 
     const newGroupRef = doc(collection(db, "groups"));
     
-    await setDoc(newGroupRef, {
+    // For each student, add an interaction with this teacher
+    const batch = writeBatch(db);
+    const interaction: TeacherInteraction = {
+      teacherId: teacher.id,
+      teacherName: teacher.name,
+      lastInteraction: Timestamp.now() as any, // Will be converted by Firestore
+    };
+
+    studentIds.forEach(studentId => {
+      const studentRef = doc(db, "users", studentId);
+      batch.update(studentRef, { teacherInteractions: arrayUnion(interaction) });
+    });
+    
+    // Create the group
+    batch.set(newGroupRef, {
         name: groupName,
         type: plan,
         teacherId: teacher.id,
@@ -151,6 +159,8 @@ export const createGroupWithTeacher = async (teacher: User, students: {id: strin
             reminders: [],
         },
     });
+
+    await batch.commit();
 };
 
 
@@ -169,11 +179,10 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
     // 2. Collect all unique student IDs from the teacher's groups
     const studentIds = [...new Set(groups.flatMap(g => g.studentIds))];
 
-    // 3. Fetch all student profiles. Firestore rules will ensure the teacher can only read students.
+    // 3. Fetch all student profiles based on the IDs.
     let allStudents: StudentProfile[] = [];
     if (studentIds.length > 0) {
         const usersRef = collection(db, "users");
-        // Firestore 'in' queries are limited to 30 elements. We need to batch them.
         const studentChunks: string[][] = [];
         for (let i = 0; i < studentIds.length; i += 30) {
             studentChunks.push(studentIds.slice(i, i + 30));
@@ -218,9 +227,8 @@ export const createLessonForGroup = async (groupId: string, groupName: string, s
     const lessonsSnap = await getDocs(lessonsRef);
     const lessonNumber = lessonsSnap.size + 1;
 
-    // Calculate average level
     const levels = students.map(s => s.level).filter(Boolean) as string[];
-    const avgLevel = levels.length > 0 ? levels[0] : 'N/A'; // Placeholder for actual average calculation
+    const avgLevel = levels.length > 0 ? levels[0] : 'N/A';
     
     const newLessonName = `L${lessonNumber.toString().padStart(2, '0')}.${groupName}.${avgLevel}`;
 
@@ -254,7 +262,6 @@ export const getBankCards = async (ownerId: string, type: BankType): Promise<Ban
     const q = query(bankRef, where("ownerId", "==", ownerId), where("type", "==", type));
     const querySnapshot = await getDocs(q);
     const cards = querySnapshot.docs.map(bankCardFromDoc);
-    // Sort manually in code
     return cards.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 };
 
@@ -264,7 +271,6 @@ export const getBankFiles = async (ownerId: string, type: 'image' | 'video' | 'a
     const q = query(bankRef, where("ownerId", "==", ownerId), where("type", "==", type));
     const querySnapshot = await getDocs(q);
     const files = querySnapshot.docs.map(bankCardFromDoc);
-    // Sort manually in code
     return files.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
@@ -310,7 +316,6 @@ export const uploadBankFile = (ownerId: string, type: BankType, file: File, onPr
       async () => {
         const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
         
-        // Save file metadata to Firestore
         const bankRef = collection(db, "bank_cards");
         await addDoc(bankRef, {
             ownerId,
@@ -329,11 +334,9 @@ export const uploadBankFile = (ownerId: string, type: BankType, file: File, onPr
 
 // Delete a bank file from Storage and Firestore
 export const deleteBankFile = async (cardId: string, filePath: string): Promise<void> => {
-    // Delete from Firestore
     const cardRef = doc(db, "bank_cards", cardId);
     await deleteDoc(cardRef);
 
-    // Delete from Storage
     const storageRef = ref(storage, filePath);
     await deleteObject(storageRef);
 }
@@ -399,6 +402,5 @@ export const removeStudentsFromGroup = async (groupId: string, studentIds: strin
         studentIds: arrayRemove(...studentIds)
     });
 };
-
 
     

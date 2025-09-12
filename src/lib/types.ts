@@ -1,5 +1,4 @@
 
-
 export type UserRole = 'student' | 'teacher' | 'admin';
 export type StudentPlan = 'privado' | 'grupo pequeño' | 'grupo grande';
 
@@ -51,7 +50,7 @@ export interface GroupContent {
 export interface ScheduledClass {
   id: string;
   link: string;
-  time: string;
+  time: string; // ISO date string
 }
 
 export interface Note {
@@ -68,6 +67,7 @@ export interface Reminder {
 }
 
 export interface PQRSMessage {
+    id: string;
     studentId: string;
     studentEmail: string;
     teacherId: string;
@@ -124,3 +124,5 @@ export interface BankCard {
     fileUrl?: string;
     filePath?: string;
 }
+
+    

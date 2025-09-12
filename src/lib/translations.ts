@@ -96,11 +96,10 @@ export const translations = {
                 createGroupButton: "Crear Grupo",
                 table: {
                     name: "Nombre",
-                    age: "Edad",
-                    plan: "Plan",
                     email: "Email",
                     phone: "Teléfono",
                     level: "Nivel",
+                    plan: "Plan",
                     availability: "Disponibilidad",
                     startDate: "Fecha Inicio",
                     duration: "Duración (sem)",
@@ -190,6 +189,11 @@ export const translations = {
         },
         studentDashboard: {
             title: "Panel de Estudiante",
+            nextClass: {
+                title: "Próxima Clase",
+                joinButton: "Unirse a la Clase",
+                noClass: "Tu profesor aún no ha programado la próxima clase."
+            },
             lessons: {
                 title: "Mis Lecciones",
                 description: "Aquí encontrarás todas las lecciones de tu grupo.",
@@ -213,7 +217,8 @@ export const translations = {
             },
             pqrs: {
                 title: "PQRS",
-                description: "Contacta a tus últimos profesores.",
+                description: "Contacta a tus profesores.",
+                contactButton: "Contactar",
                 noInteractions: "Aún no has interactuado con profesores."
             },
             pqrsDialog: {
@@ -224,7 +229,7 @@ export const translations = {
                 cancelButton: "Cancelar",
                 submitButton: "Enviar Mensaje",
                 lastInteraction: "Última interacción: {time}",
-                teacherPrefix: "Teacher",
+                teacherPrefix: "Profesor",
             },
             toasts: {
                 emptyMessage: "El mensaje no puede estar vacío.",
@@ -452,11 +457,10 @@ export const translations = {
                 createGroupButton: "Create Group",
                 table: {
                     name: "Name",
-                    age: "Age",
-                    plan: "Plan",
                     email: "Email",
                     phone: "Phone",
                     level: "Level",
+                    plan: "Plan",
                     availability: "Availability",
                     startDate: "Start Date",
                     duration: "Duration (wks)",
@@ -546,6 +550,11 @@ export const translations = {
         },
         studentDashboard: {
             title: "Student Dashboard",
+            nextClass: {
+                title: "Next Class",
+                joinButton: "Join Class",
+                noClass: "Your teacher has not scheduled the next class yet."
+            },
             lessons: {
                 title: "My Lessons",
                 description: "Here you will find all the lessons for your group.",
@@ -569,7 +578,8 @@ export const translations = {
             },
             pqrs: {
                 title: "PQRS",
-                description: "Contact your last teachers.",
+                description: "Contact your teachers.",
+                contactButton: "Contact",
                 noInteractions: "You haven't interacted with any teachers yet."
             },
             pqrsDialog: {

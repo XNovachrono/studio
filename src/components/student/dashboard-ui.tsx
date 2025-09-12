@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, ChevronRight, Loader2, MessageCircleQuestion } from "lucide-react";
+import { BookOpen, ChevronRight, Loader2, MessageCircleQuestion, Video } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, Group, StudentProfile, Lesson } from "@/lib/types";
+import type { User, Group, StudentProfile, Lesson, ScheduledClass } from "@/lib/types";
 import { getStudentData, getLessonsForGroup } from "@/lib/firestore";
 import { useLanguage } from "@/context/language-context";
 import {
@@ -17,6 +17,12 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "../ui/button";
 import { Editor } from "../common/editor";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { PqrsDialog } from "./pqrs-dialog";
+import { Avatar, AvatarFallback } from "../ui/avatar";
+import { User as UserIcon } from "lucide-react";
+
 
 interface StudentDashboardData {
     user: StudentProfile;
@@ -30,7 +36,9 @@ export function StudentDashboardUI() {
   const [isLoading, setIsLoading] = useState(true);
   const { translations } = useLanguage();
   const t = translations.studentDashboard;
-  
+  const [isPqrsDialogOpen, setPqrsDialogOpen] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
+
   useEffect(() => {
     const storedUser = localStorage.getItem("uncoverly-user");
     if (storedUser) {
@@ -65,6 +73,22 @@ export function StudentDashboardUI() {
         router.push("/login");
     }
   }, [router]);
+
+  const handlePqrsClick = (teacher: any) => {
+    setSelectedTeacher(teacher);
+    setPqrsDialogOpen(true);
+  }
+
+  const nextClass = useMemo(() => {
+    if (!data?.group?.content?.scheduledClasses?.length) {
+      return null;
+    }
+    // Sort classes to find the most recent one (or upcoming one in the future)
+    const sortedClasses = [...data.group.content.scheduledClasses].sort(
+      (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
+    );
+    return sortedClasses[0];
+  }, [data?.group]);
   
   if (isLoading) {
     return (
@@ -80,7 +104,68 @@ export function StudentDashboardUI() {
   return (
     <div className="flex h-screen flex-col">
       <DashboardHeader user={user || null} title={t.title} />
-      <main className="flex-1 overflow-auto p-4 md:p-8">
+      <main className="flex-1 overflow-auto p-4 md:p-8 space-y-6">
+        
+        <div className="grid gap-6 md:grid-cols-2">
+            {/* Next Class Card */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline text-2xl flex items-center gap-2">
+                        <Video />
+                        {t.nextClass.title}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {nextClass ? (
+                        <div className="flex flex-col items-center justify-center text-center p-4 rounded-lg bg-secondary/50 space-y-3">
+                           <p className="font-semibold text-lg">
+                             {format(new Date(nextClass.time), "eeee, d 'de' MMMM 'de' yyyy 'a las' HH:mm", { locale: es })}
+                           </p>
+                           <a href={nextClass.link} target="_blank" rel="noopener noreferrer">
+                             <Button size="lg">{t.nextClass.joinButton}</Button>
+                           </a>
+                        </div>
+                    ) : (
+                        <p className="p-4 text-center text-muted-foreground">{t.nextClass.noClass}</p>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* PQRS Card */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline text-2xl flex items-center gap-2">
+                        <MessageCircleQuestion />
+                        {t.pqrs.title}
+                    </CardTitle>
+                    <CardDescription>{t.pqrs.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {user?.teacherInteractions && user.teacherInteractions.length > 0 ? (
+                      <ul className="space-y-2">
+                        {user.teacherInteractions.map(teacher => (
+                           <li key={teacher.teacherId} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="h-9 w-9">
+                                        <AvatarFallback><UserIcon className="h-5 w-5"/></AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <p className="font-semibold">{teacher.teacherName}</p>
+                                        <p className="text-xs text-muted-foreground">{t.pqrsDialog.teacherPrefix}</p>
+                                    </div>
+                                </div>
+                               <Button variant="outline" onClick={() => handlePqrsClick(teacher)}>{t.pqrs.contactButton}</Button>
+                           </li>
+                        ))}
+                      </ul>
+                    ) : (
+                       <p className="p-4 text-center text-muted-foreground">{t.pqrs.noInteractions}</p>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+
+
         <Card>
             <CardHeader>
                 <CardTitle className="font-headline text-2xl flex items-center gap-2">
@@ -157,6 +242,17 @@ export function StudentDashboardUI() {
             </CardContent>
         </Card>
       </main>
+
+      {user && selectedTeacher && (
+        <PqrsDialog 
+          isOpen={isPqrsDialogOpen} 
+          onOpenChange={setPqrsDialogOpen} 
+          student={user}
+          teacher={selectedTeacher}
+        />
+      )}
     </div>
   );
 }
+
+    
