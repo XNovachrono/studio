@@ -89,6 +89,7 @@ export const translations = {
             tabs: {
                 students: "Estudiantes",
                 groups: "Grupos",
+                pqrs: "PQRS",
             },
             students: {
                 title: "Lista de Estudiantes Individuales",
@@ -104,12 +105,26 @@ export const translations = {
                     startDate: "Fecha Inicio",
                     duration: "Duración (sem)",
                     currentWeek: "Semana Actual",
+                    actions: "Acciones"
                 }
             },
             groups: {
                 title: "Grupos Creados",
                 description: "Gestiona los grupos existentes, asigna docentes y administra los integrantes.",
                 noGroups: "Aún no se han creado grupos.",
+            },
+            pqrs: {
+                title: "Gestión de PQRS",
+                description: "Revisa y gestiona los mensajes enviados por los estudiantes.",
+                noPqrs: "Aún no se han recibido mensajes PQRS.",
+                detailsTitle: "Mensajes de {studentName}",
+                teacherLabel: "Para",
+                anonymous: "Anónimo",
+                table: {
+                    student: "Estudiante",
+                    email: "Email",
+                    messages: "Mensajes"
+                }
             },
             createGroupDialog: {
                 title: "Asignar Docente al Grupo",
@@ -450,6 +465,7 @@ export const translations = {
             tabs: {
                 students: "Students",
                 groups: "Groups",
+                pqrs: "PQRS",
             },
             students: {
                 title: "Individual Students List",
@@ -465,12 +481,26 @@ export const translations = {
                     startDate: "Start Date",
                     duration: "Duration (wks)",
                     currentWeek: "Current Week",
+                    actions: "Actions"
                 }
             },
             groups: {
                 title: "Created Groups",
                 description: "Manage existing groups, assign teachers, and administer members.",
                 noGroups: "No groups have been created yet.",
+            },
+            pqrs: {
+                title: "PQRS Management",
+                description: "Review and manage messages sent by students.",
+                noPqrs: "No PQRS messages have been received yet.",
+                detailsTitle: "Messages from {studentName}",
+                teacherLabel: "To",
+                anonymous: "Anonymous",
+                table: {
+                    student: "Student",
+                    email: "Email",
+                    messages: "Messages"
+                }
             },
             createGroupDialog: {
                 title: "Assign Teacher to Group",

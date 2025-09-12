@@ -28,6 +28,18 @@ const bankCardFromDoc = (doc: any): BankCard => {
     } as BankCard;
 };
 
+// Helper to convert Firestore Timestamps in PQRS objects
+const pqrsFromDoc = (doc: any): PQRSMessage => {
+    const data = doc.data();
+    return {
+        id: doc.id,
+        ...data,
+        // The studentEmail might be missing in some docs if they were created before the field was added
+        studentEmail: data.studentEmail || 'No proporcionado',
+        createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
+    } as PQRSMessage;
+}
+
 // Function to get a user profile
 export const getUserProfile = async (userId: string): Promise<User | null> => {
     const userDocRef = doc(db, "users", userId);
@@ -104,11 +116,21 @@ export const submitPQRS = async (pqrsData: Omit<PQRSMessage, 'createdAt' | 'id'>
 
 // === Admin Functions ===
 
+// Fetch all PQRS messages
+export const getAllPqrsMessages = async (): Promise<PQRSMessage[]> => {
+    const pqrsRef = collection(db, "pqrs");
+    const q = query(pqrsRef, orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(pqrsFromDoc);
+};
+
+
 export const getAdminData = async (): Promise<{
     admin: User | null,
     groups: Group[],
     allStudents: StudentProfile[],
     allTeachers: User[],
+    pqrsMessages: PQRSMessage[],
 }> => {
     const allUsersRef = collection(db, "users");
     const allUsersSnap = await getDocs(allUsersRef);
@@ -121,8 +143,10 @@ export const getAdminData = async (): Promise<{
     const groupsRef = collection(db, "groups");
     const groupsSnap = await getDocs(groupsRef);
     const groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
+
+    const pqrsMessages = await getAllPqrsMessages();
     
-    return { admin, groups, allStudents, allTeachers };
+    return { admin, groups, allStudents, allTeachers, pqrsMessages };
 }
 
 
@@ -183,6 +207,7 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
     let allStudents: StudentProfile[] = [];
     if (studentIds.length > 0) {
         const usersRef = collection(db, "users");
+        // Firestore 'in' query is limited to 30 elements. We need to chunk the array.
         const studentChunks: string[][] = [];
         for (let i = 0; i < studentIds.length; i += 30) {
             studentChunks.push(studentIds.slice(i, i + 30));
