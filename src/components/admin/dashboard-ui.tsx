@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, PlusCircle, Users, Edit } from "lucide-react";
+import { Loader2, PlusCircle, Users, Edit, Calendar as CalendarIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -28,19 +29,116 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, StudentProfile, Group, StudentPlan } from "@/lib/types";
-import { getAdminData, createGroupWithTeacher } from "@/lib/firestore";
+import type { User, StudentProfile } from "@/lib/types";
+import { getAdminData, createGroupWithTeacher, updateStudentDetails } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Calendar } from "../ui/calendar";
+import { format, addWeeks, differenceInWeeks } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface AdminDashboardData {
   admin: User | null;
-  groups: Group[];
+  groups: any[];
   allStudents: StudentProfile[];
   allTeachers: User[];
 }
 
 const ENGLISH_LEVELS = ["A1", "A1.5", "A2", "A2.5", "B1", "B1.5", "C1", "C1.5", "C2"];
+
+const EditStudentDialog = ({ student, isOpen, onOpenChange, onStudentUpdate }: { student: StudentProfile | null; isOpen: boolean; onOpenChange: (open: boolean) => void; onStudentUpdate: () => void }) => {
+    const { toast } = useToast();
+    const [level, setLevel] = useState(student?.level || "");
+    const [startDate, setStartDate] = useState<Date | undefined>(student?.courseStartDate ? new Date(student.courseStartDate) : new Date());
+    const [duration, setDuration] = useState(student?.courseDuration || 16);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (student) {
+            setLevel(student.level || "");
+            setStartDate(student.courseStartDate ? new Date(student.courseStartDate) : new Date());
+            setDuration(student.courseDuration || 16);
+        }
+    }, [student]);
+
+    const handleSave = async () => {
+        if (!student || !startDate) return;
+        setIsSaving(true);
+        try {
+            await updateStudentDetails(student.id, {
+                level,
+                courseStartDate: format(startDate, "yyyy-MM-dd"),
+                courseDuration: duration,
+            });
+            toast({ title: "Estudiante actualizado", description: `Los datos de ${student.name} se guardaron correctamente.` });
+            onStudentUpdate();
+            onOpenChange(false);
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar el estudiante." });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const endDate = startDate ? format(addWeeks(startDate, duration), "PPP", { locale: es }) : "N/A";
+    const currentWeek = startDate ? differenceInWeeks(new Date(), startDate) + 1 : "N/A";
+    
+    if (!student) return null;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Editar Estudiante: {student.name}</DialogTitle>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="level-select">Nivel de Inglés</Label>
+                        <Select value={level} onValueChange={setLevel}>
+                            <SelectTrigger id="level-select"><SelectValue placeholder="Seleccionar nivel" /></SelectTrigger>
+                            <SelectContent>
+                                {ENGLISH_LEVELS.map(lvl => <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Fecha de Inicio</Label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant={"outline"} className="w-full justify-start text-left font-normal">
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {startDate ? format(startDate, "PPP", { locale: es }) : <span>Seleccionar fecha</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus /></PopoverContent>
+                            </Popover>
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="duration">Duración (semanas)</Label>
+                            <Input id="duration" type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
+                        </div>
+                    </div>
+                    <Card className="bg-secondary/50">
+                        <CardContent className="pt-6 text-sm space-y-2">
+                            <p><strong>Fecha Final del Curso:</strong> {endDate}</p>
+                            <p><strong>Semana Actual:</strong> {currentWeek > 0 && currentWeek <= duration ? currentWeek : "N/A"}</p>
+                        </CardContent>
+                    </Card>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
+                    <Button onClick={handleSave} disabled={isSaving}>
+                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Guardar Cambios
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+};
+
 
 export function AdminDashboardUI() {
   const router = useRouter();
@@ -58,6 +156,9 @@ export function AdminDashboardUI() {
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  
+  // Student editing state
+  const [editingStudent, setEditingStudent] = useState<StudentProfile | null>(null);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -193,6 +294,7 @@ export function AdminDashboardUI() {
                         <TableHead>{t.students.table.level}</TableHead>
                         <TableHead>{t.students.table.plan}</TableHead>
                         <TableHead>{t.students.table.availability}</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -212,6 +314,11 @@ export function AdminDashboardUI() {
                           <TableCell>{student.level || '-'}</TableCell>
                           <TableCell><Badge variant="outline" className="capitalize">{student.plan || '-'}</Badge></TableCell>
                           <TableCell>{student.availability || '-'}</TableCell>
+                          <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" onClick={() => setEditingStudent(student)}>
+                                  <Edit className="h-4 w-4" />
+                              </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -269,6 +376,14 @@ export function AdminDashboardUI() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Dialog for Editing Student */}
+      <EditStudentDialog 
+        student={editingStudent} 
+        isOpen={!!editingStudent} 
+        onOpenChange={() => setEditingStudent(null)} 
+        onStudentUpdate={fetchDashboardData}
+      />
     </div>
   );
 }
