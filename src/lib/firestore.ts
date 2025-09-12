@@ -169,7 +169,7 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
     // 2. Collect all unique student IDs from the teacher's groups
     const studentIds = [...new Set(groups.flatMap(g => g.studentIds))];
 
-    // 3. Fetch only the student profiles needed for those groups
+    // 3. Fetch all student profiles. Firestore rules will ensure the teacher can only read students.
     let allStudents: StudentProfile[] = [];
     if (studentIds.length > 0) {
         const usersRef = collection(db, "users");
@@ -180,11 +180,11 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
         }
 
         for (const chunk of studentChunks) {
-            const qStudents = query(usersRef, where('__name__', 'in', chunk));
-            const studentSnaps = await getDocs(qStudents);
-            studentSnaps.forEach(doc => {
-                 allStudents.push({ id: doc.id, ...doc.data() } as StudentProfile)
-            });
+             const qStudents = query(usersRef, where('__name__', 'in', chunk));
+             const studentsSnap = await getDocs(qStudents);
+             studentsSnap.forEach(doc => {
+                 allStudents.push({ id: doc.id, ...doc.data() } as StudentProfile);
+             });
         }
     }
 
@@ -346,12 +346,7 @@ export const addContentToGroup = async (
     data: any,
 ) => {
     const groupRef = doc(db, "groups", groupId);
-    const groupSnap = await getDoc(groupRef);
-    if (!groupSnap.exists()) {
-        throw new Error("Group not found!");
-    }
-    const groupData = groupSnap.data() as Group;
-
+    
     if (type === 'scheduledClass') {
         const classDate = new Date(data.time);
         await updateDoc(groupRef, {
@@ -362,56 +357,16 @@ export const addContentToGroup = async (
             })
         });
 
-        // Update teacher interaction for each student in the group
-        const teacherProfile = await getUserProfile(groupData.teacherId);
-        if (!teacherProfile) {
-            console.error("Teacher profile not found for interaction update.");
-            return;
-        }
-
-        const batch = writeBatch(db);
-        const newInteractionPayload = {
-            teacherId: groupData.teacherId,
-            teacherName: teacherProfile.name,
-            lastInteraction: Timestamp.now(),
-        };
-
-        const studentDocsToUpdate = await Promise.all(
-            groupData.studentIds.map(id => getDoc(doc(db, 'users', id)))
-        );
-
-        studentDocsToUpdate.forEach(studentDoc => {
-            if (studentDoc.exists()) {
-                const studentData = studentDoc.data() as StudentProfile;
-                let interactions = studentData.teacherInteractions || [];
-                
-                const existingInteractionIndex = interactions.findIndex(i => i.teacherId === newInteractionPayload.teacherId);
-
-                if (existingInteractionIndex > -1) {
-                    interactions[existingInteractionIndex].lastInteraction = newInteractionPayload.lastInteraction as any;
-                } else {
-                    interactions.push(newInteractionPayload as any);
-                }
-
-                interactions.sort((a, b) => {
-                    const timeA = a.lastInteraction instanceof Timestamp ? a.lastInteraction.toMillis() : new Date(a.lastInteraction).getTime();
-                    const timeB = b.lastInteraction instanceof Timestamp ? b.lastInteraction.toMillis() : new Date(b.lastInteraction).getTime();
-                    return timeB - timeA;
-                });
-
-                const updatedInteractions = interactions.slice(0, 5);
-                batch.update(studentDoc.ref, { teacherInteractions: updatedInteractions });
-            }
-        });
-        
-        await batch.commit();
-
-
     } else if (type === 'note') {
         await updateDoc(groupRef, {
             'content.notes': arrayUnion({ ...data, id: `n${Date.now()}` })
         });
     } else if (type === 'reminder') {
+        const groupSnap = await getDoc(groupRef);
+        if (!groupSnap.exists()) {
+            throw new Error("Group not found!");
+        }
+        const groupData = groupSnap.data() as Group;
         const newReminder: Omit<Reminder, 'id'> = {
             message: data.message,
             teacherName: groupData.teacherName,
