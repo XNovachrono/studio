@@ -36,6 +36,11 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
 
     if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
+        // Check for admin role to grant full access, otherwise perform specific checks
+        if (userData.role === 'admin') {
+            return { id: userDocSnap.id, ...userData } as User;
+        }
+
         if (userData.teacherInteractions) {
             userData.teacherInteractions = userData.teacherInteractions.map((interaction: any) => ({
                 ...interaction,
@@ -119,10 +124,8 @@ export const getAdminData = async (): Promise<{
     const allStudents = allUsers.filter(u => u.role === 'student' && u.hasOnboarded) as StudentProfile[];
     const allTeachers = allUsers.filter(u => u.role === 'teacher');
     
-    // Now fetch groups, which admins have read access to.
-    const groupsRef = collection(db, "groups");
-    const groupsSnap = await getDocs(groupsRef);
-    const groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
+    // As requested, we start with a clean slate for groups.
+    const groups: Group[] = [];
     
     return { admin, groups, allStudents, allTeachers };
 }
