@@ -4,7 +4,7 @@ import {
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { db } from "./firebase";
-import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder, Lesson, EditorContent, BankCard, BankType } from "./types";
+import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder, Lesson, EditorContent, BankCard, BankType, ScheduledClass } from "./types";
 
 const storage = getStorage();
 
@@ -158,7 +158,17 @@ export const getAdminData = async (): Promise<{
     
     const groupsRef = collection(db, "groups");
     const groupsSnap = await getDocs(groupsRef);
-    const groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
+    const groups = groupsSnap.docs.map(d => {
+        const groupData = d.data() as Omit<Group, 'id'>;
+         // Convert Timestamps to string dates for serialization
+        if (groupData.content.scheduledClasses) {
+            groupData.content.scheduledClasses = groupData.content.scheduledClasses.map(c => ({
+                ...c,
+                time: c.time instanceof Timestamp ? c.time.toDate().toISOString() : c.time,
+            }));
+        }
+        return { id: d.id, ...groupData } as Group
+    });
 
     const pqrsMessages = await getAllPqrsMessages();
 
@@ -386,17 +396,20 @@ export const addContentToGroup = async (
     groupId: string, 
     type: 'scheduledClass',
     data: any,
+    teacherName: string,
 ) => {
     const groupRef = doc(db, "groups", groupId);
     
     if (type === 'scheduledClass') {
         const classDate = new Date(data.time);
+        const scheduledClass: ScheduledClass = {
+             id: `c${Date.now()}`,
+             link: data.link, 
+             time: Timestamp.fromDate(classDate) as any, // Store as Timestamp
+             name: teacherName,
+        };
         await updateDoc(groupRef, {
-            'content.scheduledClasses': arrayUnion({
-                 id: `c${Date.now()}`,
-                 link: data.link, 
-                 time: Timestamp.fromDate(classDate) 
-            })
+            'content.scheduledClasses': arrayUnion(scheduledClass)
         });
     }
 };

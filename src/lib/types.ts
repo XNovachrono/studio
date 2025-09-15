@@ -51,6 +51,7 @@ export interface ScheduledClass {
   id: string;
   link: string;
   time: string; // ISO date string
+  name: string; // Teacher's name
 }
 
 export interface Note {

@@ -103,16 +103,16 @@ const BankCardImporter = ({ onSelectCard, ownerId, isOpen, onOpenChange }: { onS
         if (isOpen) {
             const fetchCards = async () => {
                 setIsLoading(true);
-                const fetchedCards = await getBankCards(ownerId, 'objective');
+                const fetchedCards = await getBankCards('objective');
                 setCards(fetchedCards);
                 setIsLoading(false);
             };
             fetchCards();
         }
-    }, [isOpen, ownerId]);
+    }, [isOpen]);
 
     const handleSelect = (card: BankCard) => {
-        onSelectCard(card.content);
+        onSelectCard(card.content!);
         onOpenChange(false);
     }
 
@@ -127,7 +127,10 @@ const BankCardImporter = ({ onSelectCard, ownerId, isOpen, onOpenChange }: { onS
                         <div className="space-y-2 pr-4">
                         {cards.length > 0 ? cards.map(card => (
                             <div key={card.id} className="flex justify-between items-center p-2 border rounded-md">
-                                <span className="font-medium">{card.name}</span>
+                                <div>
+                                    <p className="font-medium">{card.name}</p>
+                                    <p className="text-xs text-muted-foreground">Autor: {card.ownerName}</p>
+                                </div>
                                 <Button size="sm" onClick={() => handleSelect(card)}>{t.import}</Button>
                             </div>
                         )) : <p className="text-center text-muted-foreground">{t.noCards}</p>}
@@ -314,7 +317,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     );
 };
 
-const GroupCommunication = ({ group, studentsById, onClassScheduled }: { group: Group, studentsById: Map<string, StudentProfile>, onClassScheduled: () => void }) => {
+const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName }: { group: Group, studentsById: Map<string, StudentProfile>, onClassScheduled: () => void, teacherName: string }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.communication;
     const t_toast = translations.teacherDashboard.toasts;
@@ -336,7 +339,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled }: { group: 
         scheduledDateTime.setHours(hours, minutes);
 
         try {
-            await addContentToGroup(group.id, 'scheduledClass', { link, time: scheduledDateTime });
+            await addContentToGroup(group.id, 'scheduledClass', { link, time: scheduledDateTime }, teacherName);
             
             const groupStudents = group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[];
             await createLessonForGroup(group.id, group.name, groupStudents);
@@ -416,7 +419,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled }: { group: 
 };
 
 
-const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, teacherId }: { group: Group | null; studentsById: Map<string, StudentProfile>; isOpen: boolean; onOpenChange: (open: boolean) => void; teacherId: string }) => {
+const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, teacherId, teacherName }: { group: Group | null; studentsById: Map<string, StudentProfile>; isOpen: boolean; onOpenChange: (open: boolean) => void; teacherId: string; teacherName: string; }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.groups;
     const [studentToView, setStudentToView] = useState<StudentProfile | null>(null);
@@ -460,7 +463,7 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, teacher
                         </ScrollArea>
                     </TabsContent>
                      <TabsContent value="communication" className="flex-grow overflow-auto p-4">
-                        <GroupCommunication group={group} studentsById={studentsById} onClassScheduled={() => setRefreshLessonKey(k => k + 1)} />
+                        <GroupCommunication group={group} studentsById={studentsById} onClassScheduled={() => setRefreshLessonKey(k => k + 1)} teacherName={teacherName}/>
                     </TabsContent>
                 </Tabs>
             </DialogContent>
@@ -619,7 +622,7 @@ export function TeacherDashboardUI() {
         </Card>
       </main>
       
-      <GroupDetailsDialog group={groupToView} studentsById={studentsById} isOpen={!!groupToView} onOpenChange={() => setGroupToView(null)} teacherId={user.id} />
+      <GroupDetailsDialog group={groupToView} studentsById={studentsById} isOpen={!!groupToView} onOpenChange={() => setGroupToView(null)} teacherId={user.id} teacherName={user.name}/>
 
       <Dialog open={isBanksModalOpen} onOpenChange={setIsBanksModalOpen}>
         <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">

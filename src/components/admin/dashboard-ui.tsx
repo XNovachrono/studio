@@ -5,7 +5,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, PlusCircle, Users, Edit, Calendar as CalendarIcon, MessageCircle, Trash2, Eye, BookOpen, Library } from "lucide-react";
+import { Loader2, PlusCircle, Users, Edit, Calendar as CalendarIcon, MessageCircle, Trash2, Eye, BookOpen, Library, Link as LinkIcon, Bell } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -42,8 +42,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, StudentProfile, PQRSMessage, Group, BankCard } from "@/lib/types";
-import { getAdminData, createGroupWithTeacher, updateUserProfile, deletePQRSMessage } from "@/lib/firestore";
+import type { User, StudentProfile, PQRSMessage, Group, BankCard, Lesson } from "@/lib/types";
+import { getAdminData, createGroupWithTeacher, updateUserProfile, deletePQRSMessage, getLessonsForGroup } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -52,6 +52,8 @@ import { format, addWeeks, differenceInWeeks, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { ScrollArea } from "../ui/scroll-area";
 import { BanksDashboardUI } from "../teacher/banks/dashboard-ui";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
+import { Editor } from "../common/editor";
 
 interface AdminDashboardData {
   admin: User | null;
@@ -63,6 +65,181 @@ interface AdminDashboardData {
 }
 
 const ENGLISH_LEVELS = ["A1", "A1.2", "A2", "A2.2", "B1", "B1.2", "C1", "C1.2", "C2"];
+
+const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: StudentProfile | null; isOpen: boolean; onOpenChange: (open: boolean) => void }) => {
+    const { translations } = useLanguage();
+    const t = translations.teacherDashboard.studentDataDialog;
+
+    if (!student) return null;
+
+    const studentData = [
+        { label: t.name, value: student.name },
+        { label: t.plan, value: student.plan, isBadge: true },
+        { label: t.level, value: student.level },
+        { label: t.age, value: student.age },
+        { label: t.email, value: student.email },
+        { label: t.phone, value: student.phone },
+        { label: t.interests, value: student.interests?.join(', ') },
+        { label: t.objective, value: student.objective },
+        { label: t.availability, value: student.availability },
+    ];
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{t.title.replace('{studentName}', student.name)}</DialogTitle>
+                </DialogHeader>
+                <div className="py-4 space-y-2">
+                    {studentData.map(data => data.value ? (
+                        <div key={data.label} className="grid grid-cols-3 gap-2 text-sm">
+                            <span className="font-semibold text-muted-foreground">{data.label}:</span>
+                            <span className="col-span-2">
+                                {data.isBadge ? <Badge variant="secondary" className="capitalize">{data.value}</Badge> : data.value}
+                            </span>
+                        </div>
+                    ) : null)}
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+
+const LessonViewer = ({ group }: { group: Group }) => {
+    const [lessons, setLessons] = useState<Lesson[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const { translations } = useLanguage();
+    const t_lessons = translations.studentDashboard.lessons;
+
+    useEffect(() => {
+        const fetchLessons = async () => {
+            setIsLoading(true);
+            const groupLessons = await getLessonsForGroup(group.id);
+            setLessons(groupLessons);
+            setIsLoading(false);
+        };
+        fetchLessons();
+    }, [group.id]);
+
+    if (isLoading) return <div className="flex justify-center p-4"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+    if (lessons.length === 0) return <p className="text-center text-muted-foreground">{t_lessons.noLessons}</p>;
+
+    return (
+        <Accordion type="single" collapsible className="w-full">
+            {lessons.map(lesson => (
+                <AccordionItem value={lesson.id} key={lesson.id}>
+                    <AccordionTrigger className="font-semibold text-lg hover:no-underline">{lesson.name}</AccordionTrigger>
+                    <AccordionContent className="space-y-6 pl-2">
+                        <Card>
+                            <CardHeader><CardTitle>{t_lessons.recording}</CardTitle></CardHeader>
+                            <CardContent>{lesson.recording?.link ? <a href={lesson.recording.link} target="_blank" rel="noopener noreferrer"><Button>{t_lessons.viewRecording}</Button></a> : <p className="text-muted-foreground">{t_lessons.noRecording}</p>}</CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader><CardTitle>{t_lessons.content}</CardTitle></CardHeader>
+                            <CardContent><Editor content={lesson.content} onChange={() => {}} editable={false} /></CardContent>
+                        </Card>
+                         <Card>
+                            <CardHeader><CardTitle>{t_lessons.notes.title}</CardTitle></CardHeader>
+                            <CardContent><Editor content={lesson.classNote} onChange={() => {}} editable={false} /></CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader><CardTitle>{t_lessons.homework}</CardTitle></CardHeader>
+                            <CardContent><Editor content={lesson.homework} onChange={() => {}} editable={false} /></CardContent>
+                        </Card>
+                    </AccordionContent>
+                </AccordionItem>
+            ))}
+        </Accordion>
+    );
+};
+
+const AdminGroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange }: { group: Group | null; studentsById: Map<string, StudentProfile>; isOpen: boolean; onOpenChange: (open: boolean) => void; }) => {
+    const { translations } = useLanguage();
+    const t_groups = translations.teacherDashboard.groups;
+    const [studentToView, setStudentToView] = useState<StudentProfile | null>(null);
+
+    if (!group) return null;
+
+    const groupMembers = group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[];
+    const scheduledClasses = group.content.scheduledClasses || [];
+    const reminders = group.content.reminders || [];
+
+    return (
+         <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+                <DialogHeader>
+                    <DialogTitle>{group.name}</DialogTitle>
+                     <DialogDescription>
+                      <Badge variant="secondary" className="capitalize">{group.type}</Badge> · Docente: {group.teacherName}
+                    </DialogDescription>
+                </DialogHeader>
+                 <Tabs defaultValue="lessons" className="flex-grow flex flex-col overflow-hidden">
+                    <TabsList className="shrink-0">
+                        <TabsTrigger value="lessons"><BookOpen className="mr-2 h-4 w-4"/>Lecciones</TabsTrigger>
+                        <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Miembros</TabsTrigger>
+                        <TabsTrigger value="history"><CalendarIcon className="mr-2 h-4 w-4"/>Historial</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="lessons" className="flex-grow overflow-auto p-4">
+                       <LessonViewer group={group} />
+                    </TabsContent>
+                    <TabsContent value="members" className="flex-grow overflow-auto p-4">
+                         <ScrollArea className="h-full">
+                            <ul className="space-y-2 pr-4">
+                                {groupMembers.map(student => (
+                                    <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
+                                        <span className="text-sm">{student.name}</span>
+                                        <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
+                                            <Eye className="mr-2 h-4 w-4" />
+                                            {t_groups.viewData}
+                                        </Button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </ScrollArea>
+                    </TabsContent>
+                     <TabsContent value="history" className="flex-grow overflow-auto p-4 space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2"><LinkIcon/>Links de Clases Enviados</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {scheduledClasses.length > 0 ? (
+                                    <ul className="space-y-3">
+                                        {scheduledClasses.map(c => (
+                                            <li key={c.id} className="text-sm p-3 rounded-md bg-secondary/50">
+                                                <p><strong>Enlace:</strong> <a href={c.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{c.link}</a></p>
+                                                <p><strong>Fecha:</strong> {format(new Date(c.time), "PPpp", { locale: es })}</p>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : <p className="text-muted-foreground text-center">El docente aún no ha enviado enlaces de clases.</p>}
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                 <CardTitle className="flex items-center gap-2"><Bell/>Recordatorios Enviados</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {reminders.length > 0 ? (
+                                    <ul className="space-y-3">
+                                        {reminders.map(r => (
+                                            <li key={r.id} className="text-sm p-3 rounded-md bg-secondary/50">
+                                                <p>{r.message}</p>
+                                                <p className="text-xs text-muted-foreground">{format(new Date(r.sentAt), "PPpp", { locale: es })}</p>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : <p className="text-muted-foreground text-center">El docente no ha enviado recordatorios.</p>}
+                            </CardContent>
+                        </Card>
+                     </TabsContent>
+                </Tabs>
+            </DialogContent>
+            <StudentDataDialog student={studentToView} isOpen={!!studentToView} onOpenChange={() => setStudentToView(null)} />
+        </Dialog>
+    )
+}
 
 const EditStudentDialog = ({ student, isOpen, onOpenChange, onStudentUpdate }: { student: StudentProfile | null; isOpen: boolean; onOpenChange: (open: boolean) => void; onStudentUpdate: () => void }) => {
     const { toast } = useToast();
@@ -306,6 +483,9 @@ export function AdminDashboardUI() {
   
   // Teacher details state
   const [selectedTeacher, setSelectedTeacher] = useState<User | null>(null);
+  
+  // Group details state
+  const [groupToView, setGroupToView] = useState<Group | null>(null);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -594,7 +774,7 @@ export function AdminDashboardUI() {
                  {data.groups.length > 0 ? (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {data.groups.map(group => (
-                            <Card key={group.id}>
+                            <Card key={group.id} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => setGroupToView(group)}>
                                 <CardHeader>
                                     <CardTitle>{group.name}</CardTitle>
                                     <CardDescription>
@@ -709,6 +889,14 @@ export function AdminDashboardUI() {
         bankCards={data.bankCards.filter(c => c.ownerId === selectedTeacher?.id)}
         isOpen={!!selectedTeacher}
         onOpenChange={() => setSelectedTeacher(null)}
+      />
+      
+       {/* Dialog for Group Details (Admin) */}
+      <AdminGroupDetailsDialog 
+        group={groupToView}
+        studentsById={studentsById}
+        isOpen={!!groupToView}
+        onOpenChange={() => setGroupToView(null)}
       />
     </div>
   );
