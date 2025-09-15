@@ -140,7 +140,7 @@ const LessonViewer = ({ group }: { group: Group }) => {
                             <CardContent><Editor content={lesson.content} onChange={() => {}} editable={false} /></CardContent>
                         </Card>
                          <Card>
-                            <CardHeader><CardTitle>{t_lessons.notes.title}</CardTitle></CardHeader>
+                            <CardHeader><CardTitle>{translations.studentDashboard.notes.title}</CardTitle></CardHeader>
                             <CardContent><Editor content={lesson.classNote} onChange={() => {}} editable={false} /></CardContent>
                         </Card>
                         <Card>
