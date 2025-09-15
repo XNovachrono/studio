@@ -591,8 +591,26 @@ export function AdminDashboardUI() {
                 <CardDescription>{t.groups.description}</CardDescription>
               </CardHeader>
                <CardContent>
-                 {/* TODO: Group list for admin will go here */}
-                 <p className="text-center text-muted-foreground">{t.groups.noGroups}</p>
+                 {data.groups.length > 0 ? (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {data.groups.map(group => (
+                            <Card key={group.id}>
+                                <CardHeader>
+                                    <CardTitle>{group.name}</CardTitle>
+                                    <CardDescription>
+                                        <Badge variant="outline" className="capitalize">{group.type}</Badge>
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-2 text-sm">
+                                    <p><strong>Docente:</strong> {group.teacherName}</p>
+                                    <p><strong>Estudiantes:</strong> {group.studentIds.length}</p>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                 ) : (
+                    <p className="text-center text-muted-foreground">{t.groups.noGroups}</p>
+                 )}
               </CardContent>
             </Card>
           </TabsContent>
