@@ -22,6 +22,7 @@ import { es } from "date-fns/locale";
 import { PqrsDialog } from "./pqrs-dialog";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { User as UserIcon } from "lucide-react";
+import { Badge } from "../ui/badge";
 
 
 interface StudentDashboardData {
@@ -36,6 +37,7 @@ export function StudentDashboardUI() {
   const [isLoading, setIsLoading] = useState(true);
   const { translations } = useLanguage();
   const t = translations.studentDashboard;
+  const t_teacher_lessons = translations.teacherDashboard.lessons;
   const [isPqrsDialogOpen, setPqrsDialogOpen] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherInteraction | null>(null);
 
@@ -233,9 +235,14 @@ export function StudentDashboardUI() {
 
                                     {/* Attendance */}
                                      <Card>
-                                        <CardHeader><CardTitle>{t.lessons.attendance}</CardTitle></CardHeader>
+                                        <CardHeader><CardTitle>{t_teacher_lessons.attendance}</CardTitle></CardHeader>
                                         <CardContent>
-                                            <p>{t.lessons.yourStatus}: <span className="font-semibold capitalize">{lesson.attendance[user!.id] || t.lessons.notRegistered}</span></p>
+                                           <div className="flex items-center gap-2">
+                                            <span>{t.lessons.yourStatus}:</span>
+                                            <Badge variant="secondary" className="capitalize">
+                                                {lesson.attendance[user!.id] || t_teacher_lessons.attendanceStates.na}
+                                            </Badge>
+                                           </div>
                                         </CardContent>
                                     </Card>
 

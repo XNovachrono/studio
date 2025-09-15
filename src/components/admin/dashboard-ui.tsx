@@ -1,6 +1,4 @@
 
-
-      
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -106,11 +104,14 @@ const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: Student
 };
 
 
-const LessonViewer = ({ group }: { group: Group }) => {
+const LessonViewer = ({ group, studentsById }: { group: Group, studentsById: Map<string, StudentProfile> }) => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { translations } = useLanguage();
     const t_lessons = translations.studentDashboard.lessons;
+    const t_teacher_lessons = translations.teacherDashboard.lessons;
+
+    const groupMembers = useMemo(() => group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[], [group.studentIds, studentsById]);
 
     useEffect(() => {
         const fetchLessons = async () => {
@@ -147,6 +148,25 @@ const LessonViewer = ({ group }: { group: Group }) => {
                             <CardHeader><CardTitle>{t_lessons.homework}</CardTitle></CardHeader>
                             <CardContent><Editor content={lesson.homework} onChange={() => {}} editable={false} /></CardContent>
                         </Card>
+                        <Card>
+                            <CardHeader><CardTitle>{t_teacher_lessons.attendance}</CardTitle></CardHeader>
+                            <CardContent>
+                               <ul className="space-y-2">
+                                  {groupMembers.map(student => (
+                                    <li key={student.id} className="flex justify-between items-center text-sm">
+                                      <span>{student.name}</span>
+                                      <Badge variant="outline" className="capitalize">
+                                        {lesson.attendance[student.id] || t_teacher_lessons.attendanceStates.na}
+                                      </Badge>
+                                    </li>
+                                  ))}
+                               </ul>
+                            </CardContent>
+                        </Card>
+                         <Card>
+                            <CardHeader><CardTitle>{t_teacher_lessons.comments}</CardTitle></CardHeader>
+                            <CardContent><Editor content={lesson.comments} onChange={() => {}} editable={false} /></CardContent>
+                        </Card>
                     </AccordionContent>
                 </AccordionItem>
             ))}
@@ -181,7 +201,7 @@ const AdminGroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange }: 
                         <TabsTrigger value="history"><CalendarIcon className="mr-2 h-4 w-4"/>Historial</TabsTrigger>
                     </TabsList>
                     <TabsContent value="lessons" className="flex-grow overflow-auto p-4">
-                       <LessonViewer group={group} />
+                       <LessonViewer group={group} studentsById={studentsById} />
                     </TabsContent>
                     <TabsContent value="members" className="flex-grow overflow-auto p-4">
                          <ScrollArea className="h-full">

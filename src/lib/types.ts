@@ -87,6 +87,7 @@ export type EditorContent = {
   content: any[];
 };
 
+export type AttendanceStatus = 'presente' | 'ausente' | 'tarde';
 
 export interface Lesson {
   id: string;
@@ -100,7 +101,8 @@ export interface Lesson {
   content: EditorContent;
   classNote: EditorContent;
   homework: EditorContent;
-  attendance: Record<string, 'present' | 'absent' | 'late'>; // Key: studentId
+  comments: EditorContent; // For teacher/admin private notes
+  attendance: Record<string, AttendanceStatus>; // Key: studentId
 }
 
 export interface HomeworkSubmission {

@@ -17,7 +17,7 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, StudentProfile, Group, Lesson, EditorContent, BankCard } from "@/lib/types";
+import type { User, StudentProfile, Group, Lesson, EditorContent, BankCard, AttendanceStatus } from "@/lib/types";
 import { getTeacherDataForDashboard, getLessonsForGroup, createLessonForGroup, updateLesson, getBankCards, addContentToGroup } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
@@ -44,6 +44,7 @@ import { Calendar } from "../ui/calendar";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { TeacherDataSettings } from "./teacher-data-settings";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
 
 interface TeacherDashboardData {
@@ -156,6 +157,8 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
 
     // State for edited lesson content
     const [editedContent, setEditedContent] = useState<Record<string, Partial<Lesson>>>({});
+    
+    const groupMembers = useMemo(() => group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[], [group.studentIds, studentsById]);
 
     const fetchLessons = async () => {
         setIsLoading(true);
@@ -208,6 +211,18 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
             }
         }));
     };
+
+    const handleAttendanceChange = (lessonId: string, studentId: string, status: AttendanceStatus) => {
+        const currentLesson = lessons.find(l => l.id === lessonId);
+        if (!currentLesson) return;
+        
+        const currentAttendance = editedContent[lessonId]?.attendance || currentLesson.attendance || {};
+        const newAttendance = {
+            ...currentAttendance,
+            [studentId]: status,
+        };
+        handleContentChange(lessonId, 'attendance', newAttendance);
+    };
     
     const handleImportFromBank = (lessonId: string, content: EditorContent) => {
         handleContentChange(lessonId, 'content', content);
@@ -242,7 +257,9 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
             }} />
              {lessons.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full">
-                    {lessons.map(lesson => (
+                    {lessons.map(lesson => {
+                        const currentAttendance = editedContent[lesson.id]?.attendance || lesson.attendance;
+                        return (
                          <AccordionItem value={lesson.id} key={lesson.id} data-accordion-item-id={lesson.id}>
                             <AccordionTrigger className="font-semibold text-lg hover:no-underline">{lesson.name}</AccordionTrigger>
                             <AccordionContent className="space-y-6 pl-2">
@@ -304,11 +321,49 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                 </Card>
                                 <Card>
                                     <CardHeader><CardTitle>{t.attendance}</CardTitle></CardHeader>
-                                    <CardContent><p className="text-muted-foreground">{t.attendancePlaceholder}</p></CardContent>
+                                    <CardContent>
+                                      <div className="space-y-4">
+                                        {groupMembers.map(student => (
+                                          <div key={student.id} className="flex justify-between items-center">
+                                            <span>{student.name}</span>
+                                             <RadioGroup 
+                                                defaultValue={currentAttendance?.[student.id]} 
+                                                className="flex gap-4"
+                                                onValueChange={(value) => handleAttendanceChange(lesson.id, student.id, value as AttendanceStatus)}
+                                            >
+                                                <div className="flex items-center space-x-2">
+                                                    <RadioGroupItem value="presente" id={`${lesson.id}-${student.id}-presente`} />
+                                                    <Label htmlFor={`${lesson.id}-${student.id}-presente`}>{t.attendanceStates.presente}</Label>
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <RadioGroupItem value="ausente" id={`${lesson.id}-${student.id}-ausente`} />
+                                                    <Label htmlFor={`${lesson.id}-${student.id}-ausente`}>{t.attendanceStates.ausente}</Label>
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <RadioGroupItem value="tarde" id={`${lesson.id}-${student.id}-tarde`} />
+                                                    <Label htmlFor={`${lesson.id}-${student.id}-tarde`}>{t.attendanceStates.tarde}</Label>
+                                                </div>
+                                            </RadioGroup>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </CardContent>
+                                </Card>
+                                 <Card>
+                                    <CardHeader><CardTitle>{t.comments}</CardTitle></CardHeader>
+                                    <CardContent>
+                                       <Editor
+                                        content={editedContent[lesson.id]?.comments || lesson.comments}
+                                        onChange={(newContent) => handleContentChange(lesson.id, 'comments', newContent)}
+                                        editable
+                                        placeholder={t.placeholders.comments}
+                                      />
+                                    </CardContent>
                                 </Card>
                             </AccordionContent>
                         </AccordionItem>
-                    ))}
+                        )
+                    })}
                 </Accordion>
             ) : (
                 <p className="p-4 text-center text-muted-foreground">{t.noLessons}</p>

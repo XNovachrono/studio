@@ -313,12 +313,20 @@ export const translations = {
                 classNote: "Class Note",
                 homework: "Homework",
                 attendance: "Asistencia",
+                comments: "Comentarios (Solo Docentes/Admin)",
+                attendanceStates: {
+                    presente: "Presente",
+                    ausente: "Ausente",
+                    tarde: "Tarde",
+                    na: "N/A"
+                },
                 importFromBank: "Importar desde banco",
                 retry: "Reintentar",
                 placeholders: {
                      content: "Objetivo general y objetivos específicos de la clase...",
                      classNote: "Escribe tus notas de clase aquí. Usa '/' para ver los comandos...",
                      homework: "Detalla las instrucciones de la tarea...",
+                     comments: "Añade comentarios privados para otros docentes o administradores...",
                 },
                 recordingPlaceholder: "Aquí podrás añadir el link de la grabación.",
                 attendancePlaceholder: "Aquí podrás registrar la asistencia.",
@@ -720,12 +728,20 @@ export const translations = {
                 classNote: "Class Note",
                 homework: "Homework",
                 attendance: "Attendance",
+                comments: "Comments (Teacher/Admin Only)",
+                attendanceStates: {
+                    presente: "Present",
+                    ausente: "Absent",
+                    tarde: "Late",
+                    na: "N/A"
+                },
                 importFromBank: "Import from bank",
                 retry: "Retry",
                 placeholders: {
                     content: "General and specific objectives for the class...",
                     classNote: "Write your class notes here. Use '/' to see commands...",
                     homework: "Detail the homework instructions...",
+                    comments: "Add private comments for other teachers or admins...",
                 },
                 recordingPlaceholder: "Here you can add the recording link.",
                 attendancePlaceholder: "Here you can record attendance.",

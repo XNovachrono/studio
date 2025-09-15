@@ -289,6 +289,7 @@ export const createLessonForGroup = async (groupId: string, groupName: string, s
         content: defaultContent,
         classNote: defaultContent,
         homework: defaultContent,
+        comments: defaultContent,
         attendance: {},
     };
 
