@@ -253,7 +253,7 @@ const TeacherDetailsDialog = ({ teacher, groups, pqrs, bankCards, isOpen, onOpen
                         ) : <p className="text-center text-muted-foreground">Este docente no tiene grupos asignados.</p>}
                     </TabsContent>
                     <TabsContent value="banks" className="flex-grow overflow-auto">
-                        <BanksDashboardUI isModal={true} user={teacher} />
+                        <BanksDashboardUI user={teacher} />
                     </TabsContent>
                     <TabsContent value="pqrs" className="flex-grow overflow-auto p-4">
                          {pqrs.length > 0 ? (
