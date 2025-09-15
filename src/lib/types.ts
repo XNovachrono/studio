@@ -10,6 +10,7 @@ export interface User {
   plan?: StudentPlan;
   hasOnboarded?: boolean;
   email?: string;
+  groupHistory?: string[]; // Array of group IDs
 }
 
 export interface TeacherInteraction {

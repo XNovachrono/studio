@@ -208,25 +208,46 @@ export const createGroupWithTeacher = async (teacher: User, students: {id: strin
 };
 
 
-
 // === Teacher Functions ===
 export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
     groups: Group[],
     allStudents: StudentProfile[],
+    groupHistory: Group[],
 }> => {
-    // 1. Get all groups assigned to this teacher
+    // 1. Get teacher's profile to check their history
+    const teacherProfile = await getUserProfile(teacherId);
+    
+    // 2. Get all groups currently assigned to this teacher
     const groupsRef = collection(db, "groups");
     const qGroups = query(groupsRef, where("teacherId", "==", teacherId));
     const groupsSnap = await getDocs(qGroups);
     const groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
 
-    // 2. Collect all unique student IDs from the teacher's groups
-    const studentIds = [...new Set(groups.flatMap(g => g.studentIds))];
+    // 3. Get all groups from the teacher's history
+    let groupHistory: Group[] = [];
+    const historyIds = teacherProfile?.groupHistory || [];
+    if (historyIds.length > 0) {
+        const historyChunks: string[][] = [];
+         for (let i = 0; i < historyIds.length; i += 30) {
+            historyChunks.push(historyIds.slice(i, i + 30));
+        }
+        const historyPromises = historyChunks.map(chunk => getDocs(query(collection(db, "groups"), where("__name__", "in", chunk))));
+        const historySnapshots = await Promise.all(historyPromises);
 
-    // 3. Fetch all student profiles based on the IDs.
+        historySnapshots.forEach(snapshot => {
+            snapshot.forEach(doc => {
+                 groupHistory.push({ id: doc.id, ...doc.data() } as Group);
+            });
+        });
+    }
+
+    // 4. Collect all unique student IDs from all relevant groups (active and history)
+    const allGroups = [...groups, ...groupHistory];
+    const studentIds = [...new Set(allGroups.flatMap(g => g.studentIds))];
+
+    // 5. Fetch all student profiles based on the IDs.
     let allStudents: StudentProfile[] = [];
     if (studentIds.length > 0) {
-        // Firestore 'in' query is limited to 30 elements. We need to chunk the array.
         const studentChunks: string[][] = [];
         for (let i = 0; i < studentIds.length; i += 30) {
             studentChunks.push(studentIds.slice(i, i + 30));
@@ -245,7 +266,7 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
         });
     }
 
-    return { groups, allStudents };
+    return { groups, allStudents, groupHistory };
 }
 
 // === Lesson Functions ===
@@ -435,4 +456,23 @@ export const removeStudentsFromGroup = async (groupId: string, studentIds: strin
     await updateDoc(groupRef, {
         studentIds: arrayRemove(...studentIds)
     });
+};
+
+// Function for admin to change a group's teacher and update history
+export const updateGroupTeacherAndHistory = async (groupId: string, newTeacherId: string, newTeacherName: string, oldTeacherId: string) => {
+    const batch = writeBatch(db);
+
+    // 1. Update the group document
+    const groupRef = doc(db, "groups", groupId);
+    batch.update(groupRef, { teacherId: newTeacherId, teacherName: newTeacherName });
+
+    // 2. Add group to old teacher's history
+    const oldTeacherRef = doc(db, "users", oldTeacherId);
+    batch.update(oldTeacherRef, { groupHistory: arrayUnion(groupId) });
+
+    // 3. Remove group from new teacher's history (if it exists)
+    const newTeacherRef = doc(db, "users", newTeacherId);
+    batch.update(newTeacherRef, { groupHistory: arrayRemove(groupId) });
+
+    await batch.commit();
 };

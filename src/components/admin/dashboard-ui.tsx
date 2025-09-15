@@ -1,9 +1,10 @@
 
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, PlusCircle, Users, Edit, Calendar as CalendarIcon, MessageCircle, Trash2, Eye, BookOpen, Library, Link as LinkIcon, Bell } from "lucide-react";
+import { Loader2, PlusCircle, Users, Edit, Calendar as CalendarIcon, MessageCircle, Trash2, Eye, BookOpen, Library, Link as LinkIcon, Bell, Settings } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -41,7 +42,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User, StudentProfile, PQRSMessage, Group, BankCard, Lesson } from "@/lib/types";
-import { getAdminData, createGroupWithTeacher, updateUserProfile, deletePQRSMessage, getLessonsForGroup } from "@/lib/firestore";
+import { getAdminData, createGroupWithTeacher, updateUserProfile, deletePQRSMessage, getLessonsForGroup, removeStudentsFromGroup, updateGroupTeacherAndHistory } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -174,16 +175,48 @@ const LessonViewer = ({ group, studentsById }: { group: Group, studentsById: Map
     );
 };
 
-const AdminGroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange }: { group: Group | null; studentsById: Map<string, StudentProfile>; isOpen: boolean; onOpenChange: (open: boolean) => void; }) => {
+const AdminGroupDetailsDialog = ({ group, studentsById, allTeachers, isOpen, onOpenChange, onGroupUpdate }: { group: Group | null; studentsById: Map<string, StudentProfile>; allTeachers: User[]; isOpen: boolean; onOpenChange: (open: boolean) => void; onGroupUpdate: () => void; }) => {
     const { translations } = useLanguage();
     const t_groups = translations.teacherDashboard.groups;
+    const { toast } = useToast();
     const [studentToView, setStudentToView] = useState<StudentProfile | null>(null);
+    const [editingStudent, setEditingStudent] = useState<StudentProfile | null>(null);
+    const [selectedTeacherId, setSelectedTeacherId] = useState(group?.teacherId || "");
 
+    useEffect(() => {
+        if(group) setSelectedTeacherId(group.teacherId);
+    }, [group]);
+    
     if (!group) return null;
 
     const groupMembers = group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[];
     const scheduledClasses = group.content.scheduledClasses || [];
     const reminders = group.content.reminders || [];
+
+    const handleRemoveStudent = async (studentId: string) => {
+        try {
+            await removeStudentsFromGroup(group.id, [studentId]);
+            toast({ title: "Estudiante eliminado", description: "El estudiante ha sido eliminado del grupo." });
+            onGroupUpdate();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "No se pudo eliminar al estudiante." });
+        }
+    };
+    
+    const handleChangeTeacher = async () => {
+        if (!selectedTeacherId || selectedTeacherId === group.teacherId) return;
+        
+        const newTeacher = allTeachers.find(t => t.id === selectedTeacherId);
+        if(!newTeacher) return;
+        
+        try {
+            await updateGroupTeacherAndHistory(group.id, newTeacher.id, newTeacher.name, group.teacherId);
+            toast({ title: "Docente cambiado", description: `El grupo ha sido asignado a ${newTeacher.name}.` });
+            onGroupUpdate();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "No se pudo cambiar el docente." });
+        }
+    };
 
     return (
          <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -199,6 +232,7 @@ const AdminGroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange }: 
                         <TabsTrigger value="lessons"><BookOpen className="mr-2 h-4 w-4"/>Lecciones</TabsTrigger>
                         <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Miembros</TabsTrigger>
                         <TabsTrigger value="history"><CalendarIcon className="mr-2 h-4 w-4"/>Historial</TabsTrigger>
+                        <TabsTrigger value="settings"><Settings className="mr-2 h-4 w-4"/>Gestionar</TabsTrigger>
                     </TabsList>
                     <TabsContent value="lessons" className="flex-grow overflow-auto p-4">
                        <LessonViewer group={group} studentsById={studentsById} />
@@ -254,9 +288,44 @@ const AdminGroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange }: 
                             </CardContent>
                         </Card>
                      </TabsContent>
+                     <TabsContent value="settings" className="flex-grow overflow-auto p-4 space-y-6">
+                        <Card>
+                             <CardHeader><CardTitle>Cambiar Docente</CardTitle></CardHeader>
+                             <CardContent className="flex items-center gap-4">
+                                <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
+                                    <SelectTrigger><SelectValue/></SelectTrigger>
+                                    <SelectContent>
+                                        {allTeachers.map(teacher => <SelectItem key={teacher.id} value={teacher.id}>{teacher.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Button onClick={handleChangeTeacher} disabled={selectedTeacherId === group.teacherId}>Guardar</Button>
+                             </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader><CardTitle>Gestionar Miembros</CardTitle></CardHeader>
+                            <CardContent>
+                                 <ul className="space-y-2">
+                                    {groupMembers.map(student => (
+                                        <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
+                                            <span className="text-sm">{student.name}</span>
+                                            <div className="flex gap-2">
+                                                 <Button variant="outline" size="sm" onClick={() => setEditingStudent(student)}>
+                                                    <Edit className="mr-2 h-4 w-4" /> Editar
+                                                </Button>
+                                                <Button variant="destructive" size="sm" onClick={() => handleRemoveStudent(student.id)}>
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                                                </Button>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </CardContent>
+                        </Card>
+                     </TabsContent>
                 </Tabs>
             </DialogContent>
             <StudentDataDialog student={studentToView} isOpen={!!studentToView} onOpenChange={() => setStudentToView(null)} />
+            <EditStudentDialog student={editingStudent} isOpen={!!editingStudent} onOpenChange={() => setEditingStudent(null)} onStudentUpdate={onGroupUpdate} />
         </Dialog>
     )
 }
@@ -915,11 +984,11 @@ export function AdminDashboardUI() {
       <AdminGroupDetailsDialog 
         group={groupToView}
         studentsById={studentsById}
+        allTeachers={data.allTeachers}
         isOpen={!!groupToView}
         onOpenChange={() => setGroupToView(null)}
+        onGroupUpdate={fetchDashboardData}
       />
     </div>
   );
 }
-
-    

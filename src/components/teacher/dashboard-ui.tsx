@@ -1,10 +1,11 @@
 
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send } from "lucide-react";
+import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import {
@@ -50,6 +51,7 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 interface TeacherDashboardData {
   groups: Group[];
   allStudents: StudentProfile[];
+  groupHistory: Group[];
 }
 
 interface TeacherDashboardUIProps {
@@ -636,6 +638,7 @@ export function TeacherDashboardUI() {
   const privateGroups = useMemo(() => data?.groups.filter(g => g.type === 'privado') || [], [data?.groups]);
   const smallGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo pequeño') || [], [data?.groups]);
   const largeGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo grande') || [], [data?.groups]);
+  const historicalGroups = useMemo(() => data?.groupHistory || [], [data?.groupHistory]);
 
 
   if (isLoading || !data || !user) {
@@ -650,19 +653,42 @@ export function TeacherDashboardUI() {
     <div className="flex h-screen flex-col">
       <DashboardHeader user={user} title={t.title} />
       <main className="flex-1 overflow-auto p-4 md:p-8 space-y-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-headline">{t.groups.title}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-8">
-             <GroupSection title={t.groups.private} groups={privateGroups} studentsById={studentsById} onView={setGroupToView}/>
-             <GroupSection title={t.groups.small} groups={smallGroups} studentsById={studentsById} onView={setGroupToView}/>
-             <GroupSection title={t.groups.large} groups={largeGroups} studentsById={studentsById} onView={setGroupToView}/>
-             {data?.groups.length === 0 && (
-                <p className="text-center text-muted-foreground">{t.groups.noGroups}</p>
-             )}
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="active">
+            <TabsList>
+                <TabsTrigger value="active"><Users className="mr-2 h-4 w-4"/>{t.groups.title}</TabsTrigger>
+                <TabsTrigger value="history"><History className="mr-2 h-4 w-4"/>{t.groups.history}</TabsTrigger>
+            </TabsList>
+            <TabsContent value="active" className="mt-6 space-y-8">
+                 <GroupSection title={t.groups.private} groups={privateGroups} studentsById={studentsById} onView={setGroupToView}/>
+                 <GroupSection title={t.groups.small} groups={smallGroups} studentsById={studentsById} onView={setGroupToView}/>
+                 <GroupSection title={t.groups.large} groups={largeGroups} studentsById={studentsById} onView={setGroupToView}/>
+                 {data?.groups.length === 0 && (
+                    <p className="text-center text-muted-foreground pt-8">{t.groups.noGroups}</p>
+                 )}
+            </TabsContent>
+            <TabsContent value="history" className="mt-6">
+                {historicalGroups.length > 0 ? (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {historicalGroups.map(group => (
+                            <Card key={group.id}>
+                                <CardHeader>
+                                    <CardTitle className="truncate">{group.name}</CardTitle>
+                                    <CardDescription>
+                                        <Badge variant="outline" className="capitalize">{group.type}</Badge>
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm"><strong>Docente actual:</strong> {group.teacherName}</p>
+                                    <p className="text-sm"><strong>Miembros:</strong> {group.studentIds.length}</p>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-center text-muted-foreground pt-8">{t.groups.noHistory}</p>
+                )}
+            </TabsContent>
+        </Tabs>
 
         <Card>
             <CardHeader>
