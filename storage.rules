@@ -1,18 +1,17 @@
-
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Permite la lectura a cualquier usuario
+    // Allow read access to anyone
     match /{allPaths=**} {
       allow read;
     }
-
-    // Permite la escritura de archivos (crear, actualizar, borrar) solo a usuarios autenticados...
-    match /{userId}/{allPaths=**} {
-      allow write: if request.auth != null && 
-                     // ...y solo en su propia carpeta de usuario (basado en el userId en la ruta del archivo).
-                     request.auth.uid == userId;
+    
+    // Allow write access only to authenticated users
+    // This allows teachers and admins to upload to the banks.
+    // The path includes the user's ID, which adds a layer of organization.
+    match /{userId}/{bankType}/{fileName} {
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
