@@ -421,9 +421,9 @@ const TeacherDetailsDialog = ({ teacher, groups, pqrs, bankCards, isOpen, onOpen
                 <DialogHeader>
                     <DialogTitle>{t.title}: {teacher.name}</DialogTitle>
                     <DialogDescription>
-                        <div><strong>{t.contact}</strong></div>
-                        <div>{t.email}: {teacher.email}</div>
-                        <div>{t.phone}: {(teacher as any).phone || t.noPhone}</div>
+                        <span className="block"><strong>{t.contact}</strong></span>
+                        <span className="block">{t.email}: {teacher.email}</span>
+                        <span className="block">{t.phone}: {(teacher as any).phone || t.noPhone}</span>
                     </DialogDescription>
                 </DialogHeader>
                 <Tabs defaultValue="groups" className="flex-grow flex flex-col overflow-hidden">
@@ -921,3 +921,5 @@ export function AdminDashboardUI() {
     </div>
   );
 }
+
+    
