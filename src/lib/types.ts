@@ -118,6 +118,7 @@ export interface BankCard {
     type: BankType;
     name: string;
     ownerId: string; // Teacher or Admin ID
+    ownerName: string; // Teacher or Admin Name
     createdAt: string; // ISO date string
     // For cards with rich text content
     content?: EditorContent; 

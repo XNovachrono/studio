@@ -34,6 +34,7 @@ export function FileBank({ user, bankType }: FileBankProps) {
   const { translations } = useLanguage();
   const t_specifics = translations.banksDashboard.fileBank[bankType];
   const t = translations.banksDashboard.fileBank.common;
+  const t_card = translations.banksDashboard.cardBank;
   const { toast } = useToast();
   
   const [files, setFiles] = useState<BankCard[]>([]);
@@ -46,7 +47,7 @@ export function FileBank({ user, bankType }: FileBankProps) {
     setIsLoading(true);
     setError(null);
     try {
-      const fetchedFiles = await getBankFiles(user.id, bankType);
+      const fetchedFiles = await getBankFiles(bankType);
       setFiles(fetchedFiles);
     } catch (err: any) {
       console.error(`Error fetching ${bankType} bank files:`, err);
@@ -60,7 +61,7 @@ export function FileBank({ user, bankType }: FileBankProps) {
   useEffect(() => {
     fetchFiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user.id, bankType]);
+  }, [bankType]);
 
   const handleFileSelect = () => {
     fileInputRef.current?.click();
@@ -72,7 +73,7 @@ export function FileBank({ user, bankType }: FileBankProps) {
 
     setUploadProgress(0);
     try {
-      await uploadBankFile(user.id, bankType, file, (progress) => {
+      await uploadBankFile(user.id, user.name, bankType, file, (progress) => {
         setUploadProgress(progress);
       });
       toast({ title: t.toasts.uploadSuccessTitle });
@@ -86,13 +87,16 @@ export function FileBank({ user, bankType }: FileBankProps) {
     }
   };
   
-  const handleDeleteFile = async (cardId: string, filePath: string) => {
+  const handleDeleteFile = async (file: BankCard) => {
       try {
-          await deleteBankFile(cardId, filePath);
+          if (file.ownerId !== user.id && user.role !== 'admin') {
+             throw new Error("You don't have permission to delete this file.");
+          }
+          await deleteBankFile(file.id, file.filePath!);
           toast({ title: t.toasts.deleteSuccessTitle });
-          setFiles(prev => prev.filter(f => f.id !== cardId));
-      } catch (error) {
-           toast({ variant: "destructive", title: t.errors.errorTitle, description: t.errors.deleteError });
+          setFiles(prev => prev.filter(f => f.id !== file.id));
+      } catch (error: any) {
+           toast({ variant: "destructive", title: t.errors.errorTitle, description: error.message || t.errors.deleteError });
       }
   }
 
@@ -123,26 +127,32 @@ export function FileBank({ user, bankType }: FileBankProps) {
 
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {files.map(file => (
-            <Card key={file.id}>
-              <CardHeader>
-                <CardTitle className="truncate">{file.name}</CardTitle>
-                 <CardDescription>
-                  {t.createdAt}: {new Date(file.createdAt).toLocaleDateString()}
-                </CardDescription>
-              </CardHeader>
-              <CardFooter className="flex justify-end gap-2">
-                 <a href={file.fileUrl} target="_blank" rel="noopener noreferrer">
-                    <Button variant="outline" size="icon">
-                        <Download className="h-4 w-4" />
-                    </Button>
-                </a>
-                <Button variant="destructive" size="icon" onClick={() => handleDeleteFile(file.id, file.filePath!)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+          {files.map(file => {
+            const canDelete = user.role === 'admin' || user.id === file.ownerId;
+            return (
+                <Card key={file.id}>
+                <CardHeader>
+                    <CardTitle className="truncate">{file.name}</CardTitle>
+                    <CardDescription>{t_card.author}: {file.ownerName || 'N/A'}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground">{t.createdAt}: {new Date(file.createdAt).toLocaleDateString()}</p>
+                </CardContent>
+                <CardFooter className="flex justify-end gap-2">
+                    <a href={file.fileUrl} target="_blank" rel="noopener noreferrer">
+                        <Button variant="outline" size="icon">
+                            <Download className="h-4 w-4" />
+                        </Button>
+                    </a>
+                    {canDelete && (
+                        <Button variant="destructive" size="icon" onClick={() => handleDeleteFile(file)}>
+                        <Trash2 className="h-4 w-4" />
+                        </Button>
+                    )}
+                </CardFooter>
+                </Card>
+            )
+          })}
         </div>
       );
   };

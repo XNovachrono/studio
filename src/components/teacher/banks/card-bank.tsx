@@ -46,7 +46,7 @@ export function CardBank({ user, bankType }: CardBankProps) {
   const { toast } = useToast();
 
   const [cards, setCards] = useState<BankCard[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Start loading immediately
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -56,7 +56,8 @@ export function CardBank({ user, bankType }: CardBankProps) {
     setIsLoading(true);
     setError(null);
     try {
-      const fetchedCards = await getBankCards(user.id, bankType);
+      // Teachers can now see all cards, not just their own.
+      const fetchedCards = await getBankCards(bankType);
       setCards(fetchedCards);
     } catch (err: any) {
       console.error(`Error fetching ${bankType} bank cards:`, err);
@@ -70,13 +71,13 @@ export function CardBank({ user, bankType }: CardBankProps) {
   useEffect(() => {
     fetchCards();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user.id, bankType]); // Refetch when bankType changes
+  }, [bankType]);
 
   const handleOpenModal = (card: BankCard | null = null) => {
     if (card) {
       setEditingCard({ ...card });
     } else {
-      setEditingCard({ name: "", content: defaultContent, type: bankType, ownerId: user.id });
+      setEditingCard({ name: "", content: defaultContent, type: bankType, ownerId: user.id, ownerName: user.name });
     }
     setIsModalOpen(true);
   };
@@ -91,12 +92,17 @@ export function CardBank({ user, bankType }: CardBankProps) {
         name: editingCard.name,
         content: editingCard.content,
         ownerId: user.id,
+        ownerName: user.name,
         type: bankType,
     };
 
     setIsSaving(true);
     try {
       if (editingCard.id) {
+        // Ensure only owner or admin can update
+        if (editingCard.ownerId !== user.id && user.role !== 'admin') {
+            throw new Error("You don't have permission to edit this card.");
+        }
         await updateBankCard(editingCard.id, cardToSave);
         toast({ title: t.toasts.updateSuccessTitle });
       } else {
@@ -106,21 +112,24 @@ export function CardBank({ user, bankType }: CardBankProps) {
       await fetchCards();
       setIsModalOpen(false);
       setEditingCard(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving card:", error);
-      toast({ variant: "destructive", title: t.errors.errorTitle, description: t.errors.saveError });
+      toast({ variant: "destructive", title: t.errors.errorTitle, description: error.message || t.errors.saveError });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDeleteCard = async (cardId: string) => {
+  const handleDeleteCard = async (card: BankCard) => {
       try {
-          await deleteBankCard(cardId);
+          if (card.ownerId !== user.id && user.role !== 'admin') {
+             throw new Error("You don't have permission to delete this card.");
+          }
+          await deleteBankCard(card.id);
           toast({ title: t.toasts.deleteSuccessTitle });
-          setCards(prev => prev.filter(c => c.id !== cardId));
-      } catch (error) {
-           toast({ variant: "destructive", title: t.errors.errorTitle, description: t.errors.deleteError });
+          setCards(prev => prev.filter(c => c.id !== card.id));
+      } catch (error: any) {
+           toast({ variant: "destructive", title: t.errors.errorTitle, description: error.message || t.errors.deleteError });
       }
   }
 
@@ -150,24 +159,32 @@ export function CardBank({ user, bankType }: CardBankProps) {
 
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {cards.map(card => (
-            <Card key={card.id}>
-              <CardHeader>
-                <CardTitle className="truncate">{card.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                <p>{t.createdAt}: {new Date(card.createdAt).toLocaleDateString()}</p>
-              </CardContent>
-              <CardFooter className="flex justify-end gap-2">
-                <Button variant="outline" size="icon" onClick={() => handleOpenModal(card)}>
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button variant="destructive" size="icon" onClick={() => handleDeleteCard(card.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+          {cards.map(card => {
+            const canEdit = user.role === 'admin' || user.id === card.ownerId;
+            return (
+                <Card key={card.id}>
+                <CardHeader>
+                    <CardTitle className="truncate">{card.name}</CardTitle>
+                    <CardDescription>{t.author}: {card.ownerName || 'N/A'}</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">
+                    <p>{t.createdAt}: {new Date(card.createdAt).toLocaleDateString()}</p>
+                </CardContent>
+                <CardFooter className="flex justify-end gap-2">
+                    {canEdit && (
+                        <>
+                            <Button variant="outline" size="icon" onClick={() => handleOpenModal(card)}>
+                            <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="destructive" size="icon" onClick={() => handleDeleteCard(card)}>
+                            <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </>
+                    )}
+                </CardFooter>
+                </Card>
+            )
+          })}
         </div>
       );
   };

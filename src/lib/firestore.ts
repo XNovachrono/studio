@@ -294,19 +294,19 @@ export const updateLesson = async (groupId: string, lessonId: string, data: Part
 
 // === Bank Functions ===
 
-// Get all bank cards for a user (teacher/admin) of a specific type
-export const getBankCards = async (ownerId: string, type: BankType): Promise<BankCard[]> => {
+// Get all bank cards of a specific type (for teachers and admins to view all)
+export const getBankCards = async (type: BankType): Promise<BankCard[]> => {
     const bankRef = collection(db, "bank_cards");
-    const q = query(bankRef, where("ownerId", "==", ownerId), where("type", "==", type));
+    const q = query(bankRef, where("type", "==", type));
     const querySnapshot = await getDocs(q);
     const cards = querySnapshot.docs.map(bankCardFromDoc);
     return cards.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 };
 
-// Get all bank files for a user (teacher/admin) of a specific type
-export const getBankFiles = async (ownerId: string, type: 'image' | 'video' | 'audio'): Promise<BankCard[]> => {
+// Get all bank files of a specific type (for teachers and admins to view all)
+export const getBankFiles = async (type: 'image' | 'video' | 'audio'): Promise<BankCard[]> => {
     const bankRef = collection(db, "bank_cards");
-    const q = query(bankRef, where("ownerId", "==", ownerId), where("type", "==", type));
+    const q = query(bankRef, where("type", "==", type));
     const querySnapshot = await getDocs(q);
     const files = querySnapshot.docs.map(bankCardFromDoc);
     return files.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -335,7 +335,7 @@ export const deleteBankCard = async (cardId: string): Promise<void> => {
 };
 
 // Upload a file to a bank
-export const uploadBankFile = (ownerId: string, type: BankType, file: File, onProgress: (progress: number) => void): Promise<void> => {
+export const uploadBankFile = (ownerId: string, ownerName: string, type: BankType, file: File, onProgress: (progress: number) => void): Promise<void> => {
   return new Promise((resolve, reject) => {
     const filePath = `${ownerId}/${type}/${Date.now()}_${file.name}`;
     const storageRef = ref(storage, filePath);
@@ -357,6 +357,7 @@ export const uploadBankFile = (ownerId: string, type: BankType, file: File, onPr
         const bankRef = collection(db, "bank_cards");
         await addDoc(bankRef, {
             ownerId,
+            ownerName,
             type,
             name: file.name,
             fileUrl: downloadURL,
