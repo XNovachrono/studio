@@ -253,7 +253,7 @@ const TeacherDetailsDialog = ({ teacher, groups, pqrs, bankCards, isOpen, onOpen
                         ) : <p className="text-center text-muted-foreground">Este docente no tiene grupos asignados.</p>}
                     </TabsContent>
                     <TabsContent value="banks" className="flex-grow overflow-auto">
-                        <BanksDashboardUI user={teacher} />
+                        <BanksDashboardUI />
                     </TabsContent>
                     <TabsContent value="pqrs" className="flex-grow overflow-auto p-4">
                          {pqrs.length > 0 ? (
@@ -525,7 +525,7 @@ export function AdminDashboardUI() {
                             <TableCell>{student.email || '-'}</TableCell>
                             <TableCell>{(student as any).phone || '-'}</TableCell>
                             <TableCell>{student.level || '-'}</TableCell>
-                            <TableCell><Badge variant="outline" className="capitalize">{student.plan || '-'}</TableCell>
+                            <TableCell><Badge variant="outline" className="capitalize">{student.plan || '-'}</Badge></TableCell>
                             <TableCell>{student.availability || '-'}</TableCell>
                             <TableCell>{startDate ? format(startDate, "P", { locale: es }) : '-'}</TableCell>
                             <TableCell>{student.courseDuration ? `${student.courseDuration} sem` : '-'}</TableCell>
