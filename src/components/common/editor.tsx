@@ -165,17 +165,6 @@ export function Editor({
   const { translations } = useLanguage();
   const t = translations.editor;
 
-
-  const handleKeyDownInEditor = useCallback((event: KeyboardEvent) => {
-    if (!editor) return;
-    const isEditorEmpty = !editor.getText().trim();
-    
-    if (event.key === ' ' && isEditorEmpty) {
-      event.preventDefault();
-      setAiState('prompting');
-    }
-  }, [editor]);
-
   const editor = useEditor({
     extensions: [
       StarterKit.configure({}),
@@ -213,6 +202,16 @@ export function Editor({
       }
     },
   });
+
+  const handleKeyDownInEditor = useCallback((event: KeyboardEvent) => {
+    if (!editor) return;
+    const isEditorEmpty = !editor.getText().trim();
+    
+    if (event.key === ' ' && isEditorEmpty) {
+      event.preventDefault();
+      setAiState('prompting');
+    }
+  }, [editor]);
   
   useEffect(() => {
      if (editor && content) {
