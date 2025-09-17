@@ -164,7 +164,7 @@ export function Editor({
   
   const { translations } = useLanguage();
   const t = translations.editor;
-
+  
   const editor = useEditor({
     extensions: [
       StarterKit.configure({}),
@@ -173,10 +173,11 @@ export function Editor({
             if (node.type.name === 'heading') {
                 return t.placeholders.heading;
             }
-            if (!isEditing || aiState !== 'idle') {
-                return "";
+            // Only show the main placeholder if we are editing and not in an AI flow
+            if (isEditing && aiState === 'idle') {
+                return placeholder || t.placeholders.default;
             }
-            return placeholder || t.placeholders.default;
+            return ""; // Return empty otherwise
         }
       }),
       Image,
@@ -202,6 +203,7 @@ export function Editor({
       }
     },
   });
+
 
   const handleKeyDownInEditor = useCallback((event: KeyboardEvent) => {
     if (!editor) return;
@@ -340,7 +342,7 @@ export function Editor({
                  {aiState === 'loading' ? (
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/>
                  ) : (
-                    <Button variant="ghost" size="icon" onClick={() => setAiState('idle')}><X/></Button>
+                    <Button variant="ghost" size="icon" onClick={() => { setAiState('idle'); editor?.commands.clearContent(); } }><X/></Button>
                  )}
             </motion.div>
         )}

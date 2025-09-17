@@ -2,7 +2,7 @@
 export const translations = {
     es: {
         editor: {
-            initialHint: "Toca para empezar a escribir o elige una tarjeta",
+            initialHint: "Toca para continuar con una página vacía o elige una tarjeta",
             placeholders: {
                 default: "Escribe, presiona 'espacio' para la IA o '/' para los comandos",
                 heading: "Título",
@@ -434,7 +434,7 @@ export const translations = {
     },
     en: {
         editor: {
-            initialHint: "Tap to start writing or choose a card",
+            initialHint: "Tap to continue with a blank page or choose a template",
             placeholders: {
                 default: "Type, press 'space' for AI or '/' for commands",
                 heading: "Heading",
