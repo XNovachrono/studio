@@ -207,12 +207,6 @@ export function Editor({
       attributes: {
         class: "prose dark:prose-invert max-w-none focus:outline-none",
       },
-      handleKeyDown: (view, event) => {
-        if (aiState === 'idle') {
-          handleKeyDownInEditor(event);
-        }
-        return false;
-      }
     },
   });
 
@@ -229,6 +223,22 @@ export function Editor({
   
   useEffect(() => {
      if (editor) {
+        editor.setOptions({
+             editorProps: {
+                handleKeyDown: (view, event) => {
+                    if (aiState === 'idle') {
+                        handleKeyDownInEditor(event);
+                    }
+                    return false;
+                }
+            }
+        });
+     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, aiState, handleKeyDownInEditor]);
+
+  useEffect(() => {
+     if (editor) {
         const isDifferent = JSON.stringify(content) !== JSON.stringify(editor.getJSON());
         if(isDifferent) {
             editor.commands.setContent(content, false);
@@ -237,6 +247,12 @@ export function Editor({
         setIsEditing(!isContentEmpty(content));
     }
   }, [content, editor]);
+
+  useEffect(() => {
+    if (editor) {
+        editor.setEditable(editable && isEditing && aiState !== 'loading' && aiState !== 'streaming');
+    }
+  }, [editor, editable, isEditing, aiState]);
 
   const handleStartEditing = () => {
     setIsEditing(true);

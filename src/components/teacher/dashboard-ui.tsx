@@ -156,6 +156,9 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState<string | null>(null); // Store saving lesson ID
     const [isBankImporterOpen, setBankImporterOpen] = useState(false);
+    const [activeLessonIdForImport, setActiveLessonIdForImport] = useState<string | null>(null);
+    const [activeFieldForImport, setActiveFieldForImport] = useState<keyof Lesson | null>(null);
+
 
     // State for edited lesson content
     const [editedContent, setEditedContent] = useState<Record<string, Partial<Lesson>>>({});
@@ -226,9 +229,17 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
         handleContentChange(lessonId, 'attendance', newAttendance);
     };
     
-    const handleImportFromBank = (lessonId: string, content: EditorContent) => {
-        handleContentChange(lessonId, 'content', content);
-    }
+    const handleOpenBankImporter = (lessonId: string, field: keyof Lesson) => {
+        setActiveLessonIdForImport(lessonId);
+        setActiveFieldForImport(field);
+        setBankImporterOpen(true);
+    };
+
+    const handleImportFromBank = (content: EditorContent) => {
+        if (activeLessonIdForImport && activeFieldForImport) {
+            handleContentChange(activeLessonIdForImport, activeFieldForImport, content);
+        }
+    };
 
     if (isLoading) {
         return <div className="flex justify-center items-center h-40"><Loader2 className="h-6 w-6 animate-spin" /></div>;
@@ -251,12 +262,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
 
     return (
         <div className="space-y-4">
-             <BankCardImporter ownerId={teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={(content) => {
-                 const activeLessonId = lessons.find(l => document.querySelector(`[data-accordion-item-id="${l.id}"]`))?.id;
-                 if (activeLessonId) {
-                    handleImportFromBank(activeLessonId, content);
-                 }
-            }} />
+             <BankCardImporter ownerId={teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} />
              {lessons.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full">
                     {lessons.map(lesson => {
@@ -283,7 +289,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                                 <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4"/></Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent>
-                                                <DropdownMenuItem onClick={() => setBankImporterOpen(true)}>
+                                                <DropdownMenuItem onClick={() => handleOpenBankImporter(lesson.id, 'content')}>
                                                     <Import className="mr-2 h-4 w-4" />
                                                     {t.importFromBank}
                                                 </DropdownMenuItem>
@@ -300,7 +306,20 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                     </CardContent>
                                 </Card>
                                 <Card>
-                                    <CardHeader><CardTitle>{t.classNote}</CardTitle></CardHeader>
+                                    <CardHeader className="flex flex-row items-center justify-between">
+                                        <CardTitle>{t.classNote}</CardTitle>
+                                         <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4"/></Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem onClick={() => handleOpenBankImporter(lesson.id, 'classNote')}>
+                                                    <Import className="mr-2 h-4 w-4" />
+                                                    {t.importFromBank}
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </CardHeader>
                                     <CardContent>
                                        <Editor
                                         content={editedContent[lesson.id]?.classNote || lesson.classNote}
@@ -311,7 +330,20 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                     </CardContent>
                                 </Card>
                                 <Card>
-                                    <CardHeader><CardTitle>{t.homework}</CardTitle></CardHeader>
+                                    <CardHeader className="flex flex-row items-center justify-between">
+                                        <CardTitle>{t.homework}</CardTitle>
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4"/></Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem onClick={() => handleOpenBankImporter(lesson.id, 'homework')}>
+                                                    <Import className="mr-2 h-4 w-4" />
+                                                    {t.importFromBank}
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </CardHeader>
                                      <CardContent>
                                       <Editor
                                         content={editedContent[lesson.id]?.homework || lesson.homework}
