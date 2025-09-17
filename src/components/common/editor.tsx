@@ -173,10 +173,11 @@ export function Editor({
   const [aiState, setAiState] = useState<'idle' | 'prompting' | 'loading' | 'streaming' | 'done'>('idle');
   const [prompt, setPrompt] = useState('');
   const [aiGeneratedContent, setAiGeneratedContent] = useState('');
-  
+  const [currentPlaceholder, setCurrentPlaceholder] = useState('');
+
   const { translations } = useLanguage();
   const t = translations.editor;
-  
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({}),
@@ -185,8 +186,8 @@ export function Editor({
             if (node.type.name === 'heading') {
                 return t.placeholders.heading;
             }
-            if (node.type.name === 'paragraph' && node.content.size === 0) {
-              return placeholder || t.placeholders.default;
+             if (node.isFirstChild && node.isEmpty) {
+                return currentPlaceholder;
             }
             return ""; 
         }
@@ -209,7 +210,18 @@ export function Editor({
     },
   });
 
+  useEffect(() => {
+    if (isEditing) {
+      setCurrentPlaceholder(placeholder || t.placeholders.default);
+    } else {
+      setCurrentPlaceholder('');
+    }
+  }, [isEditing, placeholder, t.placeholders.default]);
 
+  useEffect(() => {
+    editor?.commands.setContent(content, false);
+  }, [content, editor]);
+  
   const handleKeyDownInEditor = useCallback((event: KeyboardEvent) => {
     if (!editor || !editable) return;
     const isEditorEmpty = !editor.getText().trim();
@@ -235,15 +247,6 @@ export function Editor({
      }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, aiState, handleKeyDownInEditor]);
-
-  useEffect(() => {
-     if (editor) {
-        const isDifferent = JSON.stringify(content) !== JSON.stringify(editor.getJSON());
-        if(isDifferent) {
-            editor.commands.setContent(content, false);
-        }
-    }
-  }, [content, editor]);
 
   useEffect(() => {
     if (editor) {
@@ -383,3 +386,5 @@ export function Editor({
 }
 
     
+
+      
