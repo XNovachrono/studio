@@ -11,7 +11,11 @@ const EditorFlowInputSchema = z.object({
 });
 export type EditorFlowInput = z.infer<typeof EditorFlowInputSchema>;
 
-const EditorFlowOutputSchema = z.string().describe('The generated text content.');
+const EditorFlowOutputSchema = z
+  .string()
+  .describe(
+    'The generated content as an HTML string, ready to be inserted into a rich text editor.'
+  );
 export type EditorFlowOutput = z.infer<typeof EditorFlowOutputSchema>;
 
 export async function generateEditorContent(
@@ -28,6 +32,16 @@ const prompt = ai.definePrompt({
 Generate clear, concise, and engaging content based on their request.
 
 Teacher's Request: {{{prompt}}}
+
+IMPORTANT: You MUST format your response as an HTML string. Do not use plain text. You can use the following HTML tags to structure the content:
+- Headings: <h1>, <h2>, <h3>
+- Paragraphs: <p>
+- Lists: <ul>, <ol>, <li>
+- Tables: <table>, <thead>, <tbody>, <tr>, <th>, <td>
+- Text formatting: <b> (bold), <i> (italic), <u> (underline), <s> (strikethrough)
+- Inline styles for colors: <span style="color: #...;"> for text color and <span style="background-color: #...;"> for highlights.
+
+Your entire response should be a single HTML string that can be directly rendered inside a rich text editor. Do not wrap your response in markdown or any other format.
 `,
 });
 
@@ -43,6 +57,16 @@ const editorFlow = ai.defineFlow(
 Generate clear, concise, and engaging content based on their request.
 
 Teacher's Request: ${input.prompt}
+
+IMPORTANT: You MUST format your response as an HTML string. Do not use plain text. You can use the following HTML tags to structure the content:
+- Headings: <h1>, <h2>, <h3>
+- Paragraphs: <p>
+- Lists: <ul>, <ol>, <li>
+- Tables: <table>, <thead>, <tbody>, <tr>, <th>, <td>
+- Text formatting: <b> (bold), <i> (italic), <u> (underline), <s> (strikethrough)
+- Inline styles for colors: <span style="color: #...;"> for text color and <span style="background-color: #...;"> for highlights.
+
+Your entire response should be a single HTML string that can be directly rendered inside a rich text editor. Do not wrap your response in markdown or any other format.
 `,
     });
     return text;

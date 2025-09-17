@@ -425,29 +425,22 @@ export function Editor({
     setAiState('loading');
     
     editor?.commands.clearContent();
-    editor?.commands.insertContent(prompt);
+    editor?.chain().focus().insertContent('Generating...').run();
 
     try {
         const result = await generateEditorContent({ prompt });
         setAiGeneratedContent(result);
-        
-        let currentText = "";
-        const words = result.split(' ');
-        setAiState('streaming');
-        for (let i = 0; i < words.length; i++) {
-            currentText += (i > 0 ? " " : "") + words[i];
-            editor?.chain().focus().setContent(prompt + "\n\n" + currentText).run();
-            await new Promise(resolve => setTimeout(resolve, 50));
-        }
+        editor?.chain().focus().setContent(result).run();
         setAiState('done');
     } catch(error) {
         console.error("AI Generation failed:", error);
+        editor?.chain().focus().setContent("Sorry, I couldn't generate the content.").run();
         setAiState('prompting');
     }
   }
   
   const handleAccept = () => {
-    editor?.commands.setContent(prompt + "\n\n" + aiGeneratedContent);
+    editor?.commands.setContent(aiGeneratedContent);
     onChange(editor?.getJSON());
     setAiState('idle');
     setPrompt('');
