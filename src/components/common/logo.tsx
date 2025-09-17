@@ -11,7 +11,7 @@ export function Logo({ className }: { className?: string }) {
         height={32}
         className="rounded-md"
       />
-      <span className="text-2xl font-bold font-headline text-primary-foreground">
+      <span className="text-2xl font-bold font-headline text-foreground">
         Uncoverly
       </span>
     </div>
