@@ -23,9 +23,9 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/language-context";
 
 const themes = [
-  { name: "Negro", name_en: "Black", value: "theme-dark-blue", color: "#3b82f6" },
-  { name: "Blanco", name_en: "White", value: "theme-light-blue", color: "#3b82f6" },
-  { name: "Menta", name_en: "Mint", value: "theme-mint-green", color: "#10b981" },
+  { name: "Negro", name_en: "Black", value: "theme-dark-blue", color: "#3b82f6", isDark: true },
+  { name: "Blanco", name_en: "White", value: "theme-light-blue", color: "#3b82f6", isDark: false },
+  { name: "Menta", name_en: "Mint", value: "theme-mint-green", color: "#10b981", isDark: false },
 ];
 
 const bodyFonts = [
@@ -58,16 +58,24 @@ export function ThemeCustomizer() {
     setBodyFont(storedBodyFont);
     setHeadlineFont(storedHeadlineFont);
     
-    document.documentElement.className = storedTheme;
     document.body.style.setProperty('--font-body', `var(--font-${storedBodyFont})`);
     document.body.style.setProperty('--font-headline', `var(--font-${storedHeadlineFont})`);
 
   }, []);
 
   const handleThemeChange = (themeValue: string) => {
+    const selectedTheme = themes.find(t => t.value === themeValue);
+    if (!selectedTheme) return;
+
     setActiveTheme(themeValue);
     localStorage.setItem("uncoverly-theme", themeValue);
+    
     document.documentElement.className = themeValue;
+    if (selectedTheme.isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   };
 
   const handleBodyFontChange = (fontValue: string) => {
