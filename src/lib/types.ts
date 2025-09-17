@@ -85,7 +85,11 @@ export interface PQRSMessage {
 // The content for the editor is a JSON object
 export type EditorContent = {
   type: "doc";
-  content: any[];
+  content: {
+    type: string;
+    content?: any[];
+    [key: string]: any;
+  }[];
 };
 
 export type AttendanceStatus = 'presente' | 'ausente' | 'tarde';

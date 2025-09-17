@@ -35,6 +35,7 @@ import { useState, useEffect, useCallback } from "react";
 import { generateEditorContent } from "@/ai/flows/editor-flow";
 import { Input } from "../ui/input";
 import { AnimatePresence, motion } from "framer-motion";
+import type { EditorContent as EditorContentType } from "@/lib/types";
 
 const colors = ["#000000", "#e03131", "#2f9e44", "#1971c2", "#f08c00"];
 
@@ -150,6 +151,16 @@ interface EditorProps {
   initialHint?: string;
 }
 
+const isContentEmpty = (content: EditorContentType | null | undefined): boolean => {
+    if (!content || !content.content) return true;
+    if (content.content.length === 0) return true;
+    if (content.content.length === 1 && content.content[0].type === 'paragraph') {
+        const paragraph = content.content[0];
+        return !paragraph.content || paragraph.content.length === 0;
+    }
+    return false;
+};
+
 export function Editor({
   content,
   onChange,
@@ -157,7 +168,8 @@ export function Editor({
   placeholder,
   initialHint,
 }: EditorProps) {
-  const [isEditing, setIsEditing] = useState(false);
+  
+  const [isEditing, setIsEditing] = useState(() => !isContentEmpty(content));
   const [aiState, setAiState] = useState<'idle' | 'prompting' | 'loading' | 'streaming' | 'done'>('idle');
   const [prompt, setPrompt] = useState('');
   const [aiGeneratedContent, setAiGeneratedContent] = useState('');
@@ -174,7 +186,7 @@ export function Editor({
                 return t.placeholders.heading;
             }
             // Only show the main placeholder if we are editing and not in an AI flow
-            if (isEditing && aiState === 'idle') {
+            if (editable && isEditing && aiState === 'idle') {
                 return placeholder || t.placeholders.default;
             }
             return ""; // Return empty otherwise
@@ -206,37 +218,29 @@ export function Editor({
 
 
   const handleKeyDownInEditor = useCallback((event: KeyboardEvent) => {
-    if (!editor) return;
+    if (!editor || !editable) return;
     const isEditorEmpty = !editor.getText().trim();
     
     if (event.key === ' ' && isEditorEmpty) {
       event.preventDefault();
       setAiState('prompting');
     }
-  }, [editor]);
+  }, [editor, editable]);
   
   useEffect(() => {
-     if (editor && content) {
-      const isInitialContent =
-        JSON.stringify(content) ===
-        JSON.stringify({
-          type: "doc",
-          content: [{ type: "paragraph" }],
-        });
-
-      if (!isInitialContent) {
-          const isContentDifferent = JSON.stringify(content) !== JSON.stringify(editor.getJSON());
-          if(isContentDifferent) {
+     if (editor) {
+        const isDifferent = JSON.stringify(content) !== JSON.stringify(editor.getJSON());
+        if(isDifferent) {
             editor.commands.setContent(content, false);
-          }
-          setIsEditing(true);
-      }
+        }
+        // Update editing state based on new content
+        setIsEditing(!isContentEmpty(content));
     }
   }, [content, editor]);
 
   const handleStartEditing = () => {
     setIsEditing(true);
-    setTimeout(() => editor?.commands.focus(), 100);
+    setTimeout(() => editor?.commands.focus(), 0);
   };
 
   const handlePromptKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -321,7 +325,7 @@ export function Editor({
       </AnimatePresence>
 
        <AnimatePresence>
-        {(aiState === 'prompting' || aiState === 'loading') && (
+        {(aiState === 'prompting' || aiState === 'loading') && isEditing && (
             <motion.div
                 key="ai-prompt"
                 initial={{ opacity: 0, y: 10 }}
