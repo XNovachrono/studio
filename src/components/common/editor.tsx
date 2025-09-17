@@ -10,14 +10,14 @@ import Underline from "@tiptap/extension-underline";
 import TextStyle from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import Highlight from '@tiptap/extension-highlight';
+import Table from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
 import {
   Bold,
   Italic,
   Strikethrough,
-  Heading1,
-  Heading2,
-  List,
-  ListOrdered,
   Underline as UnderlineIcon,
   Palette,
   Sparkles,
@@ -28,7 +28,13 @@ import {
   Pencil,
   MessageSquarePlus,
   HelpCircle,
-  ChevronDown
+  ChevronDown,
+  Table as TableIcon,
+  Trash2,
+  Columns,
+  Rows,
+  Split,
+  Heading1,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -79,7 +85,7 @@ const ColorPicker = ({ editor }: { editor: TiptapEditor }) => {
     return (
         <Popover>
             <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5">
+                <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" title="Color">
                     <Palette />
                 </Button>
             </PopoverTrigger>
@@ -162,66 +168,86 @@ const Toolbar = ({ editor }: { editor: TiptapEditor | null }) => {
         return null;
     }
 
+    const TableTools = () => (
+        <>
+            <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insertar tabla"><TableIcon /></Button>
+            {editor.can().deleteTable() && <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().deleteTable().run()} title="Eliminar tabla"><Trash2/></Button>}
+            {editor.can().addColumnAfter() && <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().addColumnAfter().run()} title="Añadir columna"><Columns/></Button>}
+            {editor.can().addRowAfter() && <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().addRowAfter().run()} title="Añadir fila"><Rows/></Button>}
+            {editor.can().mergeCells() && <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().mergeCells().run()} title="Fusionar celdas"><Split/></Button>}
+            {editor.can().toggleHeaderRow() && <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().toggleHeaderRow().run()} title="Fila de encabezado"><Heading1/></Button>}
+        </>
+    );
+
     return (
         <BubbleMenu
             editor={editor}
             tippyOptions={{ duration: 100 }}
             className="flex flex-wrap items-center gap-1 rounded-lg border bg-background p-1 shadow-lg"
         >
-            {/* AI & Collaboration Tools */}
-            <Button variant="ghost" size="sm" className="h-8"><HelpCircle className="mr-2 h-4 w-4" />{t.bubbleMenu.explain}</Button>
-            <Button variant="ghost" size="sm" className="h-8"><Sparkles className="mr-2 h-4 w-4" />{t.bubbleMenu.askAI}</Button>
-            <Button 
-                variant={editor.isActive("highlight") ? "secondary" : "ghost"}
-                size="sm" 
-                className="h-8"
-                onClick={() => editor.chain().focus().toggleHighlight({ color: '#fff3bf' }).run()}
-            >
-                <MessageSquarePlus className="mr-2 h-4 w-4" />
-                {t.bubbleMenu.comment}
-            </Button>
+            {editor.isActive('table') ? <TableTools /> : (
+                <>
+                    {/* AI & Collaboration Tools */}
+                    <Button variant="ghost" size="sm" className="h-8"><HelpCircle className="mr-2 h-4 w-4" />{t.bubbleMenu.explain}</Button>
+                    <Button variant="ghost" size="sm" className="h-8"><Sparkles className="mr-2 h-4 w-4" />{t.bubbleMenu.askAI}</Button>
+                    <Button 
+                        variant={editor.isActive("highlight") ? "secondary" : "ghost"}
+                        size="sm" 
+                        className="h-8"
+                        onClick={() => editor.chain().focus().toggleHighlight({ color: '#fff3bf' }).run()}
+                    >
+                        <MessageSquarePlus className="mr-2 h-4 w-4" />
+                        {t.bubbleMenu.comment}
+                    </Button>
 
-            <Separator orientation="vertical" className="h-6 mx-1" />
+                    <Separator orientation="vertical" className="h-6 mx-1" />
 
-            {/* Text Style & Formatting */}
-            <TextStyleSelector editor={editor} />
-            <Button
-                variant={editor.isActive("bold") ? "secondary" : "ghost"}
-                size="icon"
-                className="h-8 w-8 p-1.5"
-                onClick={() => editor.chain().focus().toggleBold().run()}
-            >
-                <Bold />
-            </Button>
-            <Button
-                variant={editor.isActive("italic") ? "secondary" : "ghost"}
-                size="icon"
-                 className="h-8 w-8 p-1.5"
-                onClick={() => editor.chain().focus().toggleItalic().run()}
-            >
-                <Italic />
-            </Button>
-            <Button
-                variant={editor.isActive("underline") ? "secondary" : "ghost"}
-                size="icon"
-                 className="h-8 w-8 p-1.5"
-                onClick={() => editor.chain().focus().toggleUnderline().run()}
-            >
-                <UnderlineIcon />
-            </Button>
-            <Button
-                variant={editor.isActive("strike") ? "secondary" : "ghost"}
-                size="icon"
-                 className="h-8 w-8 p-1.5"
-                onClick={() => editor.chain().focus().toggleStrike().run()}
-            >
-                <Strikethrough />
-            </Button>
-            
-            <Separator orientation="vertical" className="h-6 mx-1" />
-            
-            {/* Color Picker */}
-            <ColorPicker editor={editor} />
+                    {/* Text Style & Formatting */}
+                    <TextStyleSelector editor={editor} />
+                    <Button
+                        variant={editor.isActive("bold") ? "secondary" : "ghost"}
+                        size="icon"
+                        className="h-8 w-8 p-1.5"
+                        onClick={() => editor.chain().focus().toggleBold().run()}
+                         title="Negrita"
+                    >
+                        <Bold />
+                    </Button>
+                    <Button
+                        variant={editor.isActive("italic") ? "secondary" : "ghost"}
+                        size="icon"
+                         className="h-8 w-8 p-1.5"
+                        onClick={() => editor.chain().focus().toggleItalic().run()}
+                         title="Cursiva"
+                    >
+                        <Italic />
+                    </Button>
+                    <Button
+                        variant={editor.isActive("underline") ? "secondary" : "ghost"}
+                        size="icon"
+                         className="h-8 w-8 p-1.5"
+                        onClick={() => editor.chain().focus().toggleUnderline().run()}
+                         title="Subrayado"
+                    >
+                        <UnderlineIcon />
+                    </Button>
+                    <Button
+                        variant={editor.isActive("strike") ? "secondary" : "ghost"}
+                        size="icon"
+                         className="h-8 w-8 p-1.5"
+                        onClick={() => editor.chain().focus().toggleStrike().run()}
+                         title="Tachado"
+                    >
+                        <Strikethrough />
+                    </Button>
+                    
+                    <Separator orientation="vertical" className="h-6 mx-1" />
+                    
+                    {/* Color Picker & Tables */}
+                    <ColorPicker editor={editor} />
+                    <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insertar tabla"><TableIcon /></Button>
+                </>
+            )}
         </BubbleMenu>
     );
 };
@@ -266,8 +292,8 @@ export function Editor({
       StarterKit.configure({}),
       Placeholder.configure({
         placeholder: ({ node }) => {
-            if (node.isFirstChild && node.isEmpty) {
-                return currentPlaceholder;
+            if (node.type.name === 'paragraph' && node.isFirstChild && node.isEmpty) {
+                 return currentPlaceholder;
             }
             return ""; 
         }
@@ -278,6 +304,10 @@ export function Editor({
       TextStyle,
       Color,
       Highlight.configure({ multicolor: true }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: content,
     editable: editable && isEditing && aiState !== 'loading' && aiState !== 'streaming',
@@ -306,6 +336,15 @@ export function Editor({
         });
     }
   }, [editor, editable, isEditing, aiState]);
+  
+  const handleKeyDownInEditor = useCallback((event: KeyboardEvent) => {
+    if (!editor || !editable) return;
+    
+    if (event.key === ' ' && editor.isEmpty) {
+      event.preventDefault();
+      setAiState('prompting');
+    }
+  }, [editor, editable]);
 
   useEffect(() => {
      if (editor) {
@@ -321,19 +360,9 @@ export function Editor({
         });
      }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, aiState]);
+  }, [editor, aiState, handleKeyDownInEditor]);
   
   
-  const handleKeyDownInEditor = useCallback((event: KeyboardEvent) => {
-    if (!editor || !editable) return;
-    
-    if (event.key === ' ' && editor.isEmpty) {
-      event.preventDefault();
-      setAiState('prompting');
-    }
-  }, [editor, editable]);
-
-
   const handleStartEditing = () => {
     setIsEditing(true);
     setTimeout(() => editor?.commands.focus(), 0);
