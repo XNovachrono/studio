@@ -1,6 +1,21 @@
 
 export const translations = {
     es: {
+        editor: {
+            initialHint: "Toca para empezar a escribir o elige una tarjeta",
+            placeholders: {
+                default: "Escribe, presiona 'espacio' para la IA o '/' para los comandos",
+                heading: "Título",
+            },
+            ai: {
+                trigger: "Pregúntale a la IA...",
+                placeholder: "Tu pregunta o instrucción...",
+                satisfied: "¿Satisfecho con el resultado?",
+                accept: "Aceptar",
+                regenerate: "Regenerar",
+                modify: "Modificar",
+            }
+        },
         dashboardHeader: {
             dashboard: "Panel",
             banks: "Bancos",
@@ -418,6 +433,21 @@ export const translations = {
         }
     },
     en: {
+        editor: {
+            initialHint: "Tap to start writing or choose a card",
+            placeholders: {
+                default: "Type, press 'space' for AI or '/' for commands",
+                heading: "Heading",
+            },
+            ai: {
+                trigger: "Ask AI...",
+                placeholder: "Your question or instruction...",
+                satisfied: "Satisfied with the result?",
+                accept: "Accept",
+                regenerate: "Regenerate",
+                modify: "Modify",
+            }
+        },
         dashboardHeader: {
             dashboard: "Dashboard",
             banks: "Banks",

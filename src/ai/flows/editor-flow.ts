@@ -38,7 +38,13 @@ const editorFlow = ai.defineFlow(
     outputSchema: EditorFlowOutputSchema,
   },
   async input => {
-    const {text} = await ai.generate(input.prompt);
+    const {text} = await ai.generate({
+      prompt: `You are an expert educator and content creator. A teacher has asked for your help writing a class note or assignment.
+Generate clear, concise, and engaging content based on their request.
+
+Teacher's Request: ${input.prompt}
+`,
+    });
     return text;
   }
 );
