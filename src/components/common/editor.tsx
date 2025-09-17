@@ -167,15 +167,14 @@ export function Editor({
 
 
   const handleKeyDownInEditor = useCallback((event: KeyboardEvent) => {
-    // Check if the editor content is empty (or just an empty paragraph)
-    const isEditorEmpty = !editor?.getText().trim();
+    if (!editor) return;
+    const isEditorEmpty = !editor.getText().trim();
     
-    // Trigger AI prompt only if space is pressed and the editor is empty
     if (event.key === ' ' && isEditorEmpty) {
       event.preventDefault();
       setAiState('prompting');
     }
-  }, [/* editor */]); // Add editor to dependencies if it causes stale closures
+  }, [editor]);
 
   const editor = useEditor({
     extensions: [
@@ -185,7 +184,7 @@ export function Editor({
             if (node.type.name === 'heading') {
                 return t.placeholders.heading;
             }
-            if (!isEditing) {
+            if (!isEditing || aiState !== 'idle') {
                 return "";
             }
             return placeholder || t.placeholders.default;
@@ -207,14 +206,15 @@ export function Editor({
         class: "prose dark:prose-invert max-w-none focus:outline-none",
       },
       handleKeyDown: (view, event) => {
-        handleKeyDownInEditor(event);
-        return false; // Return false to allow other keydown handlers to run
+        if (aiState === 'idle') {
+          handleKeyDownInEditor(event);
+        }
+        return false;
       }
     },
   });
   
   useEffect(() => {
-    // Sync external content changes to the editor if it's not empty
      if (editor && content) {
       const isInitialContent =
         JSON.stringify(content) ===
@@ -228,7 +228,7 @@ export function Editor({
           if(isContentDifferent) {
             editor.commands.setContent(content, false);
           }
-          setIsEditing(true); // Automatically enter editing mode if there's content
+          setIsEditing(true);
       }
     }
   }, [content, editor]);
@@ -249,7 +249,6 @@ export function Editor({
     if (!prompt.trim()) return;
     setAiState('loading');
     
-    // Clear editor and show prompt
     editor?.commands.clearContent();
     editor?.commands.insertContent(prompt);
 
@@ -257,7 +256,6 @@ export function Editor({
         const result = await generateEditorContent({ prompt });
         setAiGeneratedContent(result);
         
-        // Stream-like effect for displaying text
         let currentText = "";
         const words = result.split(' ');
         setAiState('streaming');
@@ -269,7 +267,7 @@ export function Editor({
         setAiState('done');
     } catch(error) {
         console.error("AI Generation failed:", error);
-        setAiState('prompting'); // Go back to prompting on error
+        setAiState('prompting');
     }
   }
   
