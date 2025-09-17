@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEditor, EditorContent, Editor as TiptapEditor, BubbleMenu } from "@tiptap/react";
@@ -30,7 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/language-context";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { generateEditorContent } from "@/ai/flows/editor-flow";
 import { Input } from "../ui/input";
 import { AnimatePresence, motion } from "framer-motion";
@@ -165,6 +166,17 @@ export function Editor({
   const t = translations.editor;
 
 
+  const handleKeyDownInEditor = useCallback((event: KeyboardEvent) => {
+    // Check if the editor content is empty (or just an empty paragraph)
+    const isEditorEmpty = !editor?.getText().trim();
+    
+    // Trigger AI prompt only if space is pressed and the editor is empty
+    if (event.key === ' ' && isEditorEmpty) {
+      event.preventDefault();
+      setAiState('prompting');
+    }
+  }, [/* editor */]); // Add editor to dependencies if it causes stale closures
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({}),
@@ -172,6 +184,9 @@ export function Editor({
         placeholder: ({ node }) => {
             if (node.type.name === 'heading') {
                 return t.placeholders.heading;
+            }
+            if (!isEditing) {
+                return "";
             }
             return placeholder || t.placeholders.default;
         }
@@ -191,13 +206,10 @@ export function Editor({
       attributes: {
         class: "prose dark:prose-invert max-w-none focus:outline-none",
       },
-    },
-     onSelectionUpdate({ editor }) {
-        if (editor.state.selection.empty) {
-            // When cursor is placed, no text selected
-        } else {
-            // When text is selected
-        }
+      handleKeyDown: (view, event) => {
+        handleKeyDownInEditor(event);
+        return false; // Return false to allow other keydown handlers to run
+      }
     },
   });
   
@@ -226,8 +238,8 @@ export function Editor({
     setTimeout(() => editor?.commands.focus(), 100);
   };
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === ' ' && prompt.length > 0) {
+  const handlePromptKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' && prompt.trim().length > 0) {
         event.preventDefault();
         handleGenerate();
     }
@@ -305,11 +317,6 @@ export function Editor({
             >
                 <Toolbar editor={editor} />
                 <EditorContent editor={editor} />
-                {aiState === 'idle' && (
-                     <Button variant="ghost" size="sm" className="mt-2 text-muted-foreground" onClick={() => setAiState('prompting')}>
-                        <Sparkles className="mr-2 h-4 w-4"/> {t.ai.trigger}
-                    </Button>
-                )}
             </motion.div>
         )}
       </AnimatePresence>
@@ -329,8 +336,9 @@ export function Editor({
                     className="bg-transparent border-none focus-visible:ring-0"
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    onKeyDown={handleKeyDown}
+                    onKeyDown={handlePromptKeyDown}
                     disabled={aiState === 'loading'}
+                    autoFocus
                 />
                  {aiState === 'loading' ? (
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/>
