@@ -9,6 +9,7 @@ import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import TextStyle from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
+import Highlight from '@tiptap/extension-highlight';
 import {
   Bold,
   Italic,
@@ -25,6 +26,8 @@ import {
   X,
   Loader2,
   Pencil,
+  MessageSquarePlus,
+  HelpCircle
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -36,6 +39,7 @@ import { generateEditorContent } from "@/ai/flows/editor-flow";
 import { Input } from "../ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import type { EditorContent as EditorContentType } from "@/lib/types";
+import { Separator } from "../ui/separator";
 
 const colors = ["#000000", "#e03131", "#2f9e44", "#1971c2", "#f08c00"];
 
@@ -56,91 +60,118 @@ const AIToolbar = ({ state, onAccept, onRegenerate, onModify }: { state: 'idle' 
 }
 
 const Toolbar = ({ editor }: { editor: TiptapEditor | null }) => {
-  if (!editor) {
-    return null;
-  }
+    const { translations } = useLanguage();
+    const t = translations.editor;
+    if (!editor) {
+        return null;
+    }
 
-  return (
-     <BubbleMenu 
-        editor={editor} 
-        tippyOptions={{ duration: 100 }}
-        className="flex flex-wrap items-center gap-1 rounded-lg border bg-secondary p-2"
-    >
-      <Button
-        variant={editor.isActive("bold") ? "secondary" : "ghost"}
-        size="icon"
-        onClick={() => editor.chain().focus().toggleBold().run()}
-      >
-        <Bold className="h-4 w-4" />
-      </Button>
-      <Button
-        variant={editor.isActive("italic") ? "secondary" : "ghost"}
-        size="icon"
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-      >
-        <Italic className="h-4 w-4" />
-      </Button>
-      <Button
-        variant={editor.isActive("underline") ? "secondary" : "ghost"}
-        size="icon"
-        onClick={() => editor.chain().focus().toggleUnderline().run()}
-      >
-        <UnderlineIcon className="h-4 w-4" />
-      </Button>
-      <Button
-        variant={editor.isActive("strike") ? "secondary" : "ghost"}
-        size="icon"
-        onClick={() => editor.chain().focus().toggleStrike().run()}
-      >
-        <Strikethrough className="h-4 w-4" />
-      </Button>
-      <Button
-        variant={editor.isActive("heading", { level: 1 }) ? "secondary" : "ghost"}
-        size="icon"
-        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-      >
-        <Heading1 className="h-4 w-4" />
-      </Button>
-      <Button
-        variant={editor.isActive("heading", { level: 2 }) ? "secondary" : "ghost"}
-        size="icon"
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-      >
-        <Heading2 className="h-4 w-4" />
-      </Button>
-       <Button
-        variant={editor.isActive("bulletList") ? "secondary" : "ghost"}
-        size="icon"
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-      >
-        <List className="h-4 w-4" />
-      </Button>
-      <Button
-        variant={editor.isActive("orderedList") ? "secondary" : "ghost"}
-        size="icon"
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-      >
-        <ListOrdered className="h-4 w-4" />
-      </Button>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon"><Palette className="h-4 w-4"/></Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-2">
-            <div className="flex gap-1">
-                {colors.map(color => (
-                     <button
-                        key={color}
-                        onClick={() => editor.chain().focus().setColor(color).run()}
-                        className={cn("h-6 w-6 rounded-full border-2 transition-transform", editor.isActive('textStyle', { color }) ? 'border-primary scale-110' : 'border-transparent')}
-                        style={{ backgroundColor: color }}
-                    />
-                ))}
-            </div>
-        </PopoverContent>
-      </Popover>
-    </BubbleMenu>
-  );
+    return (
+        <BubbleMenu
+            editor={editor}
+            tippyOptions={{ duration: 100 }}
+            className="flex flex-wrap items-center gap-1 rounded-lg border bg-background p-2 shadow-lg"
+        >
+            {/* AI Tools */}
+            <Button variant="ghost" size="sm"><HelpCircle className="mr-2 h-4 w-4" />{t.bubbleMenu.explain}</Button>
+            <Button variant="ghost" size="sm"><Sparkles className="mr-2 h-4 w-4" />{t.bubbleMenu.askAI}</Button>
+            
+            {/* Commenting */}
+            <Button 
+                variant={editor.isActive("highlight") ? "secondary" : "ghost"}
+                size="sm" 
+                onClick={() => editor.chain().focus().toggleHighlight().run()}
+            >
+                <MessageSquarePlus className="mr-2 h-4 w-4" />
+                {t.bubbleMenu.comment}
+            </Button>
+
+            <Separator orientation="vertical" className="h-6 mx-1" />
+            
+            {/* Basic Formatting */}
+            <Button
+                variant={editor.isActive("bold") ? "secondary" : "ghost"}
+                size="icon"
+                onClick={() => editor.chain().focus().toggleBold().run()}
+            >
+                <Bold className="h-4 w-4" />
+            </Button>
+            <Button
+                variant={editor.isActive("italic") ? "secondary" : "ghost"}
+                size="icon"
+                onClick={() => editor.chain().focus().toggleItalic().run()}
+            >
+                <Italic className="h-4 w-4" />
+            </Button>
+            <Button
+                variant={editor.isActive("underline") ? "secondary" : "ghost"}
+                size="icon"
+                onClick={() => editor.chain().focus().toggleUnderline().run()}
+            >
+                <UnderlineIcon className="h-4 w-4" />
+            </Button>
+            <Button
+                variant={editor.isActive("strike") ? "secondary" : "ghost"}
+                size="icon"
+                onClick={() => editor.chain().focus().toggleStrike().run()}
+            >
+                <Strikethrough className="h-4 w-4" />
+            </Button>
+            
+             <Separator orientation="vertical" className="h-6 mx-1" />
+
+            {/* Block Formatting */}
+            <Button
+                variant={editor.isActive("heading", { level: 1 }) ? "secondary" : "ghost"}
+                size="icon"
+                onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+            >
+                <Heading1 className="h-4 w-4" />
+            </Button>
+            <Button
+                variant={editor.isActive("heading", { level: 2 }) ? "secondary" : "ghost"}
+                size="icon"
+                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            >
+                <Heading2 className="h-4 w-4" />
+            </Button>
+            <Button
+                variant={editor.isActive("bulletList") ? "secondary" : "ghost"}
+                size="icon"
+                onClick={() => editor.chain().focus().toggleBulletList().run()}
+            >
+                <List className="h-4 w-4" />
+            </Button>
+            <Button
+                variant={editor.isActive("orderedList") ? "secondary" : "ghost"}
+                size="icon"
+                onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            >
+                <ListOrdered className="h-4 w-4" />
+            </Button>
+
+             <Separator orientation="vertical" className="h-6 mx-1" />
+
+            {/* Color Picker */}
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon"><Palette className="h-4 w-4" /></Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-2">
+                    <div className="flex gap-1">
+                        {colors.map(color => (
+                            <button
+                                key={color}
+                                onClick={() => editor.chain().focus().setColor(color).run()}
+                                className={cn("h-6 w-6 rounded-full border-2 transition-transform", editor.isActive('textStyle', { color }) ? 'border-primary scale-110' : 'border-transparent')}
+                                style={{ backgroundColor: color }}
+                            />
+                        ))}
+                    </div>
+                </PopoverContent>
+            </Popover>
+        </BubbleMenu>
+    );
 };
 
 interface EditorProps {
@@ -197,6 +228,7 @@ export function Editor({
       Underline,
       TextStyle,
       Color,
+      Highlight.configure({ multicolor: true }),
     ],
     content: content,
     editable: editable && isEditing && aiState !== 'loading' && aiState !== 'streaming',
@@ -209,7 +241,7 @@ export function Editor({
       },
     },
   });
-
+  
   useEffect(() => {
     if (isEditing) {
       setCurrentPlaceholder(placeholder || t.placeholders.default);
@@ -219,25 +251,19 @@ export function Editor({
   }, [isEditing, placeholder, t.placeholders.default]);
 
   useEffect(() => {
-    editor?.commands.setContent(content, false);
-  }, [content, editor]);
-  
-  const handleKeyDownInEditor = useCallback((event: KeyboardEvent) => {
-    if (!editor || !editable) return;
-    const isEditorEmpty = !editor.getText().trim();
-    
-    if (event.key === ' ' && isEditorEmpty) {
-      event.preventDefault();
-      setAiState('prompting');
+    if (editor) {
+        editor.setOptions({
+            editable: editable && isEditing && aiState !== 'loading' && aiState !== 'streaming',
+        });
     }
-  }, [editor, editable]);
-  
+  }, [editor, editable, isEditing, aiState]);
+
   useEffect(() => {
      if (editor) {
         editor.setOptions({
              editorProps: {
                 handleKeyDown: (view, event) => {
-                    if (aiState === 'idle') {
+                    if (aiState === 'idle' && editor.isEmpty) {
                         handleKeyDownInEditor(event);
                     }
                     return false;
@@ -246,13 +272,18 @@ export function Editor({
         });
      }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, aiState, handleKeyDownInEditor]);
-
-  useEffect(() => {
-    if (editor) {
-        editor.setEditable(editable && isEditing && aiState !== 'loading' && aiState !== 'streaming');
+  }, [editor, aiState]);
+  
+  
+  const handleKeyDownInEditor = useCallback((event: KeyboardEvent) => {
+    if (!editor || !editable) return;
+    
+    if (event.key === ' ' && editor.isEmpty) {
+      event.preventDefault();
+      setAiState('prompting');
     }
-  }, [editor, editable, isEditing, aiState]);
+  }, [editor, editable]);
+
 
   const handleStartEditing = () => {
     setIsEditing(true);
@@ -384,7 +415,3 @@ export function Editor({
     </div>
   );
 }
-
-    
-
-      

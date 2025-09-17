@@ -14,6 +14,11 @@ export const translations = {
                 accept: "Aceptar",
                 regenerate: "Regenerar",
                 modify: "Modificar",
+            },
+            bubbleMenu: {
+                explain: "Explica",
+                askAI: "Pregúntale a la IA",
+                comment: "Comentar",
             }
         },
         dashboardHeader: {
@@ -446,6 +451,11 @@ export const translations = {
                 accept: "Accept",
                 regenerate: "Regenerate",
                 modify: "Modify",
+            },
+            bubbleMenu: {
+                explain: "Explain",
+                askAI: "Ask AI",
+                comment: "Comment",
             }
         },
         dashboardHeader: {
