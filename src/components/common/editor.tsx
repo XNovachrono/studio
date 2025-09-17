@@ -47,6 +47,7 @@ import { Input } from "../ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import type { EditorContent as EditorContentType } from "@/lib/types";
 import { Separator } from "../ui/separator";
+import { Label } from "../ui/label";
 
 const textColors = [
     { name: 'Default', color: '#000000' },
@@ -63,7 +64,6 @@ const highlightColors = [
     { name: 'Green', color: '#b2f2bb' },
     { name: 'Blue', color: '#a5d8ff' },
 ];
-
 
 const AIToolbar = ({ state, onAccept, onRegenerate, onModify }: { state: 'idle' | 'loading' | 'streaming' | 'done', onAccept: () => void, onRegenerate: () => void, onModify: () => void }) => {
     const { translations } = useLanguage();
@@ -161,6 +161,59 @@ const TextStyleSelector = ({ editor }: { editor: TiptapEditor }) => {
     );
 }
 
+const TableTools = ({ editor }: { editor: TiptapEditor }) => {
+    const RemoveColumnsIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v11"/><path d="m16 16-4 4-4-4"/><path d="M9 3H3v18h6"/><path d="m16 3 5 5-5 5"/></svg>
+    )
+    const RemoveRowsIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 12H3"/><path d="m6 9-3 3 3 3"/><path d="M3 9v12h18V9"/><path d="m18 3 3 3-3 3"/></svg>
+    )
+
+    return (
+        <>
+            <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().addColumnAfter().run()} title="Añadir columna"><Columns/></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().deleteColumn().run()} title="Eliminar columna"><RemoveColumnsIcon/></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().addRowAfter().run()} title="Añadir fila"><Rows/></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().deleteRow().run()} title="Eliminar fila"><RemoveRowsIcon/></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().mergeOrSplit().run()} title="Fusionar/Dividir celdas"><Split/></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().toggleHeaderRow().run()} title="Fila de encabezado"><Heading1/></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().deleteTable().run()} title="Eliminar tabla"><Trash2/></Button>
+        </>
+    )
+}
+
+const InsertTablePopover = ({ editor }: { editor: TiptapEditor }) => {
+    const [rows, setRows] = useState(3);
+    const [cols, setCols] = useState(3);
+
+    const createTable = () => {
+        editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run();
+    }
+
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" title="Insertar tabla">
+                    <TableIcon />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-4 space-y-4" sideOffset={10}>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="rows">Filas</Label>
+                        <Input id="rows" type="number" value={rows} onChange={e => setRows(parseInt(e.target.value, 10))} min="1" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="cols">Columnas</Label>
+                        <Input id="cols" type="number" value={cols} onChange={e => setCols(parseInt(e.target.value, 10))} min="1" />
+                    </div>
+                </div>
+                <Button onClick={createTable} className="w-full">Crear</Button>
+            </PopoverContent>
+        </Popover>
+    )
+}
+
 const Toolbar = ({ editor }: { editor: TiptapEditor | null }) => {
     const { translations } = useLanguage();
     const t = translations.editor;
@@ -168,24 +221,13 @@ const Toolbar = ({ editor }: { editor: TiptapEditor | null }) => {
         return null;
     }
 
-    const TableTools = () => (
-        <>
-            <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insertar tabla"><TableIcon /></Button>
-            {editor.can().deleteTable() && <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().deleteTable().run()} title="Eliminar tabla"><Trash2/></Button>}
-            {editor.can().addColumnAfter() && <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().addColumnAfter().run()} title="Añadir columna"><Columns/></Button>}
-            {editor.can().addRowAfter() && <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().addRowAfter().run()} title="Añadir fila"><Rows/></Button>}
-            {editor.can().mergeCells() && <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().mergeCells().run()} title="Fusionar celdas"><Split/></Button>}
-            {editor.can().toggleHeaderRow() && <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().toggleHeaderRow().run()} title="Fila de encabezado"><Heading1/></Button>}
-        </>
-    );
-
     return (
         <BubbleMenu
             editor={editor}
             tippyOptions={{ duration: 100 }}
             className="flex flex-wrap items-center gap-1 rounded-lg border bg-background p-1 shadow-lg"
         >
-            {editor.isActive('table') ? <TableTools /> : (
+            {editor.isActive('table') ? <TableTools editor={editor} /> : (
                 <>
                     {/* AI & Collaboration Tools */}
                     <Button variant="ghost" size="sm" className="h-8"><HelpCircle className="mr-2 h-4 w-4" />{t.bubbleMenu.explain}</Button>
@@ -245,7 +287,7 @@ const Toolbar = ({ editor }: { editor: TiptapEditor | null }) => {
                     
                     {/* Color Picker & Tables */}
                     <ColorPicker editor={editor} />
-                    <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insertar tabla"><TableIcon /></Button>
+                    <InsertTablePopover editor={editor} />
                 </>
             )}
         </BubbleMenu>
@@ -292,10 +334,13 @@ export function Editor({
       StarterKit.configure({}),
       Placeholder.configure({
         placeholder: ({ node }) => {
-            if (node.type.name === 'paragraph' && node.isFirstChild && node.isEmpty) {
-                 return currentPlaceholder;
-            }
-            return ""; 
+          if (node.type.name === 'heading') {
+            return t.placeholders.heading;
+          }
+          if (node.isFirstChild && node.isEmpty) {
+            return currentPlaceholder;
+          }
+          return "";
         }
       }),
       Image,
@@ -304,7 +349,7 @@ export function Editor({
       TextStyle,
       Color,
       Highlight.configure({ multicolor: true }),
-      Table.configure({ resizable: true }),
+      Table.configure({ resizable: true, handleWidth: 5, cellMinWidth: 25 }),
       TableRow,
       TableHeader,
       TableCell,
@@ -328,7 +373,7 @@ export function Editor({
       setCurrentPlaceholder('');
     }
   }, [isEditing, placeholder, t.placeholders.default]);
-
+  
   useEffect(() => {
     if (editor) {
         editor.setOptions({

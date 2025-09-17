@@ -113,4 +113,31 @@
   h1, h2, h3, h4, h5, h6, .font-headline {
     font-family: var(--font-headline);
   }
+
+  /* Tiptap Table Styles */
+  .prose {
+    table {
+      @apply w-full my-4 border-collapse border border-border;
+    }
+    th, td {
+      @apply border border-border px-4 py-2 text-left;
+    }
+    th {
+      @apply font-semibold bg-secondary;
+    }
+    tr {
+      @apply border-b border-border;
+    }
+    tr:last-child {
+      @apply border-b-0;
+    }
+    .selectedCell:after {
+        z-index: 2;
+        position: absolute;
+        content: "";
+        left: 0; right: 0; top: 0; bottom: 0;
+        background: hsla(var(--primary) / 0.15);
+        pointer-events: none;
+    }
+  }
 }
