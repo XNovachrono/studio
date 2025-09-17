@@ -243,8 +243,6 @@ export function Editor({
         if(isDifferent) {
             editor.commands.setContent(content, false);
         }
-        // Update editing state based on new content
-        setIsEditing(!isContentEmpty(content));
     }
   }, [content, editor]);
 
@@ -384,3 +382,5 @@ export function Editor({
     </div>
   );
 }
+
+    
