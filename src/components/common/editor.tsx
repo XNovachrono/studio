@@ -50,7 +50,7 @@ import { Separator } from "../ui/separator";
 import { Label } from "../ui/label";
 
 const textColors = [
-    { name: 'Default', color: '#000000' },
+    { name: 'Default', color: 'inherit' },
     { name: 'Red', color: '#e03131' },
     { name: 'Green', color: '#2f9e44' },
     { name: 'Blue', color: '#1971c2' },
@@ -98,7 +98,7 @@ const ColorPicker = ({ editor }: { editor: TiptapEditor }) => {
                                 key={name}
                                 onClick={() => editor.chain().focus().setColor(color).run()}
                                 className={cn("h-6 w-6 rounded-full border-2 transition-transform", editor.isActive('textStyle', { color }) ? 'border-primary scale-110' : 'border-transparent')}
-                                style={{ backgroundColor: color }}
+                                style={{ backgroundColor: color === 'inherit' ? 'hsl(var(--foreground))' : color }}
                                 title={name}
                             />
                         ))}
@@ -430,7 +430,7 @@ export function Editor({
     try {
         const result = await generateEditorContent({ prompt });
         setAiGeneratedContent(result);
-        editor?.chain().focus().setContent(result).run();
+        editor?.chain().focus().setContent(result, true).run();
         setAiState('done');
     } catch(error) {
         console.error("AI Generation failed:", error);
@@ -440,7 +440,7 @@ export function Editor({
   }
   
   const handleAccept = () => {
-    editor?.commands.setContent(aiGeneratedContent);
+    editor?.commands.setContent(aiGeneratedContent, true);
     onChange(editor?.getJSON());
     setAiState('idle');
     setPrompt('');
