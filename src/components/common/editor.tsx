@@ -27,7 +27,8 @@ import {
   Loader2,
   Pencil,
   MessageSquarePlus,
-  HelpCircle
+  HelpCircle,
+  ChevronDown
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,22 @@ import { AnimatePresence, motion } from "framer-motion";
 import type { EditorContent as EditorContentType } from "@/lib/types";
 import { Separator } from "../ui/separator";
 
-const colors = ["#000000", "#e03131", "#2f9e44", "#1971c2", "#f08c00"];
+const textColors = [
+    { name: 'Default', color: '#000000' },
+    { name: 'Red', color: '#e03131' },
+    { name: 'Green', color: '#2f9e44' },
+    { name: 'Blue', color: '#1971c2' },
+    { name: 'Orange', color: '#f08c00' },
+];
+
+const highlightColors = [
+    { name: 'Default', color: 'transparent' }, // Use transparent for "no highlight"
+    { name: 'Yellow', color: '#fff3bf' },
+    { name: 'Red', color: '#ffc9c9' },
+    { name: 'Green', color: '#b2f2bb' },
+    { name: 'Blue', color: '#a5d8ff' },
+];
+
 
 const AIToolbar = ({ state, onAccept, onRegenerate, onModify }: { state: 'idle' | 'loading' | 'streaming' | 'done', onAccept: () => void, onRegenerate: () => void, onModify: () => void }) => {
     const { translations } = useLanguage();
@@ -59,6 +75,86 @@ const AIToolbar = ({ state, onAccept, onRegenerate, onModify }: { state: 'idle' 
     )
 }
 
+const ColorPicker = ({ editor }: { editor: TiptapEditor }) => {
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5">
+                    <Palette />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-2" sideOffset={10}>
+                <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground">Color del texto</p>
+                    <div className="flex gap-1">
+                        {textColors.map(({ name, color }) => (
+                            <button
+                                key={name}
+                                onClick={() => editor.chain().focus().setColor(color).run()}
+                                className={cn("h-6 w-6 rounded-full border-2 transition-transform", editor.isActive('textStyle', { color }) ? 'border-primary scale-110' : 'border-transparent')}
+                                style={{ backgroundColor: color }}
+                                title={name}
+                            />
+                        ))}
+                    </div>
+                </div>
+                 <div className="space-y-2 mt-2">
+                    <p className="text-xs font-semibold text-muted-foreground">Color de fondo</p>
+                    <div className="flex gap-1">
+                        {highlightColors.map(({ name, color }) => (
+                            <button
+                                key={name}
+                                onClick={() => editor.chain().focus().toggleHighlight({ color }).run()}
+                                className={cn("h-6 w-6 rounded-full border-2 transition-transform", editor.isActive('highlight', { color }) ? 'border-primary scale-110' : 'border-muted-foreground')}
+                                style={{ backgroundColor: color }}
+                                title={name}
+                            />
+                        ))}
+                    </div>
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+};
+
+const TextStyleSelector = ({ editor }: { editor: TiptapEditor }) => {
+    const items = [
+        { name: 'Texto', action: () => editor.chain().focus().setParagraph().run(), isActive: editor.isActive('paragraph') },
+        { name: 'Encabezado 1', action: () => editor.chain().focus().toggleHeading({ level: 1 }).run(), isActive: editor.isActive('heading', { level: 1 }) },
+        { name: 'Encabezado 2', action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(), isActive: editor.isActive('heading', { level: 2 }) },
+        { name: 'Lista con viñetas', action: () => editor.chain().focus().toggleBulletList().run(), isActive: editor.isActive('bulletList') },
+        { name: 'Lista numerada', action: () => editor.chain().focus().toggleOrderedList().run(), isActive: editor.isActive('orderedList') },
+    ];
+
+    const activeItem = items.find(item => item.isActive) || items[0];
+
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8">
+                    {activeItem.name}
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-1" sideOffset={10}>
+                <div className="flex flex-col">
+                    {items.map(item => (
+                         <Button
+                            key={item.name}
+                            variant={item.isActive ? 'secondary' : 'ghost'}
+                            size="sm"
+                            className="w-full justify-start"
+                            onClick={item.action}
+                        >
+                            {item.name}
+                        </Button>
+                    ))}
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
 const Toolbar = ({ editor }: { editor: TiptapEditor | null }) => {
     const { translations } = useLanguage();
     const t = translations.editor;
@@ -70,106 +166,62 @@ const Toolbar = ({ editor }: { editor: TiptapEditor | null }) => {
         <BubbleMenu
             editor={editor}
             tippyOptions={{ duration: 100 }}
-            className="flex flex-wrap items-center gap-1 rounded-lg border bg-background p-2 shadow-lg"
+            className="flex flex-wrap items-center gap-1 rounded-lg border bg-background p-1 shadow-lg"
         >
-            {/* AI Tools */}
-            <Button variant="ghost" size="sm"><HelpCircle className="mr-2 h-4 w-4" />{t.bubbleMenu.explain}</Button>
-            <Button variant="ghost" size="sm"><Sparkles className="mr-2 h-4 w-4" />{t.bubbleMenu.askAI}</Button>
-            
-            {/* Commenting */}
+            {/* AI & Collaboration Tools */}
+            <Button variant="ghost" size="sm" className="h-8"><HelpCircle className="mr-2 h-4 w-4" />{t.bubbleMenu.explain}</Button>
+            <Button variant="ghost" size="sm" className="h-8"><Sparkles className="mr-2 h-4 w-4" />{t.bubbleMenu.askAI}</Button>
             <Button 
                 variant={editor.isActive("highlight") ? "secondary" : "ghost"}
                 size="sm" 
-                onClick={() => editor.chain().focus().toggleHighlight().run()}
+                className="h-8"
+                onClick={() => editor.chain().focus().toggleHighlight({ color: '#fff3bf' }).run()}
             >
                 <MessageSquarePlus className="mr-2 h-4 w-4" />
                 {t.bubbleMenu.comment}
             </Button>
 
             <Separator orientation="vertical" className="h-6 mx-1" />
-            
-            {/* Basic Formatting */}
+
+            {/* Text Style & Formatting */}
+            <TextStyleSelector editor={editor} />
             <Button
                 variant={editor.isActive("bold") ? "secondary" : "ghost"}
                 size="icon"
+                className="h-8 w-8 p-1.5"
                 onClick={() => editor.chain().focus().toggleBold().run()}
             >
-                <Bold className="h-4 w-4" />
+                <Bold />
             </Button>
             <Button
                 variant={editor.isActive("italic") ? "secondary" : "ghost"}
                 size="icon"
+                 className="h-8 w-8 p-1.5"
                 onClick={() => editor.chain().focus().toggleItalic().run()}
             >
-                <Italic className="h-4 w-4" />
+                <Italic />
             </Button>
             <Button
                 variant={editor.isActive("underline") ? "secondary" : "ghost"}
                 size="icon"
+                 className="h-8 w-8 p-1.5"
                 onClick={() => editor.chain().focus().toggleUnderline().run()}
             >
-                <UnderlineIcon className="h-4 w-4" />
+                <UnderlineIcon />
             </Button>
             <Button
                 variant={editor.isActive("strike") ? "secondary" : "ghost"}
                 size="icon"
+                 className="h-8 w-8 p-1.5"
                 onClick={() => editor.chain().focus().toggleStrike().run()}
             >
-                <Strikethrough className="h-4 w-4" />
+                <Strikethrough />
             </Button>
             
-             <Separator orientation="vertical" className="h-6 mx-1" />
-
-            {/* Block Formatting */}
-            <Button
-                variant={editor.isActive("heading", { level: 1 }) ? "secondary" : "ghost"}
-                size="icon"
-                onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-            >
-                <Heading1 className="h-4 w-4" />
-            </Button>
-            <Button
-                variant={editor.isActive("heading", { level: 2 }) ? "secondary" : "ghost"}
-                size="icon"
-                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            >
-                <Heading2 className="h-4 w-4" />
-            </Button>
-            <Button
-                variant={editor.isActive("bulletList") ? "secondary" : "ghost"}
-                size="icon"
-                onClick={() => editor.chain().focus().toggleBulletList().run()}
-            >
-                <List className="h-4 w-4" />
-            </Button>
-            <Button
-                variant={editor.isActive("orderedList") ? "secondary" : "ghost"}
-                size="icon"
-                onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            >
-                <ListOrdered className="h-4 w-4" />
-            </Button>
-
-             <Separator orientation="vertical" className="h-6 mx-1" />
-
+            <Separator orientation="vertical" className="h-6 mx-1" />
+            
             {/* Color Picker */}
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon"><Palette className="h-4 w-4" /></Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-2">
-                    <div className="flex gap-1">
-                        {colors.map(color => (
-                            <button
-                                key={color}
-                                onClick={() => editor.chain().focus().setColor(color).run()}
-                                className={cn("h-6 w-6 rounded-full border-2 transition-transform", editor.isActive('textStyle', { color }) ? 'border-primary scale-110' : 'border-transparent')}
-                                style={{ backgroundColor: color }}
-                            />
-                        ))}
-                    </div>
-                </PopoverContent>
-            </Popover>
+            <ColorPicker editor={editor} />
         </BubbleMenu>
     );
 };
@@ -214,10 +266,7 @@ export function Editor({
       StarterKit.configure({}),
       Placeholder.configure({
         placeholder: ({ node }) => {
-            if (node.type.name === 'heading') {
-                return t.placeholders.heading;
-            }
-             if (node.isFirstChild && node.isEmpty) {
+            if (node.isFirstChild && node.isEmpty) {
                 return currentPlaceholder;
             }
             return ""; 
