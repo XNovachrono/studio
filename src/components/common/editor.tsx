@@ -185,11 +185,10 @@ export function Editor({
             if (node.type.name === 'heading') {
                 return t.placeholders.heading;
             }
-            // Only show the main placeholder if we are editing and not in an AI flow
-            if (editable && isEditing) {
-                return placeholder || t.placeholders.default;
+            if (node.type.name === 'paragraph' && node.content.size === 0) {
+              return placeholder || t.placeholders.default;
             }
-            return ""; // Return empty otherwise
+            return ""; 
         }
       }),
       Image,
