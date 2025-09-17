@@ -186,7 +186,7 @@ export function Editor({
                 return t.placeholders.heading;
             }
             // Only show the main placeholder if we are editing and not in an AI flow
-            if (editable) {
+            if (editable && isEditing) {
                 return placeholder || t.placeholders.default;
             }
             return ""; // Return empty otherwise
