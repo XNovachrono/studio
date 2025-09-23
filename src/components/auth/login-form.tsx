@@ -25,7 +25,6 @@ import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
 import type { User } from "@/lib/types";
 import { useLanguage } from "@/context/language-context";
-import { getStudentData, getTeacherDataForDashboard, getAdminData } from "@/lib/firestore";
 
 const loginSchemaEs = z.object({
   email: z.string().email("Por favor, introduce un correo electrónico válido."),
@@ -77,23 +76,25 @@ export function LoginForm() {
           description: t.successDescription.replace('{name}', userProfile.name),
         });
 
-        if (userProfile.role === "teacher") {
-          const teacherData = await getTeacherDataForDashboard(firebaseUser.uid);
-          localStorage.setItem("uncoverly-dashboard-data", JSON.stringify(teacherData));
-          router.push("/teacher/dashboard");
-        } else if (userProfile.role === "admin") {
-          const adminData = await getAdminData();
-          localStorage.setItem("uncoverly-dashboard-data", JSON.stringify(adminData));
-          router.push("/admin/dashboard");
-        } else {
-          if ((userProfile as any).hasOnboarded) {
-            const studentData = await getStudentData(firebaseUser.uid);
-            localStorage.setItem("uncoverly-dashboard-data", JSON.stringify(studentData));
-            router.push("/student/dashboard");
-          } else {
-            router.push("/student/onboarding");
-          }
+        // REDIRECT based on role
+        switch (userProfile.role) {
+          case "teacher":
+            router.push("/teacher/dashboard");
+            break;
+          case "admin":
+            router.push("/admin/dashboard");
+            break;
+          case "student":
+            if ((userProfile as any).hasOnboarded) {
+              router.push("/student/dashboard");
+            } else {
+              router.push("/student/onboarding");
+            }
+            break;
+          default:
+            router.push("/login"); // Fallback
         }
+        
       } else {
          throw new Error(t.errorUserNotFound);
       }

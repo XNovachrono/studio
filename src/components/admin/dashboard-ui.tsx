@@ -577,22 +577,15 @@ export function AdminDashboardUI() {
   const [groupToView, setGroupToView] = useState<Group | null>(null);
 
   const fetchDashboardData = async () => {
-    const storedData = localStorage.getItem("uncoverly-dashboard-data");
-    if (storedData) {
-      setData(JSON.parse(storedData));
+    setIsLoading(true);
+    try {
+      const adminData = await getAdminData();
+      setData(adminData);
+    } catch (error) {
+      console.error("Error fetching admin data:", error);
+      toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
+    } finally {
       setIsLoading(false);
-      localStorage.removeItem("uncoverly-dashboard-data");
-    } else {
-      setIsLoading(true);
-      try {
-        const adminData = await getAdminData();
-        setData(adminData);
-      } catch (error) {
-        console.error("Error fetching admin data:", error);
-        toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
-      } finally {
-        setIsLoading(false);
-      }
     }
   };
 

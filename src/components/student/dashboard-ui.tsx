@@ -123,53 +123,37 @@ export function StudentDashboardUI() {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherInteraction | null>(null);
 
-  const fetchDashboardData = async () => {
-      const storedUser = localStorage.getItem("uncoverly-user");
-      if (!storedUser) {
-          router.push("/login");
-          return;
-      }
-      const parsedUser = JSON.parse(storedUser);
-
-      const storedData = localStorage.getItem("uncoverly-dashboard-data");
-      if (storedData) {
-          setData(JSON.parse(storedData));
-          setIsLoading(false);
-          localStorage.removeItem("uncoverly-dashboard-data");
-      } else {
-          setIsLoading(true);
-          try {
-              const studentData = await getStudentData(parsedUser.id);
-              let lessons: Lesson[] = [];
-              if (studentData.group) {
-                  lessons = await getLessonsForGroup(studentData.group.id);
-              }
-              setData({ ...studentData, lessons });
-          } catch (error) {
-              console.error("Error fetching student data:", error);
-          } finally {
-              setIsLoading(false);
-          }
-      }
-  };
-
   useEffect(() => {
-    const storedUser = localStorage.getItem("uncoverly-user");
-    if (!storedUser) {
-      router.push("/login");
-      return;
-    }
-
-    const parsedUser = JSON.parse(storedUser);
-    if (parsedUser.role !== 'student') {
-        router.push('/login');
-        return;
-    }
-    if (!parsedUser.hasOnboarded) {
-        router.push('/student/onboarding');
-        return;
-    }
-
+    const fetchDashboardData = async () => {
+        const storedUser = localStorage.getItem("uncoverly-user");
+        if (!storedUser) {
+            router.push("/login");
+            return;
+        }
+        const parsedUser = JSON.parse(storedUser);
+         if (parsedUser.role !== 'student') {
+            router.push('/login');
+            return;
+        }
+        if (!parsedUser.hasOnboarded) {
+            router.push('/student/onboarding');
+            return;
+        }
+        
+        setIsLoading(true);
+        try {
+            const studentData = await getStudentData(parsedUser.id);
+            let lessons: Lesson[] = [];
+            if (studentData.group) {
+                lessons = await getLessonsForGroup(studentData.group.id);
+            }
+            setData({ ...studentData, lessons });
+        } catch (error) {
+            console.error("Error fetching student data:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
     fetchDashboardData();
   }, [router]);
 

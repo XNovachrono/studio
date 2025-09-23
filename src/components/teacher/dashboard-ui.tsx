@@ -42,6 +42,7 @@ import { format, parseISO, addDays, isBefore, startOfToday } from "date-fns";
 import { es } from "date-fns/locale";
 import { TeacherDataSettings } from "./teacher-data-settings";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 
 
 interface TeacherDashboardData {
@@ -818,40 +819,33 @@ export function TeacherDashboardUI() {
   const [isBanksModalOpen, setIsBanksModalOpen] = useState(false);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("uncoverly-user");
-    if (!storedUser) {
-      router.push("/login");
-      return;
-    }
-    
-    const parsedUser = JSON.parse(storedUser);
-    if (parsedUser.role !== 'teacher') {
-        router.push('/login');
+    const fetchDashboardData = async () => {
+      const storedUser = localStorage.getItem("uncoverly-user");
+      if (!storedUser) {
+        router.push("/login");
         return;
-    }
-    setUser(parsedUser);
-
-    const fetchDashboardData = async (teacherId: string) => {
-      const storedData = localStorage.getItem("uncoverly-dashboard-data");
-      if (storedData) {
-        setData(JSON.parse(storedData));
-        setIsLoading(false);
-        localStorage.removeItem("uncoverly-dashboard-data");
-      } else {
-        setIsLoading(true);
-        try {
-          const teacherData = await getTeacherDataForDashboard(teacherId);
-          setData(teacherData);
-        } catch (error) {
-            console.error("Error fetching teacher data:", error);
-            toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
-        } finally {
-            setIsLoading(false);
-        }
+      }
+      
+      const parsedUser = JSON.parse(storedUser);
+      if (parsedUser.role !== 'teacher') {
+          router.push('/login');
+          return;
+      }
+      setUser(parsedUser);
+      
+      setIsLoading(true);
+      try {
+        const teacherData = await getTeacherDataForDashboard(parsedUser.id);
+        setData(teacherData);
+      } catch (error) {
+          console.error("Error fetching teacher data:", error);
+          toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
+      } finally {
+          setIsLoading(false);
       }
     };
     
-    fetchDashboardData(parsedUser.id);
+    fetchDashboardData();
   }, [router, toast]);
 
   const studentsById = useMemo(() => new Map(data?.allStudents.map(s => [s.id, s])), [data?.allStudents]);
