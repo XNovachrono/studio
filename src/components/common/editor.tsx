@@ -51,6 +51,7 @@ import { Separator } from "../ui/separator";
 import { Label } from "../ui/label";
 import { suggestion as slashCommandSuggestion } from './editor-slash-command';
 import { Extension } from '@tiptap/core';
+import suggestion from '@tiptap/suggestion';
 
 const SlashCommand = Extension.create({
   name: 'slashCommand',
@@ -61,7 +62,7 @@ const SlashCommand = Extension.create({
   },
   addProseMirrorPlugins() {
     return [
-      require('@tiptap/suggestion').suggestion(this.options.suggestion),
+      suggestion(this.options.suggestion),
     ];
   },
 });
@@ -354,8 +355,8 @@ export function Editor({
           if (node.type.name === 'heading') {
             return t.placeholders.heading;
           }
-          if (node.isFirstChild && node.isEmpty) {
-            return currentPlaceholder;
+          if (editable && isEditing && node.isFirstChild && node.isEmpty) {
+            return placeholder || t.placeholders.default;
           }
           return "";
         }
@@ -443,7 +444,6 @@ export function Editor({
     setAiState('loading');
     
     editor?.commands.clearContent();
-    editor?.chain().focus().insertContent('Generating...').run();
 
     try {
         const result = await generateEditorContent({ prompt });
