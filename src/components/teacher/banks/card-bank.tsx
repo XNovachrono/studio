@@ -32,6 +32,7 @@ import { Editor } from "@/components/common/editor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const defaultContent: EditorContent = {
   type: "doc",
@@ -298,11 +299,13 @@ export function CardBank({ user, bankType }: CardBankProps) {
             </div>
             <div>
               <Label>{t.cardContent}</Label>
-              <Editor
-                content={editingCard?.content || defaultContent}
-                onChange={(content) => setEditingCard(prev => ({...prev!, content}))}
-                editable
-              />
+                <ScrollArea className="max-h-[50vh] w-full pr-4">
+                    <Editor
+                        content={editingCard?.content || defaultContent}
+                        onChange={(content) => setEditingCard(prev => ({...prev!, content}))}
+                        editable
+                    />
+                </ScrollArea>
             </div>
           </div>
           <DialogFooter>
