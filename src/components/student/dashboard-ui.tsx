@@ -3,11 +3,11 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, ChevronRight, Loader2, MessageCircleQuestion, Video } from "lucide-react";
+import { BookOpen, Calendar as CalendarIcon, Loader2, MessageCircleQuestion, Video } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User, Group, StudentProfile, Lesson, ScheduledClass, TeacherInteraction } from "@/lib/types";
-import { getStudentData, getLessonsForGroup } from "@/lib/firestore";
+import { getStudentData, getLessonsForGroup, updateUserProfile } from "@/lib/firestore";
 import { useLanguage } from "@/context/language-context";
 import {
   Accordion,
@@ -17,12 +17,17 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "../ui/button";
 import { Editor } from "../common/editor";
-import { format } from "date-fns";
+import { format, parse, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { PqrsDialog } from "./pqrs-dialog";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { User as UserIcon } from "lucide-react";
 import { Badge } from "../ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
+import { Calendar } from "../ui/calendar";
+import type { DateRange } from "react-day-picker";
+import { Input } from "../ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 
 interface StudentDashboardData {
@@ -30,6 +35,56 @@ interface StudentDashboardData {
     group: Group | null;
     lessons: Lesson[];
 }
+
+const CalendarDialog = ({ user, onOpenChange, isOpen }: { user: StudentProfile, isOpen: boolean, onOpenChange: (open: boolean) => void }) => {
+    const { toast } = useToast();
+    const [dates, setDates] = useState<Date[] | undefined>(
+        user.scheduledSlots?.dates.map(d => parseISO(d)) || []
+    );
+    const [time, setTime] = useState(user.scheduledSlots?.time || "18:00");
+
+    const handleSave = async () => {
+        try {
+            const scheduledSlots = {
+                dates: dates?.map(d => format(d, 'yyyy-MM-dd')) || [],
+                time: time,
+            };
+            await updateUserProfile(user.id, { scheduledSlots });
+            toast({ title: "Calendario actualizado", description: "Tus preferencias de horario han sido guardadas." });
+            onOpenChange(false);
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "No se pudo guardar tu horario." });
+        }
+    };
+    
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Selecciona tu Horario</DialogTitle>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <p className="text-sm text-muted-foreground">Selecciona los días que te gustaría tener clase. Tu docente verá tu disponibilidad.</p>
+                     <Calendar
+                        mode="multiple"
+                        selected={dates}
+                        onSelect={setDates}
+                        className="rounded-md border"
+                    />
+                    <div className="space-y-2">
+                        <label htmlFor="class-time" className="text-sm font-medium">Hora preferida</label>
+                        <Input id="class-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+                    <Button onClick={handleSave}>Guardar Horario</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 
 export function StudentDashboardUI() {
   const router = useRouter();
@@ -39,7 +94,38 @@ export function StudentDashboardUI() {
   const t = translations.studentDashboard;
   const t_teacher_lessons = translations.teacherDashboard.lessons;
   const [isPqrsDialogOpen, setPqrsDialogOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherInteraction | null>(null);
+
+  const fetchDashboardData = async () => {
+      const storedUser = localStorage.getItem("uncoverly-user");
+      if (!storedUser) {
+          router.push("/login");
+          return;
+      }
+      const parsedUser = JSON.parse(storedUser);
+
+      const storedData = localStorage.getItem("uncoverly-dashboard-data");
+      if (storedData) {
+          setData(JSON.parse(storedData));
+          setIsLoading(false);
+          localStorage.removeItem("uncoverly-dashboard-data");
+      } else {
+          setIsLoading(true);
+          try {
+              const studentData = await getStudentData(parsedUser.id);
+              let lessons: Lesson[] = [];
+              if (studentData.group) {
+                  lessons = await getLessonsForGroup(studentData.group.id);
+              }
+              setData({ ...studentData, lessons });
+          } catch (error) {
+              console.error("Error fetching student data:", error);
+          } finally {
+              setIsLoading(false);
+          }
+      }
+  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem("uncoverly-user");
@@ -57,32 +143,6 @@ export function StudentDashboardUI() {
         router.push('/student/onboarding');
         return;
     }
-
-    const fetchDashboardData = async () => {
-      // First, try to load data from localStorage for a faster start
-      const storedData = localStorage.getItem("uncoverly-dashboard-data");
-      if (storedData) {
-        setData(JSON.parse(storedData));
-        setIsLoading(false);
-        // Clean up the stored data to ensure fresh data on next full load
-        localStorage.removeItem("uncoverly-dashboard-data");
-      } else {
-        // If no stored data, fetch from Firestore
-        setIsLoading(true);
-        try {
-            const studentData = await getStudentData(parsedUser.id);
-            let lessons: Lesson[] = [];
-            if (studentData.group) {
-                lessons = await getLessonsForGroup(studentData.group.id);
-            }
-            setData({ ...studentData, lessons });
-        } catch (error) {
-            console.error("Error fetching student data:", error);
-        } finally {
-            setIsLoading(false);
-        }
-      }
-    };
 
     fetchDashboardData();
   }, [router]);
@@ -124,13 +184,14 @@ export function StudentDashboardUI() {
 
   const user = data?.user;
   const lessons = data?.lessons || [];
+  const isPrivateStudent = user?.plan === 'privado';
 
   return (
     <div className="flex h-screen flex-col">
       <DashboardHeader user={user || null} title={t.title} />
       <main className="flex-1 overflow-auto p-4 md:p-8 space-y-6">
         
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className={`grid gap-6 md:grid-cols-2 ${isPrivateStudent ? 'lg:grid-cols-3' : ''}`}>
             {/* Next Class Card */}
             <Card>
                 <CardHeader>
@@ -183,6 +244,22 @@ export function StudentDashboardUI() {
                     )}
                 </CardContent>
             </Card>
+            
+             {/* Calendar Card - Only for private students */}
+            {isPrivateStudent && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline text-2xl flex items-center gap-2">
+                            <CalendarIcon />
+                            {t.calendar.title}
+                        </CardTitle>
+                        <CardDescription>{t.calendar.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex justify-center">
+                        <Button onClick={() => setIsCalendarOpen(true)}>{t.calendar.button}</Button>
+                    </CardContent>
+                </Card>
+            )}
         </div>
 
 
@@ -275,6 +352,9 @@ export function StudentDashboardUI() {
           student={user}
           teacher={selectedTeacher}
         />
+      )}
+      {user && isPrivateStudent && (
+        <CalendarDialog user={user} isOpen={isCalendarOpen} onOpenChange={setIsCalendarOpen} />
       )}
     </div>
   );

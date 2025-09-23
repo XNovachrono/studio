@@ -26,12 +26,6 @@ import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -44,7 +38,7 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
-import { format } from "date-fns";
+import { format, parseISO, addDays, isBefore, startOfToday } from "date-fns";
 import { es } from "date-fns/locale";
 import { TeacherDataSettings } from "./teacher-data-settings";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
@@ -464,59 +458,54 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
              <BankCardImporter ownerId={teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} />
              <FileBankImporter isOpen={isFileBankImporterOpen} onOpenChange={setFileBankImporterOpen} onSelectFile={handleImportFileFromBank} />
              {lessons.length > 0 ? (
-                <Accordion type="single" collapsible className="w-full" defaultValue={`lesson-${lessons[0]?.id}`}>
-                    {lessons.map(lesson => (
-                         <AccordionItem value={`lesson-${lesson.id}`} key={lesson.id}>
-                            <AccordionTrigger className="font-semibold text-lg hover:no-underline">{lesson.name}</AccordionTrigger>
-                            <AccordionContent className="space-y-4 pt-2">
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="font-headline text-lg flex items-center gap-2"><Video /> {t.recording}</CardTitle>
-                                        <CardDescription>{t.recordingPlaceholder}</CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="flex items-center gap-2">
-                                        <Input 
-                                            placeholder="https://..." 
-                                            value={editedContent[lesson.id]?.recording?.link ?? lesson.recording?.link ?? ""}
-                                            onChange={(e) => handleContentChange(lesson.id, 'recording', { link: e.target.value })}
-                                        />
-                                        <Button onClick={() => handleSaveLesson(lesson.id)} disabled={isSaving === lesson.id}>
-                                            {isSaving === lesson.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <Card onClick={() => handleOpenModal(lesson.id, 'content')} className="cursor-pointer hover:bg-accent/50 transition-colors">
-                                        <CardHeader>
-                                            <CardTitle className="font-headline text-base flex items-center gap-2"><Target/> {t.content}</CardTitle>
-                                        </CardHeader>
-                                    </Card>
-                                    <Card onClick={() => handleOpenModal(lesson.id, 'classNote')} className="cursor-pointer hover:bg-accent/50 transition-colors">
-                                        <CardHeader>
-                                            <CardTitle className="font-headline text-base flex items-center gap-2"><FileText/> {t.classNote}</CardTitle>
-                                        </CardHeader>
-                                    </Card>
-                                    <Card onClick={() => handleOpenModal(lesson.id, 'homework')} className="cursor-pointer hover:bg-accent/50 transition-colors">
-                                        <CardHeader>
-                                            <CardTitle className="font-headline text-base flex items-center gap-2"><BookCheck/> {t.homework}</CardTitle>
-                                        </CardHeader>
-                                    </Card>
-                                     <Card onClick={() => handleOpenModal(lesson.id, 'attendance')} className="cursor-pointer hover:bg-accent/50 transition-colors">
-                                        <CardHeader>
-                                            <CardTitle className="font-headline text-base flex items-center gap-2"><Users2/> {t.attendance}</CardTitle>
-                                        </CardHeader>
-                                    </Card>
-                                     <Card onClick={() => handleOpenModal(lesson.id, 'comments')} className="cursor-pointer hover:bg-accent/50 transition-colors">
-                                        <CardHeader>
-                                            <CardTitle className="font-headline text-base flex items-center gap-2"><MessageSquareQuote/> {t.comments}</CardTitle>
-                                        </CardHeader>
-                                    </Card>
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                    ))}
-                </Accordion>
+                 lessons.map(lesson => (
+                     <div key={lesson.id} className="p-4 border rounded-lg">
+                        <h3 className="font-semibold text-lg mb-4">{lesson.name}</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <Card>
+                                <CardHeader>
+                                    <CardTitle className="font-headline text-lg flex items-center gap-2"><Video /> {t.recording}</CardTitle>
+                                    <CardDescription>{t.recordingPlaceholder}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="flex items-center gap-2">
+                                    <Input 
+                                        placeholder="https://..." 
+                                        value={editedContent[lesson.id]?.recording?.link ?? lesson.recording?.link ?? ""}
+                                        onChange={(e) => handleContentChange(lesson.id, 'recording', { link: e.target.value })}
+                                    />
+                                    <Button onClick={() => handleSaveLesson(lesson.id)} disabled={isSaving === lesson.id}>
+                                        {isSaving === lesson.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                            <Card onClick={() => handleOpenModal(lesson.id, 'content')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                <CardHeader>
+                                    <CardTitle className="font-headline text-base flex items-center gap-2"><Target/> {t.content}</CardTitle>
+                                </CardHeader>
+                            </Card>
+                            <Card onClick={() => handleOpenModal(lesson.id, 'classNote')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                <CardHeader>
+                                    <CardTitle className="font-headline text-base flex items-center gap-2"><FileText/> {t.classNote}</CardTitle>
+                                </CardHeader>
+                            </Card>
+                            <Card onClick={() => handleOpenModal(lesson.id, 'homework')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                <CardHeader>
+                                    <CardTitle className="font-headline text-base flex items-center gap-2"><BookCheck/> {t.homework}</CardTitle>
+                                </CardHeader>
+                            </Card>
+                             <Card onClick={() => handleOpenModal(lesson.id, 'attendance')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                <CardHeader>
+                                    <CardTitle className="font-headline text-base flex items-center gap-2"><Users2/> {t.attendance}</CardTitle>
+                                </CardHeader>
+                            </Card>
+                             <Card onClick={() => handleOpenModal(lesson.id, 'comments')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                <CardHeader>
+                                    <CardTitle className="font-headline text-base flex items-center gap-2"><MessageSquareQuote/> {t.comments}</CardTitle>
+                                </CardHeader>
+                            </Card>
+                        </div>
+                    </div>
+                 ))
             ) : (
                 <p className="p-4 text-center text-muted-foreground">{t.noLessons}</p>
             )}
@@ -558,6 +547,25 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [time, setTime] = useState("18:00");
     const [isScheduling, setIsScheduling] = useState(false);
+
+    useEffect(() => {
+        if (group.type === 'privado' && group.studentIds.length > 0) {
+            const student = studentsById.get(group.studentIds[0]);
+            if (student?.scheduledSlots?.dates?.length) {
+                const today = startOfToday();
+                const nextAvailableDate = student.scheduledSlots.dates
+                    .map(d => parseISO(d))
+                    .sort((a, b) => a.getTime() - b.getTime())
+                    .find(d => !isBefore(d, today));
+
+                if (nextAvailableDate) {
+                    setDate(nextAvailableDate);
+                    setTime(student.scheduledSlots.time);
+                }
+            }
+        }
+    }, [group, studentsById]);
+
 
     const handleScheduleClass = async () => {
         if (!link || !date || !time) {
@@ -660,6 +668,8 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, teacher
     if (!group) return null;
 
     const groupMembers = group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[];
+    const isPrivateGroup = group.type === 'privado';
+    const privateStudent = isPrivateGroup && groupMembers.length > 0 ? groupMembers[0] : null;
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -675,6 +685,7 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, teacher
                         <TabsTrigger value="lessons"><BookOpen className="mr-2 h-4 w-4"/>Lecciones</TabsTrigger>
                         <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Miembros</TabsTrigger>
                         <TabsTrigger value="communication"><Send className="mr-2 h-4 w-4"/>Comunicación</TabsTrigger>
+                        {isPrivateGroup && <TabsTrigger value="calendar"><CalendarIcon className="mr-2 h-4 w-4"/>Calendario</TabsTrigger>}
                     </TabsList>
                     <TabsContent value="lessons" className="flex-grow overflow-auto p-4">
                        <GroupLessons key={refreshLessonKey} group={group} studentsById={studentsById} teacherId={teacherId} onLessonCreated={() => setRefreshLessonKey(k => k + 1)} />
@@ -697,6 +708,36 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, teacher
                      <TabsContent value="communication" className="flex-grow overflow-auto p-4">
                         <GroupCommunication group={group} studentsById={studentsById} onClassScheduled={() => setRefreshLessonKey(k => k + 1)} teacherName={teacherName}/>
                     </TabsContent>
+                    {isPrivateGroup && (
+                        <TabsContent value="calendar" className="flex-grow overflow-auto p-4">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Disponibilidad del Estudiante</CardTitle>
+                                    <CardDescription>
+                                        Días seleccionados por {privateStudent?.name || 'el estudiante'} para las clases.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {privateStudent?.scheduledSlots?.dates && privateStudent.scheduledSlots.dates.length > 0 ? (
+                                        <>
+                                            <Calendar
+                                                mode="multiple"
+                                                selected={privateStudent.scheduledSlots.dates.map(d => parseISO(d))}
+                                                defaultMonth={parseISO(privateStudent.scheduledSlots.dates[0])}
+                                                className="rounded-md border"
+                                                disabled
+                                            />
+                                            <p className="mt-4 text-sm">
+                                                <strong>Hora preferida:</strong> {privateStudent.scheduledSlots.time}
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <p className="text-muted-foreground">El estudiante aún no ha seleccionado su horario.</p>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    )}
                 </Tabs>
             </DialogContent>
             <StudentDataDialog student={studentToView} isOpen={!!studentToView} onOpenChange={() => setStudentToView(null)} />
@@ -813,7 +854,7 @@ export function TeacherDashboardUI() {
     };
     
     fetchDashboardData(parsedUser.id);
-  }, [router]);
+  }, [router, toast]);
 
   const studentsById = useMemo(() => new Map(data?.allStudents.map(s => [s.id, s])), [data?.allStudents]);
   

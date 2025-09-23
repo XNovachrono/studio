@@ -255,6 +255,11 @@ export const translations = {
                 joinButton: "Unirse a la Clase",
                 noClass: "Tu profesor aún no ha programado la próxima clase."
             },
+            calendar: {
+                title: "Calendario",
+                description: "Selecciona tus días y horas preferidas para las clases.",
+                button: "Abrir Calendario"
+            },
             lessons: {
                 title: "Mis Lecciones",
                 description: "Aquí encontrarás todas las lecciones de tu grupo.",
@@ -696,6 +701,11 @@ export const translations = {
                 title: "Next Class",
                 joinButton: "Join Class",
                 noClass: "Your teacher has not scheduled the next class yet."
+            },
+            calendar: {
+                title: "Calendar",
+                description: "Select your preferred days and times for classes.",
+                button: "Open Calendar"
             },
             lessons: {
                 title: "My Lessons",

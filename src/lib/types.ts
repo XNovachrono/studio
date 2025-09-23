@@ -30,6 +30,10 @@ export interface StudentProfile extends User {
   level?: string;
   courseStartDate?: string; // YYYY-MM-DD
   courseDuration?: number; // in weeks
+  scheduledSlots?: {
+    dates: string[]; // YYYY-MM-DD
+    time: string; // HH:mm
+  };
 }
 
 export interface Group {
