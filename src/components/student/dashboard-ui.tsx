@@ -247,7 +247,7 @@ export function StudentDashboardUI() {
                     <CardHeader>
                         <CardTitle className="font-headline text-2xl flex items-center gap-2">
                             <Goal />
-                            Mis Objetivos
+                            {t_goals.title}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -424,5 +424,3 @@ export function StudentDashboardUI() {
     </div>
   );
 }
-
-    

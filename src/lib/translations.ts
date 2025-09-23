@@ -327,6 +327,7 @@ export const translations = {
                 button: "Gestionar Bancos"
             },
             goals: {
+                title: "Objetivos",
                 mainObjective: "Objetivo Principal",
                 weeklyObjectives: "Objetivos Semanales",
                 mainPlaceholder: "Define el objetivo general para este grupo...",
@@ -783,6 +784,7 @@ export const translations = {
                 button: "Manage Banks"
             },
             goals: {
+                title: "Goals",
                 mainObjective: "Main Objective",
                 weeklyObjectives: "Weekly Objectives",
                 mainPlaceholder: "Define the overall objective for this group...",

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -255,8 +254,8 @@ const GroupGoals = ({ group, onGroupUpdate }: { group: Group, onGroupUpdate: () 
                 <AccordionItem value="item-1">
                     <Card>
                         <CardHeader>
-                            <AccordionTrigger>
-                                <CardTitle className="font-headline text-lg">{t.mainObjective}</CardTitle>
+                             <AccordionTrigger>
+                                 <CardTitle className="font-headline text-lg">{t.mainObjective}</CardTitle>
                             </AccordionTrigger>
                         </CardHeader>
                         <AccordionContent>
@@ -772,6 +771,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
 const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroupUpdate, teacherId, teacherName }: { group: Group | null; studentsById: Map<string, StudentProfile>; isOpen: boolean; onOpenChange: (open: boolean) => void; onGroupUpdate: () => void; teacherId: string; teacherName: string; }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.groups;
+    const t_goals = translations.teacherDashboard.goals;
     const [studentToView, setStudentToView] = useState<StudentProfile | null>(null);
     const [refreshLessonKey, setRefreshLessonKey] = useState(0);
 
@@ -792,7 +792,7 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
                 </DialogHeader>
                 <Tabs defaultValue="goals" className="flex-grow flex flex-col overflow-hidden">
                     <TabsList className="shrink-0">
-                        <TabsTrigger value="goals"><Goal className="mr-2 h-4 w-4"/>Goals</TabsTrigger>
+                        <TabsTrigger value="goals"><Goal className="mr-2 h-4 w-4"/>{t_goals.title}</TabsTrigger>
                         <TabsTrigger value="lessons"><BookOpen className="mr-2 h-4 w-4"/>Lecciones</TabsTrigger>
                         <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Miembros</TabsTrigger>
                         <TabsTrigger value="communication"><Send className="mr-2 h-4 w-4"/>Comunicación</TabsTrigger>
