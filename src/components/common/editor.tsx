@@ -42,7 +42,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/language-context";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { generateEditorContent } from "@/ai/flows/editor-flow";
 import { Input } from "../ui/input";
 import { AnimatePresence, motion } from "framer-motion";
@@ -330,6 +330,169 @@ const isContentEmpty = (content: EditorContentType | null | undefined): boolean 
     return false;
 };
 
+const EditorInstance = ({ content, onChange, editable, placeholder, aiState, setAiState, prompt, setPrompt, aiGeneratedContent, setAiGeneratedContent }: any) => {
+    const { translations } = useLanguage();
+    const t = translations.editor;
+
+    const editor = useEditor({
+        extensions: [
+            StarterKit.configure({}),
+            Placeholder.configure({
+                placeholder: ({ node }) => {
+                    if (node.type.name === 'heading') {
+                        return t.placeholders.heading;
+                    }
+                    if (editable && node.isFirstChild && node.isEmpty) {
+                        return placeholder || t.placeholders.default;
+                    }
+                    return "";
+                }
+            }),
+            Image,
+            Link.configure({ openOnClick: false }),
+            Underline,
+            TextStyle,
+            Color,
+            Highlight.configure({ multicolor: true }),
+            Table.configure({ resizable: true, handleWidth: 5, cellMinWidth: 25 }),
+            TableRow,
+            TableHeader,
+            TableCell,
+            SlashCommand,
+        ],
+        content: content,
+        editable: editable && aiState !== 'loading' && aiState !== 'streaming',
+        onUpdate: ({ editor }) => {
+            onChange(editor.getJSON());
+        },
+        editorProps: {
+            attributes: {
+                class: "prose dark:prose-invert max-w-none focus:outline-none",
+            },
+            handleKeyDown: (view, event) => {
+                if (aiState === 'idle' && view.state.doc.textContent.length === 0 && event.key === ' ') {
+                    event.preventDefault();
+                    setAiState('prompting');
+                    return true;
+                }
+                return false;
+            }
+        },
+    }, [editable, aiState]); // Dependencies to recreate editor instance
+
+    useEffect(() => {
+        // Automatically focus the editor when it becomes editable.
+        if (editor && editable) {
+           setTimeout(() => editor.commands.focus(), 0);
+        }
+    }, [editor, editable]);
+
+    const handleGenerate = async () => {
+        if (!prompt.trim()) return;
+        setAiState('loading');
+        
+        editor?.commands.clearContent();
+
+        try {
+            const result = await generateEditorContent({ prompt });
+            setAiGeneratedContent(result);
+            editor?.chain().focus().setContent(result, true).run();
+            setAiState('done');
+        } catch(error) {
+            console.error("AI Generation failed:", error);
+            editor?.chain().focus().setContent("Sorry, I couldn't generate the content.").run();
+            setAiState('prompting');
+        }
+    }
+
+    const handlePromptKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'Enter' && prompt.trim().length > 0) {
+            event.preventDefault();
+            handleGenerate();
+        }
+    }
+
+    const handleAccept = () => {
+        editor?.commands.setContent(aiGeneratedContent, true);
+        onChange(editor?.getJSON());
+        setAiState('idle');
+        setPrompt('');
+    };
+
+    const handleRegenerate = () => {
+        handleGenerate();
+    };
+
+    const handleModify = () => {
+        setAiState('prompting');
+        editor?.commands.setContent(prompt);
+    };
+
+    if (!editable && !editor) {
+        // For non-editable view, still need to render content
+        return <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: content }} />;
+    }
+    
+    if (!editor) return null;
+
+
+    return (
+        <motion.div
+            key="editor"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="w-full relative"
+        >
+            <Toolbar editor={editor} />
+            <EditorContent editor={editor} />
+
+            <AnimatePresence>
+                {(aiState === 'prompting' || aiState === 'loading') && (
+                    <motion.div
+                        key="ai-prompt"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="absolute bottom-0 left-0 right-0 bg-secondary p-2 rounded-lg shadow-lg flex items-center gap-2"
+                    >
+                        <Sparkles className="text-primary h-5 w-5"/>
+                        <Input 
+                            placeholder={t.ai.placeholder}
+                            className="bg-transparent border-none focus-visible:ring-0"
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            onKeyDown={handlePromptKeyDown}
+                            disabled={aiState === 'loading'}
+                            autoFocus
+                        />
+                         {aiState === 'loading' ? (
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/>
+                         ) : (
+                            <Button variant="ghost" size="icon" onClick={() => { setAiState('idle'); editor?.commands.clearContent(); } }><X/></Button>
+                         )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {aiState === 'done' && (
+                    <motion.div
+                        key="ai-toolbar"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="w-full mt-2"
+                    >
+                        <AIToolbar state={aiState} onAccept={handleAccept} onRegenerate={handleRegenerate} onModify={handleModify}/>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
+    );
+}
+
+
 export function Editor({
   content,
   onChange,
@@ -345,122 +508,21 @@ export function Editor({
 
   const { translations } = useLanguage();
   const t = translations.editor;
-
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({}),
-      Placeholder.configure({
-        placeholder: ({ node }) => {
-          if (node.type.name === 'heading') {
-            return t.placeholders.heading;
-          }
-          // Only show the placeholder on the first, empty paragraph node when editing.
-          if (editable && isEditing && node.isFirstChild && node.isEmpty) {
-            return placeholder || t.placeholders.default;
-          }
-          return "";
-        }
-      }),
-      Image,
-      Link.configure({ openOnClick: false }),
-      Underline,
-      TextStyle,
-      Color,
-      Highlight.configure({ multicolor: true }),
-      Table.configure({ resizable: true, handleWidth: 5, cellMinWidth: 25 }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      SlashCommand,
-    ],
-    content: content,
-    editable: editable && isEditing && aiState !== 'loading' && aiState !== 'streaming',
-    onUpdate: ({ editor }) => {
-      onChange(editor.getJSON());
-    },
-    editorProps: {
-      attributes: {
-        class: "prose dark:prose-invert max-w-none focus:outline-none",
-      },
-       handleKeyDown: (view, event) => {
-          if (aiState === 'idle' && view.state.doc.textContent.length === 0 && event.key === ' ') {
-            event.preventDefault();
-            setAiState('prompting');
-            return true; // Prevent the space from being inserted
-          }
-          return false; // Let tiptap handle other keys
-       }
-    },
-  });
-  
-  // This effect ensures the editor instance is destroyed and recreated
-  // when the `isEditing` state changes, which is crucial for preventing
-  // stale references that cause the "editor is undefined" error.
-  useEffect(() => {
-    if (editor) {
-        editor.setOptions({
-            editable: editable && isEditing && aiState !== 'loading' && aiState !== 'streaming',
-        });
-    }
-    return () => {
-        editor?.destroy();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditing, editable, aiState]);
-  
   
   const handleStartEditing = () => {
     setIsEditing(true);
-    // Reset AI state when starting fresh
     setAiState('idle');
     setPrompt('');
     setAiGeneratedContent('');
-    setTimeout(() => editor?.commands.focus(), 0);
-  };
-
-  const handlePromptKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter' && prompt.trim().length > 0) {
-        event.preventDefault();
-        handleGenerate();
-    }
-  }
-
-  const handleGenerate = async () => {
-    if (!prompt.trim()) return;
-    setAiState('loading');
-    
-    editor?.commands.clearContent();
-
-    try {
-        const result = await generateEditorContent({ prompt });
-        setAiGeneratedContent(result);
-        editor?.chain().focus().setContent(result, true).run();
-        setAiState('done');
-    } catch(error) {
-        console.error("AI Generation failed:", error);
-        editor?.chain().focus().setContent("Sorry, I couldn't generate the content.").run();
-        setAiState('prompting');
-    }
-  }
-  
-  const handleAccept = () => {
-    editor?.commands.setContent(aiGeneratedContent, true);
-    onChange(editor?.getJSON());
-    setAiState('idle');
-    setPrompt('');
-  };
-  
-  const handleRegenerate = () => {
-    handleGenerate();
-  };
-
-  const handleModify = () => {
-     setAiState('prompting');
-     editor?.commands.setContent(prompt);
   };
 
   if (!editable) {
-     return <EditorContent editor={editor} className="prose dark:prose-invert max-w-none"/>
+     const nonEditableEditor = useEditor({
+        extensions: [ StarterKit, Image, Link, Underline, TextStyle, Color, Highlight, Table.configure({ resizable: true }), TableRow, TableHeader, TableCell ],
+        content: content,
+        editable: false,
+     });
+     return <EditorContent editor={nonEditableEditor} className="prose dark:prose-invert max-w-none"/>
   }
 
   return (
@@ -478,60 +540,21 @@ export function Editor({
                 <p>{initialHint || t.initialHint}</p>
             </motion.div>
         ) : (
-             <motion.div 
-                key="editor"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="w-full"
-            >
-                <Toolbar editor={editor} />
-                <EditorContent editor={editor} />
-            </motion.div>
+             <EditorInstance 
+                key={isEditing ? 'editing' : 'not-editing'}
+                content={content}
+                onChange={onChange}
+                editable={isEditing}
+                placeholder={placeholder}
+                aiState={aiState}
+                setAiState={setAiState}
+                prompt={prompt}
+                setPrompt={setPrompt}
+                aiGeneratedContent={aiGeneratedContent}
+                setAiGeneratedContent={setAiGeneratedContent}
+             />
         )}
       </AnimatePresence>
-
-       <AnimatePresence>
-        {(aiState === 'prompting' || aiState === 'loading') && isEditing && (
-            <motion.div
-                key="ai-prompt"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="absolute bottom-4 left-4 right-4 bg-secondary p-2 rounded-lg shadow-lg flex items-center gap-2"
-            >
-                <Sparkles className="text-primary h-5 w-5"/>
-                <Input 
-                    placeholder={t.ai.placeholder}
-                    className="bg-transparent border-none focus-visible:ring-0"
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    onKeyDown={handlePromptKeyDown}
-                    disabled={aiState === 'loading'}
-                    autoFocus
-                />
-                 {aiState === 'loading' ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/>
-                 ) : (
-                    <Button variant="ghost" size="icon" onClick={() => { setAiState('idle'); editor?.commands.clearContent(); } }><X/></Button>
-                 )}
-            </motion.div>
-        )}
-       </AnimatePresence>
-       
-       <AnimatePresence>
-         {aiState === 'done' && (
-             <motion.div
-                key="ai-toolbar"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="w-full"
-            >
-                 <AIToolbar state={aiState} onAccept={handleAccept} onRegenerate={handleRegenerate} onModify={handleModify}/>
-             </motion.div>
-         )}
-       </AnimatePresence>
     </div>
   );
 }
