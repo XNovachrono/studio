@@ -813,67 +813,68 @@ export function TeacherDashboardUI() {
   }
 
   return (
-    <div className="flex h-screen flex-col">
-      <DashboardHeader user={user} title={t.title} />
-      <main className="flex-1 overflow-auto p-4 md:p-8 space-y-8">
-        <Tabs defaultValue="active">
-            <TabsList>
-                <TabsTrigger value="active"><Users className="mr-2 h-4 w-4"/>{t.groups.title}</TabsTrigger>
-                <TabsTrigger value="history"><History className="mr-2 h-4 w-4"/>{t.groups.history}</TabsTrigger>
-            </TabsList>
-            <TabsContent value="active" className="mt-6 space-y-8">
-                 <GroupSection title={t.groups.private} groups={privateGroups} studentsById={studentsById} onView={setGroupToView}/>
-                 <GroupSection title={t.groups.small} groups={smallGroups} studentsById={studentsById} onView={setGroupToView}/>
-                 <GroupSection title={t.groups.large} groups={largeGroups} studentsById={studentsById} onView={setGroupToView}/>
-                 {data?.groups.length === 0 && (
-                    <p className="text-center text-muted-foreground pt-8">{t.groups.noGroups}</p>
-                 )}
-            </TabsContent>
-            <TabsContent value="history" className="mt-6">
-                {historicalGroups.length > 0 ? (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {historicalGroups.map(group => (
-                            <Card key={group.id}>
-                                <CardHeader>
-                                    <CardTitle className="truncate">{group.name}</CardTitle>
-                                    <CardDescription>
-                                        <Badge variant="outline" className="capitalize">{group.type}</Badge>
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-sm"><strong>Docente actual:</strong> {group.teacherName}</p>
-                                    <p className="text-sm"><strong>Miembros:</strong> {group.studentIds.length}</p>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-center text-muted-foreground pt-8">{t.groups.noHistory}</p>
-                )}
-            </TabsContent>
-        </Tabs>
+    <>
+      <div className="flex h-screen flex-col">
+        <DashboardHeader user={user} title={t.title} />
+        <main className="flex-1 overflow-auto p-4 md:p-8 space-y-8">
+          <Tabs defaultValue="active">
+              <TabsList>
+                  <TabsTrigger value="active"><Users className="mr-2 h-4 w-4"/>{t.groups.title}</TabsTrigger>
+                  <TabsTrigger value="history"><History className="mr-2 h-4 w-4"/>{t.groups.history}</TabsTrigger>
+              </TabsList>
+              <TabsContent value="active" className="mt-6 space-y-8">
+                  <GroupSection title={t.groups.private} groups={privateGroups} studentsById={studentsById} onView={setGroupToView}/>
+                  <GroupSection title={t.groups.small} groups={smallGroups} studentsById={studentsById} onView={setGroupToView}/>
+                  <GroupSection title={t.groups.large} groups={largeGroups} studentsById={studentsById} onView={setGroupToView}/>
+                  {data?.groups.length === 0 && (
+                      <p className="text-center text-muted-foreground pt-8">{t.groups.noGroups}</p>
+                  )}
+              </TabsContent>
+              <TabsContent value="history" className="mt-6">
+                  {historicalGroups.length > 0 ? (
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          {historicalGroups.map(group => (
+                              <Card key={group.id}>
+                                  <CardHeader>
+                                      <CardTitle className="truncate">{group.name}</CardTitle>
+                                      <CardDescription>
+                                          <Badge variant="outline" className="capitalize">{group.type}</Badge>
+                                      </CardDescription>
+                                  </CardHeader>
+                                  <CardContent>
+                                      <p className="text-sm"><strong>Docente actual:</strong> {group.teacherName}</p>
+                                      <p className="text-sm"><strong>Miembros:</strong> {group.studentIds.length}</p>
+                                  </CardContent>
+                              </Card>
+                          ))}
+                      </div>
+                  ) : (
+                      <p className="text-center text-muted-foreground pt-8">{t.groups.noHistory}</p>
+                  )}
+              </TabsContent>
+          </Tabs>
 
-        <Card>
-            <CardHeader>
-                <CardTitle className="font-headline">{t.banks.title}</CardTitle>
-                <CardDescription>{t.banks.description}</CardHeader>
-            </CardHeader>
-            <CardFooter>
-                 <Button onClick={() => setIsBanksModalOpen(true)}>
-                    {t.banks.button} <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-            </CardFooter>
-        </Card>
-      </main>
-      
-      <GroupDetailsDialog group={groupToView} studentsById={studentsById} isOpen={!!groupToView} onOpenChange={() => setGroupToView(null)} teacherId={user.id} teacherName={user.name}/>
-
+          <Card>
+              <CardHeader>
+                  <CardTitle className="font-headline">{t.banks.title}</CardTitle>
+                  <CardDescription>{t.banks.description}</CardDescription>
+              </CardHeader>
+              <CardFooter>
+                  <Button onClick={() => setIsBanksModalOpen(true)}>
+                      {t.banks.button} <ChevronRight className="ml-2 h-4 w-4" />
+                  </Button>
+              </CardFooter>
+          </Card>
+        </main>
+        
+        <GroupDetailsDialog group={groupToView} studentsById={studentsById} isOpen={!!groupToView} onOpenChange={() => setGroupToView(null)} teacherId={user.id} teacherName={user.name}/>
+      </div>
       <Dialog open={isBanksModalOpen} onOpenChange={setIsBanksModalOpen}>
         <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
             <DialogHeader className="p-6 pb-0 relative">
-                 <DialogTitle>{t.banks.title}</DialogTitle>
+                  <DialogTitle>{t.banks.title}</DialogTitle>
                 <DialogDescription>{t.banks.description}</DialogDescription>
-                 <Button variant="ghost" size="icon" className="absolute top-4 right-16" asChild>
+                  <Button variant="ghost" size="icon" className="absolute top-4 right-16" asChild>
                     <Link href="/teacher/banks">
                         <Expand className="h-5 w-5" />
                         <span className="sr-only">Ver en pantalla completa</span>
@@ -881,10 +882,10 @@ export function TeacherDashboardUI() {
                 </Button>
             </DialogHeader>
             <div className="flex-1 overflow-auto">
-                 <BanksDashboardUI isModal={true} />
+                  <BanksDashboardUI isModal={true} />
             </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
