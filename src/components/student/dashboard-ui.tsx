@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Calendar as CalendarIcon, Loader2, MessageCircleQuestion, Video } from "lucide-react";
+import { BookOpen, Calendar as CalendarIcon, Loader2, MessageCircleQuestion, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User, Group, StudentProfile, Lesson, ScheduledClass, TeacherInteraction } from "@/lib/types";
@@ -122,9 +122,11 @@ export function StudentDashboardUI() {
   const [isPqrsDialogOpen, setPqrsDialogOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherInteraction | null>(null);
+  const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+  const [modalContent, setModalContent] = useState<keyof Lesson | null>(null);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
+
+  const fetchDashboardData = async () => {
         const storedUser = localStorage.getItem("uncoverly-user");
         if (!storedUser) {
             router.push("/login");
@@ -154,12 +156,24 @@ export function StudentDashboardUI() {
             setIsLoading(false);
         }
     };
+
+  useEffect(() => {
     fetchDashboardData();
   }, [router]);
 
   const handlePqrsClick = (teacher: TeacherInteraction) => {
     setSelectedTeacher(teacher);
     setPqrsDialogOpen(true);
+  }
+
+  const handleCardClick = (lesson: Lesson, contentKey: keyof Lesson) => {
+    setActiveLesson(lesson);
+    setModalContent(contentKey);
+  };
+  
+  const handleCloseModal = () => {
+    setActiveLesson(null);
+    setModalContent(null);
   }
 
   const nextClass = useMemo(() => {
@@ -283,67 +297,55 @@ export function StudentDashboardUI() {
             </CardHeader>
             <CardContent>
                 {lessons.length > 0 ? (
-                    <Accordion type="single" collapsible className="w-full">
+                    <Accordion type="single" collapsible className="w-full space-y-4">
                         {lessons.map(lesson => (
-                            <AccordionItem value={lesson.id} key={lesson.id}>
-                                <AccordionTrigger className="font-semibold text-lg hover:no-underline">
+                            <AccordionItem value={lesson.id} key={lesson.id} className="border rounded-lg bg-background">
+                                <AccordionTrigger className="px-4 py-3 font-semibold text-lg hover:no-underline">
                                     {lesson.name}
                                 </AccordionTrigger>
-                                <AccordionContent className="space-y-6 pl-2">
-                                    {/* Recording */}
-                                    <Card>
-                                        <CardHeader><CardTitle>{t.lessons.recording}</CardTitle></CardHeader>
-                                        <CardContent>
-                                            {lesson.recording?.link ? (
-                                                <a href={lesson.recording.link} target="_blank" rel="noopener noreferrer">
-                                                    <Button>{t.lessons.viewRecording}</Button>
-                                                </a>
-                                            ) : <p className="text-muted-foreground">{t.lessons.noRecording}</p>}
-                                        </CardContent>
-                                    </Card>
-
-                                    {/* Content */}
-                                    <Card>
-                                        <CardHeader><CardTitle>{t.lessons.content}</CardTitle></CardHeader>
-                                        <CardContent>
-                                            <Editor content={lesson.content} onChange={() => {}} editable={false} />
-                                        </CardContent>
-                                    </Card>
-                                    
-                                    {/* Class Note */}
-                                    <Card>
-                                        <CardHeader><CardTitle>{t.notes.title}</CardTitle></CardHeader>
-                                        <CardContent>
-                                            <Editor content={lesson.classNote} onChange={() => {}} editable={false} />
-                                        </CardContent>
-                                    </Card>
-                                    
-                                    {/* Homework */}
-                                    <Card>
-                                        <CardHeader><CardTitle>{t.lessons.homework}</CardTitle></CardHeader>
-                                        <CardContent>
-                                            <p className="font-semibold mb-2">{t.lessons.instructions}</p>
-                                            <Editor content={lesson.homework} onChange={() => {}} editable={false} />
-                                            <div className="p-4 border rounded-lg bg-secondary/50 mt-6">
-                                                <p className="text-center font-semibold">{t.lessons.yourSubmission}</p>
-                                                <p className="text-center text-muted-foreground text-sm">{t.lessons.noSubmission}</p>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-
-                                    {/* Attendance */}
-                                     <Card>
-                                        <CardHeader><CardTitle>{t_teacher_lessons.attendance}</CardTitle></CardHeader>
-                                        <CardContent>
-                                           <div className="flex items-center gap-2">
-                                            <span>{t.lessons.yourStatus}:</span>
-                                            <Badge variant="secondary" className="capitalize">
-                                                {lesson.attendance[user!.id] || t_teacher_lessons.attendanceStates.na}
-                                            </Badge>
-                                           </div>
-                                        </CardContent>
-                                    </Card>
-
+                                <AccordionContent className="p-4 border-t space-y-4">
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                         <Card>
+                                            <CardHeader>
+                                                <CardTitle className="font-headline text-base flex items-center gap-2"><Video /> {t.lessons.recording}</CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                {lesson.recording?.link ? (
+                                                    <a href={lesson.recording.link} target="_blank" rel="noopener noreferrer">
+                                                        <Button>{t.lessons.viewRecording}</Button>
+                                                    </a>
+                                                ) : <p className="text-muted-foreground text-sm">{t.lessons.noRecording}</p>}
+                                            </CardContent>
+                                        </Card>
+                                        <Card onClick={() => handleCardClick(lesson, 'content')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                            <CardHeader>
+                                                <CardTitle className="font-headline text-base flex items-center gap-2"><Target/> {t.lessons.content}</CardTitle>
+                                            </CardHeader>
+                                        </Card>
+                                        <Card onClick={() => handleCardClick(lesson, 'classNote')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                            <CardHeader>
+                                                <CardTitle className="font-headline text-base flex items-center gap-2"><FileText/> {t.notes.title}</CardTitle>
+                                            </CardHeader>
+                                        </Card>
+                                        <Card onClick={() => handleCardClick(lesson, 'homework')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                            <CardHeader>
+                                                <CardTitle className="font-headline text-base flex items-center gap-2"><BookCheck/> {t.lessons.homework}</CardTitle>
+                                            </CardHeader>
+                                        </Card>
+                                         <Card>
+                                            <CardHeader>
+                                                <CardTitle className="font-headline text-base flex items-center gap-2"><Users2/> {t_teacher_lessons.attendance}</CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <span>{t.lessons.yourStatus}:</span>
+                                                    <Badge variant="secondary" className="capitalize">
+                                                        {lesson.attendance[user!.id] || t_teacher_lessons.attendanceStates.na}
+                                                    </Badge>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                     </div>
                                 </AccordionContent>
                             </AccordionItem>
                         ))}
@@ -354,6 +356,30 @@ export function StudentDashboardUI() {
             </CardContent>
         </Card>
       </main>
+
+      <Dialog open={!!activeLesson} onOpenChange={handleCloseModal}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-2xl">
+              {modalContent === 'content' && t.lessons.content}
+              {modalContent === 'classNote' && t.notes.title}
+              {modalContent === 'homework' && t.lessons.homework}
+            </DialogTitle>
+             <DialogDescription>{activeLesson?.name}</DialogDescription>
+          </DialogHeader>
+          <div className="py-4 max-h-[60vh] overflow-y-auto">
+            {activeLesson && modalContent && (
+              <Editor content={activeLesson[modalContent as keyof Lesson]} onChange={() => {}} editable={false} />
+            )}
+             {activeLesson && modalContent === 'homework' && (
+                  <div className="p-4 border rounded-lg bg-secondary/50 mt-6">
+                    <p className="text-center font-semibold">{t.lessons.yourSubmission}</p>
+                    <p className="text-center text-muted-foreground text-sm">{t.lessons.noSubmission}</p>
+                  </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {user && selectedTeacher && (
         <PqrsDialog 
@@ -369,3 +395,5 @@ export function StudentDashboardUI() {
     </div>
   );
 }
+
+    

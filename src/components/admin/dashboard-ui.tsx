@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, PlusCircle, Users, Edit, Calendar as CalendarIcon, MessageCircle, Trash2, Eye, BookOpen, Library, Link as LinkIcon, Bell, Settings } from "lucide-react";
+import { Loader2, PlusCircle, Users, Edit, Calendar as CalendarIcon, MessageCircle, Trash2, Eye, BookOpen, Library, Link as LinkIcon, Bell, Settings, Target, Video, FileText, BookCheck, Users2, MessageSquareQuote } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -109,8 +109,10 @@ const LessonViewer = ({ group, studentsById }: { group: Group, studentsById: Map
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { translations } = useLanguage();
-    const t_lessons = translations.studentDashboard.lessons;
-    const t_teacher_lessons = translations.teacherDashboard.lessons;
+    const t_lessons_student = translations.studentDashboard;
+    const t_lessons_teacher = translations.teacherDashboard.lessons;
+    const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+    const [modalContent, setModalContent] = useState<keyof Lesson | null>(null);
 
     const groupMembers = useMemo(() => group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[], [group.studentIds, studentsById]);
 
@@ -124,54 +126,99 @@ const LessonViewer = ({ group, studentsById }: { group: Group, studentsById: Map
         fetchLessons();
     }, [group.id]);
 
+    const handleCardClick = (lesson: Lesson, contentKey: keyof Lesson) => {
+        setActiveLesson(lesson);
+        setModalContent(contentKey);
+    };
+
+    const handleCloseModal = () => {
+        setActiveLesson(null);
+        setModalContent(null);
+    };
+
     if (isLoading) return <div className="flex justify-center p-4"><Loader2 className="h-6 w-6 animate-spin" /></div>;
-    if (lessons.length === 0) return <p className="text-center text-muted-foreground">{t_lessons.noLessons}</p>;
+    if (lessons.length === 0) return <p className="text-center text-muted-foreground">{t_lessons_student.lessons.noLessons}</p>;
 
     return (
-        <Accordion type="single" collapsible className="w-full">
+        <>
+        <Accordion type="single" collapsible className="w-full space-y-4">
             {lessons.map(lesson => (
-                <AccordionItem value={lesson.id} key={lesson.id}>
-                    <AccordionTrigger className="font-semibold text-lg hover:no-underline">{lesson.name}</AccordionTrigger>
-                    <AccordionContent className="space-y-6 pl-2">
-                        <Card>
-                            <CardHeader><CardTitle>{t_lessons.recording}</CardTitle></CardHeader>
-                            <CardContent>{lesson.recording?.link ? <a href={lesson.recording.link} target="_blank" rel="noopener noreferrer"><Button>{t_lessons.viewRecording}</Button></a> : <p className="text-muted-foreground">{t_lessons.noRecording}</p>}</CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader><CardTitle>{t_lessons.content}</CardTitle></CardHeader>
-                            <CardContent><Editor content={lesson.content} onChange={() => {}} editable={false} /></CardContent>
-                        </Card>
-                         <Card>
-                            <CardHeader><CardTitle>{translations.studentDashboard.notes.title}</CardTitle></CardHeader>
-                            <CardContent><Editor content={lesson.classNote} onChange={() => {}} editable={false} /></CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader><CardTitle>{t_lessons.homework}</CardTitle></CardHeader>
-                            <CardContent><Editor content={lesson.homework} onChange={() => {}} editable={false} /></CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader><CardTitle>{t_teacher_lessons.attendance}</CardTitle></CardHeader>
-                            <CardContent>
-                               <ul className="space-y-2">
-                                  {groupMembers.map(student => (
-                                    <li key={student.id} className="flex justify-between items-center text-sm">
-                                      <span>{student.name}</span>
-                                      <Badge variant="outline" className="capitalize">
-                                        {lesson.attendance[student.id] || t_teacher_lessons.attendanceStates.na}
-                                      </Badge>
-                                    </li>
-                                  ))}
-                               </ul>
-                            </CardContent>
-                        </Card>
-                         <Card>
-                            <CardHeader><CardTitle>{t_teacher_lessons.comments}</CardTitle></CardHeader>
-                            <CardContent><Editor content={lesson.comments} onChange={() => {}} editable={false} /></CardContent>
-                        </Card>
+                <AccordionItem value={lesson.id} key={lesson.id} className="border rounded-lg bg-background">
+                    <AccordionTrigger className="px-4 py-3 font-semibold text-lg hover:no-underline">{lesson.name}</AccordionTrigger>
+                    <AccordionContent className="p-4 border-t">
+                       <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                               <Card>
+                                    <CardHeader>
+                                        <CardTitle className="font-headline text-base flex items-center gap-2"><Video /> {t_lessons_teacher.recording}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {lesson.recording?.link ? <a href={lesson.recording.link} target="_blank" rel="noopener noreferrer"><Button>{t_lessons_student.lessons.viewRecording}</Button></a> : <p className="text-muted-foreground text-sm">{t_lessons_student.lessons.noRecording}</p>}
+                                    </CardContent>
+                                </Card>
+                                <Card onClick={() => handleCardClick(lesson, 'content')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                    <CardHeader>
+                                        <CardTitle className="font-headline text-base flex items-center gap-2"><Target/> {t_lessons_teacher.content}</CardTitle>
+                                    </CardHeader>
+                                </Card>
+                                <Card onClick={() => handleCardClick(lesson, 'classNote')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                    <CardHeader>
+                                        <CardTitle className="font-headline text-base flex items-center gap-2"><FileText/> {t_lessons_teacher.classNote}</CardTitle>
+                                    </CardHeader>
+                                </Card>
+                                <Card onClick={() => handleCardClick(lesson, 'homework')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                    <CardHeader>
+                                        <CardTitle className="font-headline text-base flex items-center gap-2"><BookCheck/> {t_lessons_teacher.homework}</CardTitle>
+                                    </CardHeader>
+                                </Card>
+                                 <Card onClick={() => handleCardClick(lesson, 'attendance')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                    <CardHeader>
+                                        <CardTitle className="font-headline text-base flex items-center gap-2"><Users2/> {t_lessons_teacher.attendance}</CardTitle>
+                                    </CardHeader>
+                                </Card>
+                                 <Card onClick={() => handleCardClick(lesson, 'comments')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                    <CardHeader>
+                                        <CardTitle className="font-headline text-base flex items-center gap-2"><MessageSquareQuote/> {t_lessons_teacher.comments}</CardTitle>
+                                    </CardHeader>
+                                </Card>
+                            </div>
+                        </div>
                     </AccordionContent>
                 </AccordionItem>
             ))}
         </Accordion>
+         <Dialog open={!!activeLesson} onOpenChange={handleCloseModal}>
+            <DialogContent className="max-w-3xl">
+            <DialogHeader>
+                <DialogTitle className="font-headline text-2xl">
+                    {modalContent === 'content' && t_lessons_teacher.content}
+                    {modalContent === 'classNote' && t_lessons_teacher.classNote}
+                    {modalContent === 'homework' && t_lessons_teacher.homework}
+                    {modalContent === 'attendance' && t_lessons_teacher.attendance}
+                    {modalContent === 'comments' && t_lessons_teacher.comments}
+                </DialogTitle>
+                <DialogDescription>{activeLesson?.name}</DialogDescription>
+            </DialogHeader>
+            <div className="py-4 max-h-[60vh] overflow-y-auto">
+                {activeLesson && modalContent && modalContent !== 'attendance' && (
+                    <Editor content={activeLesson[modalContent as 'content' | 'classNote' | 'homework' | 'comments']} onChange={() => {}} editable={false} />
+                )}
+                {activeLesson && modalContent === 'attendance' && (
+                     <ul className="space-y-2">
+                        {groupMembers.map(student => (
+                            <li key={student.id} className="flex justify-between items-center text-sm p-2 rounded-md bg-secondary/50">
+                            <span>{student.name}</span>
+                            <Badge variant="outline" className="capitalize">
+                                {activeLesson.attendance[student.id] || t_lessons_teacher.attendanceStates.na}
+                            </Badge>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+            </DialogContent>
+      </Dialog>
+      </>
     );
 };
 
@@ -992,3 +1039,5 @@ export function AdminDashboardUI() {
     </div>
   );
 }
+
+    
