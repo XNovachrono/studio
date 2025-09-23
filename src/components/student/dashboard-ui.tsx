@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Calendar as CalendarIcon, Loader2, MessageCircleQuestion, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote } from "lucide-react";
+import { BookOpen, Calendar as CalendarIcon, Loader2, MessageCircleQuestion, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User, Group, StudentProfile, Lesson, ScheduledClass, TeacherInteraction } from "@/lib/types";
@@ -119,6 +119,7 @@ export function StudentDashboardUI() {
   const { translations } = useLanguage();
   const t = translations.studentDashboard;
   const t_teacher_lessons = translations.teacherDashboard.lessons;
+  const t_goals = translations.teacherDashboard.goals;
   const [isPqrsDialogOpen, setPqrsDialogOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherInteraction | null>(null);
@@ -215,7 +216,7 @@ export function StudentDashboardUI() {
       <DashboardHeader user={user || null} title={t.title} />
       <main className="flex-1 overflow-auto p-4 md:p-8 space-y-6">
         
-        <div className={`grid gap-6 md:grid-cols-2 ${isPrivateStudent ? 'lg:grid-cols-3' : ''}`}>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
             {/* Next Class Card */}
             <Card>
                 <CardHeader>
@@ -239,6 +240,34 @@ export function StudentDashboardUI() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Goals Card */}
+            {data.group && (
+                <Card className="xl:col-span-2">
+                    <CardHeader>
+                        <CardTitle className="font-headline text-2xl flex items-center gap-2">
+                            <Goal />
+                            Mis Objetivos
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                         <Accordion type="multiple" className="w-full space-y-4">
+                            <AccordionItem value="main-objective">
+                                <AccordionTrigger className="font-headline text-lg p-4 bg-secondary/50 rounded-md hover:no-underline">{t_goals.mainObjective}</AccordionTrigger>
+                                <AccordionContent className="p-4 border rounded-b-md">
+                                    <Editor content={data.group.mainObjective} onChange={() => {}} editable={false} />
+                                </AccordionContent>
+                            </AccordionItem>
+                             <AccordionItem value="weekly-objectives">
+                                <AccordionTrigger className="font-headline text-lg p-4 bg-secondary/50 rounded-md hover:no-underline">{t_goals.weeklyObjectives}</AccordionTrigger>
+                                <AccordionContent className="p-4 border rounded-b-md">
+                                    <Editor content={data.group.weeklyObjectives} onChange={() => {}} editable={false} />
+                                </AccordionContent>
+                            </AccordionItem>
+                        </Accordion>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* PQRS Card */}
             <Card>
