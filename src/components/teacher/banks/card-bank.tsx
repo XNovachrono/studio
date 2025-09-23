@@ -19,6 +19,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ import { createBankCard, getBankCards, updateBankCard, deleteBankCard } from "@/
 import { Editor } from "@/components/common/editor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 
 const defaultContent: EditorContent = {
   type: "doc",
@@ -41,6 +43,26 @@ const ENGLISH_LEVELS = ["A1", "A1.2", "A2", "A2.2", "B1", "B1.2", "C1", "C1.2", 
 interface CardBankProps {
   user: User;
   bankType: 'objective' | 'class' | 'homework';
+}
+
+const ViewCardDialog = ({ card, isOpen, onOpenChange }: { card: BankCard | null, isOpen: boolean, onOpenChange: (open: boolean) => void }) => {
+    if (!card) return null;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                    <DialogTitle>{card.name}</DialogTitle>
+                    <DialogDescription>
+                        Autor: {card.ownerName} | Nivel: <Badge variant="outline">{card.level || "Sin Nivel"}</Badge>
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 max-h-[60vh] overflow-auto">
+                    <Editor content={card.content} onChange={() => {}} editable={false} />
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
 }
 
 export function CardBank({ user, bankType }: CardBankProps) {
@@ -55,6 +77,7 @@ export function CardBank({ user, bankType }: CardBankProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<Partial<BankCard> | null>(null);
+  const [viewingCard, setViewingCard] = useState<BankCard | null>(null);
 
   const fetchCards = async () => {
     setIsLoading(true);
@@ -191,26 +214,28 @@ export function CardBank({ user, bankType }: CardBankProps) {
                             {levelCards.map(card => {
                                 const canEdit = user.role === 'admin' || user.id === card.ownerId;
                                 return (
-                                    <Card key={card.id}>
-                                    <CardHeader>
-                                        <CardTitle className="truncate">{card.name}</CardTitle>
-                                        <CardDescription>{t.author}: {card.ownerName || 'N/A'}</CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="text-sm text-muted-foreground">
-                                        <p>{t.createdAt}: {new Date(card.createdAt).toLocaleDateString()}</p>
-                                    </CardContent>
-                                    <CardFooter className="flex justify-end gap-2">
-                                        {canEdit && (
-                                            <>
-                                                <Button variant="outline" size="icon" onClick={() => handleOpenModal(card)}>
-                                                <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="destructive" size="icon" onClick={() => handleDeleteCard(card)}>
-                                                <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </>
-                                        )}
-                                    </CardFooter>
+                                    <Card key={card.id} className="flex flex-col">
+                                        <div className="flex-grow cursor-pointer" onClick={() => setViewingCard(card)}>
+                                            <CardHeader>
+                                                <CardTitle className="truncate">{card.name}</CardTitle>
+                                                <CardDescription>{t.author}: {card.ownerName || 'N/A'}</CardDescription>
+                                            </CardHeader>
+                                            <CardContent className="text-sm text-muted-foreground">
+                                                <p>{t.createdAt}: {new Date(card.createdAt).toLocaleDateString()}</p>
+                                            </CardContent>
+                                        </div>
+                                        <CardFooter className="flex justify-end gap-2">
+                                            {canEdit && (
+                                                <>
+                                                    <Button variant="outline" size="icon" onClick={() => handleOpenModal(card)}>
+                                                    <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button variant="destructive" size="icon" onClick={() => handleDeleteCard(card)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </>
+                                            )}
+                                        </CardFooter>
                                     </Card>
                                 )
                             })}
@@ -239,6 +264,9 @@ export function CardBank({ user, bankType }: CardBankProps) {
       <CardContent>
         {renderContent()}
       </CardContent>
+
+      {/* View Modal */}
+      <ViewCardDialog card={viewingCard} isOpen={!!viewingCard} onOpenChange={() => setViewingCard(null)} />
 
       {/* Edit/Create Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
