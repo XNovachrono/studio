@@ -159,20 +159,25 @@ export const suggestion = {
 
     return {
       onStart: (props: SuggestionProps<Command>) => {
-        component = React.createElement(CommandList, {
+        const CommandListComponent = React.createElement(CommandList, {
           ...props,
           ref: React.createRef(),
           command: (item: Command) => props.command(item),
         });
+        
+        component = {
+            props: CommandListComponent.props,
+            ref: CommandListComponent.ref,
+        }
 
         if (!props.clientRect) {
             return;
         }
 
-        popup = tippy(document.body, {
+        popup = tippy('body', {
           getReferenceClientRect: props.clientRect as any,
           appendTo: () => document.body,
-          content: component,
+          content: CommandListComponent,
           showOnCreate: true,
           interactive: true,
           trigger: 'manual',
@@ -180,7 +185,7 @@ export const suggestion = {
         });
       },
       onUpdate(props: SuggestionProps<Command>) {
-        if (component?.props) {
+        if(component?.props) {
             component.props = { ...component.props, ...props };
         }
         
