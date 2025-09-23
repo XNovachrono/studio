@@ -106,7 +106,6 @@ const BankCardImporter = ({ onSelectCard, ownerId, isOpen, onOpenChange }: { onS
         if (isOpen) {
             const fetchCards = async () => {
                 setIsLoading(true);
-                // The type 'objective' is hardcoded as per the original logic, but this could be a prop if needed
                 const fetchedCards = await getBankCards('objective');
                 setCards(fetchedCards);
                 setIsLoading(false);
@@ -225,7 +224,6 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     const [activeFieldForImport, setActiveFieldForImport] = useState<keyof Lesson | null>(null);
 
 
-    // State for edited lesson content
     const [editedContent, setEditedContent] = useState<Record<string, Partial<Lesson>>>({});
     
     const groupMembers = useMemo(() => group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[], [group.studentIds, studentsById]);
@@ -247,7 +245,6 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
 
     useEffect(() => {
         fetchLessons();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [group.id, onLessonCreated]);
 
     const handleSaveLesson = async (lessonId: string) => {
@@ -369,7 +366,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                         return (
                          <AccordionItem value={lesson.id} key={lesson.id} data-accordion-item-id={lesson.id}>
                             <AccordionTrigger className="font-semibold text-lg hover:no-underline">{lesson.name}</AccordionTrigger>
-                            <AccordionContent className="space-y-2 pl-2">
+                            <AccordionContent className="space-y-4 pt-2">
                                 <div className="flex justify-end sticky top-16 bg-background/80 backdrop-blur-sm z-10 py-2">
                                    <Button onClick={() => handleSaveLesson(lesson.id)} disabled={isLessonSaving || !editedContent[lesson.id]}>
                                       {isLessonSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -377,124 +374,148 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                    </Button>
                                 </div>
 
-                                <Accordion type="multiple" className="w-full">
-                                    <AccordionItem value="recording">
-                                        <AccordionTrigger className="text-base font-medium">{t.recording}</AccordionTrigger>
-                                        <AccordionContent>
-                                            <p className="text-muted-foreground p-4">{t.recordingPlaceholder}</p>
-                                        </AccordionContent>
-                                    </AccordionItem>
+                                <Accordion type="multiple" className="w-full space-y-4">
+                                    <Card>
+                                        <AccordionItem value="recording" className="border-b-0">
+                                            <AccordionTrigger className="px-6 py-4">
+                                                <CardTitle className="text-base font-medium">{t.recording}</CardTitle>
+                                            </AccordionTrigger>
+                                            <AccordionContent className="px-6 pb-4">
+                                                <p className="text-muted-foreground">{t.recordingPlaceholder}</p>
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    </Card>
 
-                                    <AccordionItem value="content">
-                                        <AccordionTrigger className="text-base font-medium flex justify-between items-center w-full">
-                                            <span>{t.content}</span>
-                                            <DropdownMenu onOpenChange={(e) => e.stopPropagation()}>
-                                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4"/></Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                                                    <DropdownMenuItem onClick={() => handleOpenBankImporter(lesson.id, 'content')}>
-                                                        <Import className="mr-2 h-4 w-4" />
-                                                        {t.importFromBank}
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </AccordionTrigger>
-                                        <AccordionContent>
-                                            <Editor
-                                                content={editedContent[lesson.id]?.content || lesson.content}
-                                                onChange={(newContent) => handleContentChange(lesson.id, 'content', newContent)}
-                                                editable
-                                                placeholder={t.placeholders.content}
-                                            />
-                                        </AccordionContent>
-                                    </AccordionItem>
-                                    
-                                    <AccordionItem value="classNote">
-                                        <AccordionTrigger className="text-base font-medium flex justify-between items-center w-full">
-                                            <span>{t.classNote}</span>
-                                            <Button variant="outline" size="sm" onClick={(e) => {e.stopPropagation(); handleOpenFileBankImporter(lesson.id)}}>
-                                                <FileUp className="mr-2 h-4 w-4"/>
-                                                Importar Archivo
-                                            </Button>
-                                        </AccordionTrigger>
-                                        <AccordionContent>
-                                            <Editor
-                                                content={editedContent[lesson.id]?.classNote || lesson.classNote}
-                                                onChange={(newContent) => handleContentChange(lesson.id, 'classNote', newContent)}
-                                                editable
-                                                placeholder={t.placeholders.classNote}
-                                            />
-                                        </AccordionContent>
-                                    </AccordionItem>
-
-                                    <AccordionItem value="homework">
-                                        <AccordionTrigger className="text-base font-medium flex justify-between items-center w-full">
-                                           <span>{t.homework}</span>
-                                           <DropdownMenu onOpenChange={(e) => e.stopPropagation()}>
-                                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4"/></Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                                                    <DropdownMenuItem onClick={() => handleOpenBankImporter(lesson.id, 'homework')}>
-                                                        <Import className="mr-2 h-4 w-4" />
-                                                        {t.importFromBank}
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </AccordionTrigger>
-                                        <AccordionContent>
-                                            <Editor
-                                                content={editedContent[lesson.id]?.homework || lesson.homework}
-                                                onChange={(newContent) => handleContentChange(lesson.id, 'homework', newContent)}
-                                                editable
-                                                placeholder={t.placeholders.homework}
-                                            />
-                                        </AccordionContent>
-                                    </AccordionItem>
-
-                                    <AccordionItem value="attendance">
-                                        <AccordionTrigger className="text-base font-medium">{t.attendance}</AccordionTrigger>
-                                        <AccordionContent>
-                                            <div className="space-y-4 p-4">
-                                                {groupMembers.map(student => (
-                                                <div key={student.id} className="flex justify-between items-center">
-                                                    <span>{student.name}</span>
-                                                    <RadioGroup 
-                                                        defaultValue={currentAttendance?.[student.id]} 
-                                                        className="flex gap-4"
-                                                        onValueChange={(value) => handleAttendanceChange(lesson.id, student.id, value as AttendanceStatus)}
-                                                    >
-                                                        <div className="flex items-center space-x-2">
-                                                            <RadioGroupItem value="presente" id={`${lesson.id}-${student.id}-presente`} />
-                                                            <Label htmlFor={`${lesson.id}-${student.id}-presente`}>{t.attendanceStates.presente}</Label>
-                                                        </div>
-                                                        <div className="flex items-center space-x-2">
-                                                            <RadioGroupItem value="ausente" id={`${lesson.id}-${student.id}-ausente`} />
-                                                            <Label htmlFor={`${lesson.id}-${student.id}-ausente`}>{t.attendanceStates.ausente}</Label>
-                                                        </div>
-                                                        <div className="flex items-center space-x-2">
-                                                            <RadioGroupItem value="tarde" id={`${lesson.id}-${student.id}-tarde`} />
-                                                            <Label htmlFor={`${lesson.id}-${student.id}-tarde`}>{t.attendanceStates.tarde}</Label>
-                                                        </div>
-                                                    </RadioGroup>
+                                    <Card>
+                                        <AccordionItem value="content" className="border-b-0">
+                                             <AccordionTrigger className="px-6 py-4 w-full">
+                                                <div className="flex justify-between items-center w-full">
+                                                    <CardTitle className="text-base font-medium">{t.content}</CardTitle>
+                                                    <DropdownMenu onOpenChange={(e) => e.stopPropagation()}>
+                                                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4"/></Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+                                                            <DropdownMenuItem onClick={() => handleOpenBankImporter(lesson.id, 'content')}>
+                                                                <Import className="mr-2 h-4 w-4" />
+                                                                {t.importFromBank}
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </div>
-                                                ))}
-                                            </div>
-                                        </AccordionContent>
-                                    </AccordionItem>
+                                            </AccordionTrigger>
+                                            <AccordionContent className="px-6 pb-4">
+                                                <Editor
+                                                    content={editedContent[lesson.id]?.content || lesson.content}
+                                                    onChange={(newContent) => handleContentChange(lesson.id, 'content', newContent)}
+                                                    editable
+                                                    placeholder={t.placeholders.content}
+                                                />
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    </Card>
+                                    
+                                     <Card>
+                                        <AccordionItem value="classNote" className="border-b-0">
+                                            <AccordionTrigger className="px-6 py-4 w-full">
+                                                <div className="flex justify-between items-center w-full">
+                                                    <CardTitle className="text-base font-medium">{t.classNote}</CardTitle>
+                                                     <Button variant="outline" size="sm" onClick={(e) => {e.stopPropagation(); handleOpenFileBankImporter(lesson.id)}}>
+                                                        <FileUp className="mr-2 h-4 w-4"/>
+                                                        Importar Archivo
+                                                    </Button>
+                                                </div>
+                                            </AccordionTrigger>
+                                            <AccordionContent className="px-6 pb-4">
+                                                <Editor
+                                                    content={editedContent[lesson.id]?.classNote || lesson.classNote}
+                                                    onChange={(newContent) => handleContentChange(lesson.id, 'classNote', newContent)}
+                                                    editable
+                                                    placeholder={t.placeholders.classNote}
+                                                />
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    </Card>
 
-                                    <AccordionItem value="comments">
-                                        <AccordionTrigger className="text-base font-medium">{t.comments}</AccordionTrigger>
-                                        <AccordionContent>
-                                            <Editor
-                                                content={editedContent[lesson.id]?.comments || lesson.comments}
-                                                onChange={(newContent) => handleContentChange(lesson.id, 'comments', newContent)}
-                                                editable
-                                                placeholder={t.placeholders.comments}
-                                            />
-                                        </AccordionContent>
-                                    </AccordionItem>
+                                     <Card>
+                                        <AccordionItem value="homework" className="border-b-0">
+                                            <AccordionTrigger className="px-6 py-4 w-full">
+                                                <div className="flex justify-between items-center w-full">
+                                                    <CardTitle className="text-base font-medium">{t.homework}</CardTitle>
+                                                    <DropdownMenu onOpenChange={(e) => e.stopPropagation()}>
+                                                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4"/></Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+                                                            <DropdownMenuItem onClick={() => handleOpenBankImporter(lesson.id, 'homework')}>
+                                                                <Import className="mr-2 h-4 w-4" />
+                                                                {t.importFromBank}
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
+                                            </AccordionTrigger>
+                                            <AccordionContent className="px-6 pb-4">
+                                                <Editor
+                                                    content={editedContent[lesson.id]?.homework || lesson.homework}
+                                                    onChange={(newContent) => handleContentChange(lesson.id, 'homework', newContent)}
+                                                    editable
+                                                    placeholder={t.placeholders.homework}
+                                                />
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    </Card>
+                                    
+                                    <Card>
+                                        <AccordionItem value="attendance" className="border-b-0">
+                                            <AccordionTrigger className="px-6 py-4">
+                                                <CardTitle className="text-base font-medium">{t.attendance}</CardTitle>
+                                            </AccordionTrigger>
+                                            <AccordionContent className="px-6 pb-4">
+                                                <div className="space-y-4">
+                                                    {groupMembers.map(student => (
+                                                    <div key={student.id} className="flex justify-between items-center">
+                                                        <span>{student.name}</span>
+                                                        <RadioGroup 
+                                                            defaultValue={currentAttendance?.[student.id]} 
+                                                            className="flex gap-4"
+                                                            onValueChange={(value) => handleAttendanceChange(lesson.id, student.id, value as AttendanceStatus)}
+                                                        >
+                                                            <div className="flex items-center space-x-2">
+                                                                <RadioGroupItem value="presente" id={`${lesson.id}-${student.id}-presente`} />
+                                                                <Label htmlFor={`${lesson.id}-${student.id}-presente`}>{t.attendanceStates.presente}</Label>
+                                                            </div>
+                                                            <div className="flex items-center space-x-2">
+                                                                <RadioGroupItem value="ausente" id={`${lesson.id}-${student.id}-ausente`} />
+                                                                <Label htmlFor={`${lesson.id}-${student.id}-ausente`}>{t.attendanceStates.ausente}</Label>
+                                                            </div>
+                                                            <div className="flex items-center space-x-2">
+                                                                <RadioGroupItem value="tarde" id={`${lesson.id}-${student.id}-tarde`} />
+                                                                <Label htmlFor={`${lesson.id}-${student.id}-tarde`}>{t.attendanceStates.tarde}</Label>
+                                                            </div>
+                                                        </RadioGroup>
+                                                    </div>
+                                                    ))}
+                                                </div>
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    </Card>
+                                    
+                                    <Card>
+                                        <AccordionItem value="comments" className="border-b-0">
+                                            <AccordionTrigger className="px-6 py-4">
+                                                <CardTitle className="text-base font-medium">{t.comments}</CardTitle>
+                                            </AccordionTrigger>
+                                            <AccordionContent className="px-6 pb-4">
+                                                <Editor
+                                                    content={editedContent[lesson.id]?.comments || lesson.comments}
+                                                    onChange={(newContent) => handleContentChange(lesson.id, 'comments', newContent)}
+                                                    editable
+                                                    placeholder={t.placeholders.comments}
+                                                />
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    </Card>
                                 </Accordion>
 
                             </AccordionContent>
@@ -540,7 +561,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
             setLink("");
             setDate(new Date());
             setTime("18:00");
-            onClassScheduled(); // This will trigger a refresh in the lessons tab
+            onClassScheduled(); 
         } catch (error) {
             console.error("Error scheduling class:", error);
             toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.genericError });
@@ -773,7 +794,6 @@ export function TeacherDashboardUI() {
     };
     
     fetchDashboardData(parsedUser.id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const studentsById = useMemo(() => new Map(data?.allStudents.map(s => [s.id, s])), [data?.allStudents]);
@@ -836,7 +856,7 @@ export function TeacherDashboardUI() {
         <Card>
             <CardHeader>
                 <CardTitle className="font-headline">{t.banks.title}</CardTitle>
-                <CardDescription>{t.banks.description}</CardDescription>
+                <CardDescription>{t.banks.description}</CardHeader>
             </CardHeader>
             <CardFooter>
                  <Button onClick={() => setIsBanksModalOpen(true)}>
