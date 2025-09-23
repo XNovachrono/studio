@@ -68,7 +68,7 @@ const CommandList = forwardRef<CommandListRef, { items: Command[]; command: (ite
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   // Add this guard clause
-  if (!props.editor.isEditable) return null;
+  if (!props.editor || !props.editor.isEditable) return null;
 
   const selectItem = (index: number) => {
     const item = props.items[index];
@@ -163,10 +163,14 @@ export const suggestion = {
           command: (item: Command) => props.command(item),
         });
 
+        if (!props.clientRect) {
+            return;
+        }
+
         popup = tippy(document.body, {
           getReferenceClientRect: props.clientRect,
           appendTo: () => document.body,
-          content: component.props.editor.options.element,
+          content: component,
           showOnCreate: true,
           interactive: true,
           trigger: 'manual',
@@ -176,6 +180,10 @@ export const suggestion = {
       onUpdate(props: SuggestionProps<Command>) {
         if (component?.props) {
             component.props = { ...component.props, ...props };
+        }
+        
+        if (!props.clientRect) {
+            return;
         }
         
         popup?.[0].setProps({
