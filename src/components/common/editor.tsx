@@ -410,7 +410,14 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
                 return false;
             }
         },
-    }, [editable, aiState]); // Dependencies to recreate editor instance
+    }, [editable]); // Only depend on editable
+
+    useEffect(() => {
+        if (editor) {
+            editor.setEditable(editable && aiState !== 'loading' && aiState !== 'streaming' && aiState !== 'done');
+        }
+    }, [editor, editable, aiState]);
+
 
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
@@ -453,11 +460,6 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
         setAiState('idle');
         setPrompt('');
     };
-
-    if (!editable && !editor) {
-        // For non-editable view, still need to render content
-        return <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: content }} />;
-    }
     
     if (!editor) return null;
 
@@ -469,9 +471,13 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
             exit={{ opacity: 0 }}
             className="w-full relative"
         >
-            {aiState !== 'done' && <Toolbar editor={editor} />}
+            <Toolbar editor={editor} />
             
-            {aiState === 'done' ? (
+            <div className={cn(aiState === 'done' && 'hidden')}>
+                 <EditorContent editor={editor} />
+            </div>
+
+            {aiState === 'done' && (
                  <div className="w-full">
                     <div 
                         className="prose dark:prose-invert max-w-none p-2 border rounded-md min-h-[100px]"
@@ -487,8 +493,6 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
                         <AIToolbar state={aiState} onAccept={handleAccept} onRegenerate={handleRegenerate} onModify={handleModify}/>
                     </motion.div>
                 </div>
-            ) : (
-                <EditorContent editor={editor} />
             )}
 
 
