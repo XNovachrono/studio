@@ -43,6 +43,8 @@ export interface Group {
   studentIds: string[];
   teacherId: string;
   teacherName: string; 
+  mainObjective: EditorContent;
+  weeklyObjectives: EditorContent;
   content: GroupContent;
 }
 

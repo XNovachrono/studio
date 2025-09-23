@@ -326,6 +326,13 @@ export const translations = {
                 description: "Gestiona tu material reutilizable para clases, tareas y objetivos.",
                 button: "Gestionar Bancos"
             },
+            goals: {
+                mainObjective: "Objetivo Principal",
+                weeklyObjectives: "Objetivos Semanales",
+                mainPlaceholder: "Define el objetivo general para este grupo...",
+                weeklyPlaceholder: "Define los objetivos específicos para esta semana...",
+                saveButton: "Guardar Objetivos",
+            },
             lessons: {
                 newLesson: "Nueva Lección",
                 saveChanges: "Guardar Cambios",
@@ -409,7 +416,9 @@ export const translations = {
                  scheduleClassError: "Por favor, completa todos los campos para programar la clase.",
                  scheduleClassSuccessTitle: "Clase Programada",
                  scheduleClassSuccessDescription: "La clase ha sido programada y se ha creado una nueva lección.",
-                 genericError: "Ocurrió un error. Por favor, inténtalo de nuevo."
+                 genericError: "Ocurrió un error. Por favor, inténtalo de nuevo.",
+                 objectivesSavedTitle: "Objetivos Guardados",
+                 saveObjectivesError: "No se pudieron guardar los objetivos.",
             }
         },
         onboardingWizard: {
@@ -773,6 +782,13 @@ export const translations = {
                 description: "Manage your reusable material for classes, homework, and objectives.",
                 button: "Manage Banks"
             },
+            goals: {
+                mainObjective: "Main Objective",
+                weeklyObjectives: "Weekly Objectives",
+                mainPlaceholder: "Define the overall objective for this group...",
+                weeklyPlaceholder: "Define the specific objectives for this week...",
+                saveButton: "Save Objectives",
+            },
             lessons: {
                 newLesson: "New Lesson",
                 saveChanges: "Save Changes",
@@ -856,7 +872,9 @@ export const translations = {
                  scheduleClassError: "Please fill all fields to schedule the class.",
                  scheduleClassSuccessTitle: "Class Scheduled",
                  scheduleClassSuccessDescription: "The class has been scheduled and a new lesson has been created.",
-                 genericError: "An error occurred. Please try again."
+                 genericError: "An error occurred. Please try again.",
+                 objectivesSavedTitle: "Objectives Saved",
+                 saveObjectivesError: "Could not save objectives.",
             }
         },
          onboardingWizard: {

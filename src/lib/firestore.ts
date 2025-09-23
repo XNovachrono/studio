@@ -190,6 +190,8 @@ export const createGroupWithTeacher = async (teacher: User, students: {id: strin
     // For each student, add an interaction with this teacher
     const batch = writeBatch(db);
 
+    const defaultObjectiveContent: EditorContent = { type: "doc", content: [{ type: "paragraph" }] };
+
     // Create the group
     batch.set(newGroupRef, {
         name: groupName,
@@ -197,6 +199,8 @@ export const createGroupWithTeacher = async (teacher: User, students: {id: strin
         teacherId: teacher.id,
         teacherName: teacher.name,
         studentIds,
+        mainObjective: defaultObjectiveContent,
+        weeklyObjectives: defaultObjectiveContent,
         content: {
             scheduledClasses: [],
             notes: [],
@@ -268,6 +272,12 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
 
     return { groups, allStudents, groupHistory };
 }
+
+// Update group objectives
+export const updateGroupObjectives = async (groupId: string, data: { mainObjective?: EditorContent, weeklyObjectives?: EditorContent }): Promise<void> => {
+    const groupRef = doc(db, "groups", groupId);
+    await updateDoc(groupRef, data);
+};
 
 // === Lesson Functions ===
 

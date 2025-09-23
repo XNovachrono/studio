@@ -5,7 +5,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote } from "lucide-react";
+import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import {
@@ -21,7 +21,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User, StudentProfile, Group, Lesson, EditorContent, BankCard, AttendanceStatus } from "@/lib/types";
-import { getTeacherDataForDashboard, getLessonsForGroup, createLessonForGroup, updateLesson, getBankCards, addContentToGroup, getBankFiles } from "@/lib/firestore";
+import { getTeacherDataForDashboard, getLessonsForGroup, createLessonForGroup, updateLesson, getBankCards, addContentToGroup, getBankFiles, updateGroupObjectives } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -206,6 +206,100 @@ const FileBankImporter = ({ onSelectFile, isOpen, onOpenChange }: { onSelectFile
 }
 
 type ModalType = 'content' | 'classNote' | 'homework' | 'attendance' | 'comments' | null;
+
+const GroupGoals = ({ group, onGroupUpdate }: { group: Group, onGroupUpdate: () => void }) => {
+    const { translations } = useLanguage();
+    const t = translations.teacherDashboard.goals;
+    const t_toast = translations.teacherDashboard.toasts;
+    const { toast } = useToast();
+    const [mainObjective, setMainObjective] = useState(group.mainObjective);
+    const [weeklyObjectives, setWeeklyObjectives] = useState(group.weeklyObjectives);
+    const [isBankImporterOpen, setBankImporterOpen] = useState(false);
+    const [importTarget, setImportTarget] = useState<'main' | 'weekly' | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleOpenBankImporter = (target: 'main' | 'weekly') => {
+        setImportTarget(target);
+        setBankImporterOpen(true);
+    };
+
+    const handleImportFromBank = (content: EditorContent) => {
+        if (importTarget === 'main') {
+            setMainObjective(content);
+        } else if (importTarget === 'weekly') {
+            setWeeklyObjectives(content);
+        }
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await updateGroupObjectives(group.id, {
+                mainObjective,
+                weeklyObjectives,
+            });
+            toast({ title: t_toast.objectivesSavedTitle });
+            onGroupUpdate();
+        } catch (error) {
+            console.error("Error saving objectives:", error);
+            toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.saveObjectivesError });
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
+    return (
+        <div className="space-y-6">
+            <BankCardImporter ownerId={group.teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} />
+            <Card>
+                 <Accordion type="single" collapsible defaultValue="item-1">
+                    <AccordionItem value="item-1">
+                        <AccordionTrigger className="px-6 font-headline text-lg">{t.mainObjective}</AccordionTrigger>
+                        <AccordionContent className="p-6 pt-0">
+                             <Editor
+                                content={mainObjective}
+                                onChange={setMainObjective}
+                                editable
+                                placeholder={t.mainPlaceholder}
+                            />
+                            <Button className="mt-4" onClick={() => handleOpenBankImporter('main')}>
+                                <Import className="mr-2 h-4 w-4" />
+                                {translations.teacherDashboard.lessons.importFromBank}
+                            </Button>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            </Card>
+            <Card>
+                 <Accordion type="single" collapsible defaultValue="item-1">
+                    <AccordionItem value="item-1">
+                        <AccordionTrigger className="px-6 font-headline text-lg">{t.weeklyObjectives}</AccordionTrigger>
+                        <AccordionContent className="p-6 pt-0">
+                             <Editor
+                                content={weeklyObjectives}
+                                onChange={setWeeklyObjectives}
+                                editable
+                                placeholder={t.weeklyPlaceholder}
+                            />
+                            <Button className="mt-4" onClick={() => handleOpenBankImporter('weekly')}>
+                                <Import className="mr-2 h-4 w-4" />
+                                 {translations.teacherDashboard.lessons.importFromBank}
+                            </Button>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            </Card>
+
+            <div className="flex justify-end">
+                <Button onClick={handleSave} disabled={isSaving}>
+                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                    {t.saveButton}
+                </Button>
+            </div>
+        </div>
+    );
+};
+
 
 const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { group: Group, studentsById: Map<string, StudentProfile>, teacherId: string, onLessonCreated: () => void }) => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -459,54 +553,62 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
              <BankCardImporter ownerId={teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} />
              <FileBankImporter isOpen={isFileBankImporterOpen} onOpenChange={setFileBankImporterOpen} onSelectFile={handleImportFileFromBank} />
              {lessons.length > 0 ? (
-                 lessons.map(lesson => (
-                     <div key={lesson.id} className="p-4 border rounded-lg">
-                        <h3 className="font-semibold text-lg mb-4">{lesson.name}</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <Card>
-                                <CardHeader>
-                                    <CardTitle className="font-headline text-lg flex items-center gap-2"><Video /> {t.recording}</CardTitle>
-                                    <CardDescription>{t.recordingPlaceholder}</CardDescription>
-                                </CardHeader>
-                                <CardContent className="flex items-center gap-2">
-                                    <Input 
-                                        placeholder="https://..." 
-                                        value={editedContent[lesson.id]?.recording?.link ?? lesson.recording?.link ?? ""}
-                                        onChange={(e) => handleContentChange(lesson.id, 'recording', { link: e.target.value })}
-                                    />
-                                    <Button onClick={() => handleSaveLesson(lesson.id)} disabled={isSaving === lesson.id}>
-                                        {isSaving === lesson.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                            <Card onClick={() => handleOpenModal(lesson.id, 'content')} className="cursor-pointer hover:bg-accent/50 transition-colors">
-                                <CardHeader>
-                                    <CardTitle className="font-headline text-base flex items-center gap-2"><Target/> {t.content}</CardTitle>
-                                </CardHeader>
-                            </Card>
-                            <Card onClick={() => handleOpenModal(lesson.id, 'classNote')} className="cursor-pointer hover:bg-accent/50 transition-colors">
-                                <CardHeader>
-                                    <CardTitle className="font-headline text-base flex items-center gap-2"><FileText/> {t.classNote}</CardTitle>
-                                </CardHeader>
-                            </Card>
-                            <Card onClick={() => handleOpenModal(lesson.id, 'homework')} className="cursor-pointer hover:bg-accent/50 transition-colors">
-                                <CardHeader>
-                                    <CardTitle className="font-headline text-base flex items-center gap-2"><BookCheck/> {t.homework}</CardTitle>
-                                </CardHeader>
-                            </Card>
-                             <Card onClick={() => handleOpenModal(lesson.id, 'attendance')} className="cursor-pointer hover:bg-accent/50 transition-colors">
-                                <CardHeader>
-                                    <CardTitle className="font-headline text-base flex items-center gap-2"><Users2/> {t.attendance}</CardTitle>
-                                </CardHeader>
-                            </Card>
-                             <Card onClick={() => handleOpenModal(lesson.id, 'comments')} className="cursor-pointer hover:bg-accent/50 transition-colors">
-                                <CardHeader>
-                                    <CardTitle className="font-headline text-base flex items-center gap-2"><MessageSquareQuote/> {t.comments}</CardTitle>
-                                </CardHeader>
-                            </Card>
-                        </div>
-                    </div>
-                 ))
+                <Accordion type="multiple" className="w-full space-y-4">
+                 {lessons.map(lesson => (
+                     <AccordionItem value={lesson.id} key={lesson.id} className="border rounded-lg">
+                        <AccordionTrigger className="px-4 py-3 font-semibold text-lg hover:no-underline">
+                           {lesson.name}
+                        </AccordionTrigger>
+                        <AccordionContent className="p-4 border-t">
+                            <div className="space-y-4">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="font-headline text-lg flex items-center gap-2"><Video /> {t.recording}</CardTitle>
+                                        <CardDescription>{t.recordingPlaceholder}</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex items-center gap-2">
+                                        <Input 
+                                            placeholder="https://..." 
+                                            value={editedContent[lesson.id]?.recording?.link ?? lesson.recording?.link ?? ""}
+                                            onChange={(e) => handleContentChange(lesson.id, 'recording', { link: e.target.value })}
+                                        />
+                                        <Button onClick={() => handleSaveLesson(lesson.id)} disabled={isSaving === lesson.id}>
+                                            {isSaving === lesson.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <Card onClick={() => handleOpenModal(lesson.id, 'content')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                        <CardHeader>
+                                            <CardTitle className="font-headline text-base flex items-center gap-2"><Target/> {t.content}</CardTitle>
+                                        </CardHeader>
+                                    </Card>
+                                    <Card onClick={() => handleOpenModal(lesson.id, 'classNote')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                        <CardHeader>
+                                            <CardTitle className="font-headline text-base flex items-center gap-2"><FileText/> {t.classNote}</CardTitle>
+                                        </CardHeader>
+                                    </Card>
+                                    <Card onClick={() => handleOpenModal(lesson.id, 'homework')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                        <CardHeader>
+                                            <CardTitle className="font-headline text-base flex items-center gap-2"><BookCheck/> {t.homework}</CardTitle>
+                                        </CardHeader>
+                                    </Card>
+                                     <Card onClick={() => handleOpenModal(lesson.id, 'attendance')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                        <CardHeader>
+                                            <CardTitle className="font-headline text-base flex items-center gap-2"><Users2/> {t.attendance}</CardTitle>
+                                        </CardHeader>
+                                    </Card>
+                                     <Card onClick={() => handleOpenModal(lesson.id, 'comments')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                        <CardHeader>
+                                            <CardTitle className="font-headline text-base flex items-center gap-2"><MessageSquareQuote/> {t.comments}</CardTitle>
+                                        </CardHeader>
+                                    </Card>
+                                </div>
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                 ))}
+                 </Accordion>
             ) : (
                 <p className="p-4 text-center text-muted-foreground">{t.noLessons}</p>
             )}
@@ -660,7 +762,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
 };
 
 
-const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, teacherId, teacherName }: { group: Group | null; studentsById: Map<string, StudentProfile>; isOpen: boolean; onOpenChange: (open: boolean) => void; teacherId: string; teacherName: string; }) => {
+const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroupUpdate, teacherId, teacherName }: { group: Group | null; studentsById: Map<string, StudentProfile>; isOpen: boolean; onOpenChange: (open: boolean) => void; onGroupUpdate: () => void; teacherId: string; teacherName: string; }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.groups;
     const [studentToView, setStudentToView] = useState<StudentProfile | null>(null);
@@ -681,13 +783,17 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, teacher
                       <Badge variant="secondary" className="capitalize">{group.type}</Badge>
                     </DialogDescription>
                 </DialogHeader>
-                <Tabs defaultValue="lessons" className="flex-grow flex flex-col overflow-hidden">
+                <Tabs defaultValue="goals" className="flex-grow flex flex-col overflow-hidden">
                     <TabsList className="shrink-0">
+                        <TabsTrigger value="goals"><Goal className="mr-2 h-4 w-4"/>Goals</TabsTrigger>
                         <TabsTrigger value="lessons"><BookOpen className="mr-2 h-4 w-4"/>Lecciones</TabsTrigger>
                         <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Miembros</TabsTrigger>
                         <TabsTrigger value="communication"><Send className="mr-2 h-4 w-4"/>Comunicación</TabsTrigger>
                         {isPrivateGroup && <TabsTrigger value="calendar"><CalendarIcon className="mr-2 h-4 w-4"/>Calendario</TabsTrigger>}
                     </TabsList>
+                    <TabsContent value="goals" className="flex-grow overflow-auto p-4">
+                        <GroupGoals group={group} onGroupUpdate={onGroupUpdate} />
+                    </TabsContent>
                     <TabsContent value="lessons" className="flex-grow overflow-auto p-4">
                        <GroupLessons key={refreshLessonKey} group={group} studentsById={studentsById} teacherId={teacherId} onLessonCreated={() => setRefreshLessonKey(k => k + 1)} />
                     </TabsContent>
@@ -817,26 +923,24 @@ export function TeacherDashboardUI() {
   
   const [groupToView, setGroupToView] = useState<Group | null>(null);
   const [isBanksModalOpen, setIsBanksModalOpen] = useState(false);
-
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      const storedUser = localStorage.getItem("uncoverly-user");
-      if (!storedUser) {
-        router.push("/login");
-        return;
-      }
-      
-      const parsedUser = JSON.parse(storedUser);
-      if (parsedUser.role !== 'teacher') {
-          router.push('/login');
-          return;
-      }
-      setUser(parsedUser);
-      
+  
+  const fetchDashboardData = async (userId: string) => {
       setIsLoading(true);
       try {
-        const teacherData = await getTeacherDataForDashboard(parsedUser.id);
+        const teacherData = await getTeacherDataForDashboard(userId);
         setData(teacherData);
+        // If a group is being viewed, update its data
+        if (groupToView) {
+            const updatedGroup = teacherData.groups.find(g => g.id === groupToView.id);
+            if (updatedGroup) {
+                setGroupToView(updatedGroup);
+            } else {
+                // The group might have been archived or is no longer active
+                const updatedHistoryGroup = teacherData.groupHistory.find(g => g.id === groupToView.id);
+                if(updatedHistoryGroup) setGroupToView(updatedHistoryGroup);
+                else setGroupToView(null); // Or close it if it's gone completely
+            }
+        }
       } catch (error) {
           console.error("Error fetching teacher data:", error);
           toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
@@ -844,9 +948,22 @@ export function TeacherDashboardUI() {
           setIsLoading(false);
       }
     };
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("uncoverly-user");
+    if (!storedUser) {
+      router.push("/login");
+      return;
+    }
     
-    fetchDashboardData();
-  }, [router, toast]);
+    const parsedUser = JSON.parse(storedUser);
+    if (parsedUser.role !== 'teacher') {
+        router.push('/login');
+        return;
+    }
+    setUser(parsedUser);
+    fetchDashboardData(parsedUser.id);
+  }, [router]);
 
   const studentsById = useMemo(() => new Map(data?.allStudents.map(s => [s.id, s])), [data?.allStudents]);
   
@@ -919,7 +1036,15 @@ export function TeacherDashboardUI() {
           </Card>
         </main>
         
-        <GroupDetailsDialog group={groupToView} studentsById={studentsById} isOpen={!!groupToView} onOpenChange={() => setGroupToView(null)} teacherId={user.id} teacherName={user.name}/>
+        <GroupDetailsDialog 
+            group={groupToView} 
+            studentsById={studentsById} 
+            isOpen={!!groupToView} 
+            onOpenChange={() => setGroupToView(null)} 
+            onGroupUpdate={() => fetchDashboardData(user.id)}
+            teacherId={user.id} 
+            teacherName={user.name}
+        />
       </div>
       <Dialog open={isBanksModalOpen} onOpenChange={setIsBanksModalOpen}>
         <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
