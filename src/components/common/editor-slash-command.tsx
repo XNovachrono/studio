@@ -67,6 +67,9 @@ interface CommandListRef {
 const CommandList = forwardRef<CommandListRef, { items: Command[]; command: (item: Command) => void; editor: Editor }>((props, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
+  // Add this guard clause
+  if (!props.editor.isEditable) return null;
+
   const selectItem = (index: number) => {
     const item = props.items[index];
     if (item) {
@@ -156,6 +159,7 @@ export const suggestion = {
       onStart: (props: SuggestionProps<Command>) => {
         component = React.createElement(CommandList, {
           ...props,
+          ref: React.createRef(),
           command: (item: Command) => props.command(item),
         });
 
@@ -170,8 +174,10 @@ export const suggestion = {
         });
       },
       onUpdate(props: SuggestionProps<Command>) {
-        component.props = { ...component.props, ...props };
-
+        if (component?.props) {
+            component.props = { ...component.props, ...props };
+        }
+        
         popup?.[0].setProps({
           getReferenceClientRect: props.clientRect,
         });
