@@ -252,7 +252,7 @@ const GroupGoals = ({ group, onGroupUpdate }: { group: Group, onGroupUpdate: () 
         <div className="space-y-6">
             <BankCardImporter ownerId={group.teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} />
             <Card>
-                 <Accordion type="single" collapsible defaultValue="item-1">
+                 <Accordion type="single" collapsible>
                     <AccordionItem value="item-1">
                         <AccordionTrigger className="px-6 font-headline text-lg">{t.mainObjective}</AccordionTrigger>
                         <AccordionContent className="p-6 pt-0">
@@ -271,7 +271,7 @@ const GroupGoals = ({ group, onGroupUpdate }: { group: Group, onGroupUpdate: () 
                 </Accordion>
             </Card>
             <Card>
-                 <Accordion type="single" collapsible defaultValue="item-1">
+                 <Accordion type="single" collapsible>
                     <AccordionItem value="item-1">
                         <AccordionTrigger className="px-6 font-headline text-lg">{t.weeklyObjectives}</AccordionTrigger>
                         <AccordionContent className="p-6 pt-0">
