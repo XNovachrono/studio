@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Loader2, PlusCircle, Trash2, Edit, RefreshCw } from "lucide-react";
 import {
   Card,
@@ -28,11 +28,15 @@ import type { User, BankCard, EditorContent } from "@/lib/types";
 import { useLanguage } from "@/context/language-context";
 import { createBankCard, getBankCards, updateBankCard, deleteBankCard } from "@/lib/firestore";
 import { Editor } from "@/components/common/editor";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 
 const defaultContent: EditorContent = {
   type: "doc",
   content: [{ type: "paragraph" }],
 };
+
+const ENGLISH_LEVELS = ["A1", "A1.2", "A2", "A2.2", "B1", "B1.2", "C1", "C1.2", "C2"];
 
 interface CardBankProps {
   user: User;
@@ -72,12 +76,29 @@ export function CardBank({ user, bankType }: CardBankProps) {
     fetchCards();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bankType]);
+  
+  const groupedCards = useMemo(() => {
+    const groups: Record<string, BankCard[]> = {};
+    cards.forEach(card => {
+        const level = card.level || "Sin Nivel";
+        if (!groups[level]) {
+            groups[level] = [];
+        }
+        groups[level].push(card);
+    });
+    // Sort levels: A1, A1.2, ..., Sin Nivel
+    return Object.entries(groups).sort(([levelA], [levelB]) => {
+        if (levelA === "Sin Nivel") return 1;
+        if (levelB === "Sin Nivel") return -1;
+        return levelA.localeCompare(levelB, undefined, { numeric: true });
+    });
+  }, [cards]);
 
   const handleOpenModal = (card: BankCard | null = null) => {
     if (card) {
       setEditingCard({ ...card });
     } else {
-      setEditingCard({ name: "", content: defaultContent, type: bankType, ownerId: user.id, ownerName: user.name });
+      setEditingCard({ name: "", content: defaultContent, type: bankType, ownerId: user.id, ownerName: user.name, level: "" });
     }
     setIsModalOpen(true);
   };
@@ -94,6 +115,7 @@ export function CardBank({ user, bankType }: CardBankProps) {
         ownerId: user.id,
         ownerName: user.name,
         type: bankType,
+        level: editingCard.level || "",
     };
 
     setIsSaving(true);
@@ -158,33 +180,40 @@ export function CardBank({ user, bankType }: CardBankProps) {
     }
 
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {cards.map(card => {
-            const canEdit = user.role === 'admin' || user.id === card.ownerId;
-            return (
-                <Card key={card.id}>
-                <CardHeader>
-                    <CardTitle className="truncate">{card.name}</CardTitle>
-                    <CardDescription>{t.author}: {card.ownerName || 'N/A'}</CardDescription>
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground">
-                    <p>{t.createdAt}: {new Date(card.createdAt).toLocaleDateString()}</p>
-                </CardContent>
-                <CardFooter className="flex justify-end gap-2">
-                    {canEdit && (
-                        <>
-                            <Button variant="outline" size="icon" onClick={() => handleOpenModal(card)}>
-                            <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="destructive" size="icon" onClick={() => handleDeleteCard(card)}>
-                            <Trash2 className="h-4 w-4" />
-                            </Button>
-                        </>
-                    )}
-                </CardFooter>
-                </Card>
-            )
-          })}
+        <div className="space-y-6">
+            {groupedCards.map(([level, levelCards]) => (
+                <div key={level}>
+                    <h3 className="text-lg font-semibold font-headline mb-2">Nivel: {level}</h3>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {levelCards.map(card => {
+                            const canEdit = user.role === 'admin' || user.id === card.ownerId;
+                            return (
+                                <Card key={card.id}>
+                                <CardHeader>
+                                    <CardTitle className="truncate">{card.name}</CardTitle>
+                                    <CardDescription>{t.author}: {card.ownerName || 'N/A'}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="text-sm text-muted-foreground">
+                                    <p>{t.createdAt}: {new Date(card.createdAt).toLocaleDateString()}</p>
+                                </CardContent>
+                                <CardFooter className="flex justify-end gap-2">
+                                    {canEdit && (
+                                        <>
+                                            <Button variant="outline" size="icon" onClick={() => handleOpenModal(card)}>
+                                            <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="destructive" size="icon" onClick={() => handleDeleteCard(card)}>
+                                            <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </>
+                                    )}
+                                </CardFooter>
+                                </Card>
+                            )
+                        })}
+                    </div>
+                </div>
+            ))}
         </div>
       );
   };
@@ -214,13 +243,26 @@ export function CardBank({ user, bankType }: CardBankProps) {
             <DialogTitle>{editingCard?.id ? t.editCard : t.newCard}</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <div>
-              <Label htmlFor="card-name">{t.cardName}</Label>
-              <Input
-                id="card-name"
-                value={editingCard?.name || ""}
-                onChange={(e) => setEditingCard(prev => ({ ...prev!, name: e.target.value }))}
-              />
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="card-name">{t.cardName}</Label>
+                  <Input
+                    id="card-name"
+                    value={editingCard?.name || ""}
+                    onChange={(e) => setEditingCard(prev => ({ ...prev!, name: e.target.value }))}
+                  />
+                </div>
+                 <div>
+                    <Label htmlFor="card-level">Nivel de Inglés</Label>
+                    <Select value={editingCard?.level || ""} onValueChange={(level) => setEditingCard(prev => ({...prev!, level}))}>
+                        <SelectTrigger id="card-level">
+                            <SelectValue placeholder="Seleccionar nivel" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {ENGLISH_LEVELS.map(lvl => <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                 </div>
             </div>
             <div>
               <Label>{t.cardContent}</Label>

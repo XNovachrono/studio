@@ -134,6 +134,7 @@ export interface BankCard {
     ownerId: string; // Teacher or Admin ID
     ownerName: string; // Teacher or Admin Name
     createdAt: string; // ISO date string
+    level?: string; // e.g., "A1", "A2.2", "B1"
     // For cards with rich text content
     content?: EditorContent; 
     // For file-based cards
