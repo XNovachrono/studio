@@ -376,6 +376,7 @@ export const uploadBankFile = (ownerId: string, ownerName: string, type: BankTyp
     uploadTask.on(
       "state_changed",
       (snapshot) => {
+        if (!snapshot) return;
         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
         onProgress(progress);
       },
