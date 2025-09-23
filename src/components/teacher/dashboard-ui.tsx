@@ -555,12 +555,12 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
              {lessons.length > 0 ? (
                 <Accordion type="multiple" className="w-full space-y-4">
                  {lessons.map(lesson => (
-                     <AccordionItem value={lesson.id} key={lesson.id} className="border rounded-lg">
+                     <AccordionItem value={lesson.id} key={lesson.id} className="border rounded-lg bg-background">
                         <AccordionTrigger className="px-4 py-3 font-semibold text-lg hover:no-underline">
                            {lesson.name}
                         </AccordionTrigger>
                         <AccordionContent className="p-4 border-t">
-                            <div className="space-y-4">
+                             <div className="space-y-4">
                                 <Card>
                                     <CardHeader>
                                         <CardTitle className="font-headline text-lg flex items-center gap-2"><Video /> {t.recording}</CardTitle>
@@ -915,17 +915,14 @@ export function TeacherDashboardUI() {
   const { toast } = useToast();
   const { translations } = useLanguage();
   const t = translations.teacherDashboard;
-  const t_toast = translations.teacherDashboard.toasts;
   
   const [user, setUser] = useState<User | null>(null);
   const [data, setData] = useState<TeacherDashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   
   const [groupToView, setGroupToView] = useState<Group | null>(null);
   const [isBanksModalOpen, setIsBanksModalOpen] = useState(false);
   
   const fetchDashboardData = async (userId: string) => {
-      setIsLoading(true);
       try {
         const teacherData = await getTeacherDataForDashboard(userId);
         setData(teacherData);
@@ -943,9 +940,8 @@ export function TeacherDashboardUI() {
         }
       } catch (error) {
           console.error("Error fetching teacher data:", error);
+          const t_toast = translations.teacherDashboard.toasts;
           toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
-      } finally {
-          setIsLoading(false);
       }
     };
 
@@ -963,7 +959,7 @@ export function TeacherDashboardUI() {
     }
     setUser(parsedUser);
     fetchDashboardData(parsedUser.id);
-  }, [router]);
+  }, [router, translations.teacherDashboard.toasts]);
 
   const studentsById = useMemo(() => new Map(data?.allStudents.map(s => [s.id, s])), [data?.allStudents]);
   
@@ -973,7 +969,7 @@ export function TeacherDashboardUI() {
   const historicalGroups = useMemo(() => data?.groupHistory || [], [data?.groupHistory]);
 
 
-  if (isLoading || !data || !user) {
+  if (!data || !user) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
