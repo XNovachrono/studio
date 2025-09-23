@@ -267,9 +267,8 @@ const GroupGoals = ({ group, onGroupUpdate }: { group: Group, onGroupUpdate: () 
                                     editable
                                     placeholder={t.mainPlaceholder}
                                 />
-                                <Button className="mt-4" onClick={() => handleOpenBankImporter('main')}>
-                                    <Import className="mr-2 h-4 w-4" />
-                                    {translations.teacherDashboard.lessons.importFromBank}
+                                <Button className="mt-4" size="icon" variant="outline" onClick={() => handleOpenBankImporter('main')}>
+                                    <Import className="h-4 w-4" />
                                 </Button>
                             </CardContent>
                         </AccordionContent>
@@ -292,9 +291,8 @@ const GroupGoals = ({ group, onGroupUpdate }: { group: Group, onGroupUpdate: () 
                                     editable
                                     placeholder={t.weeklyPlaceholder}
                                 />
-                                <Button className="mt-4" onClick={() => handleOpenBankImporter('weekly')}>
-                                    <Import className="mr-2 h-4 w-4" />
-                                     {translations.teacherDashboard.lessons.importFromBank}
+                                <Button className="mt-4" size="icon" variant="outline" onClick={() => handleOpenBankImporter('weekly')}>
+                                    <Import className="h-4 w-4" />
                                 </Button>
                             </CardContent>
                         </AccordionContent>
@@ -481,9 +479,8 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                             editable
                             placeholder={t.placeholders.content}
                         />
-                        <Button className="mt-4" onClick={() => handleOpenBankImporter(selectedLesson.id, 'content')}>
-                            <Import className="mr-2 h-4 w-4" />
-                            {t.importFromBank}
+                        <Button className="mt-4" size="icon" variant="outline" onClick={() => handleOpenBankImporter(selectedLesson.id, 'content')}>
+                            <Import className="h-4 w-4" />
                         </Button>
                     </>
                 );
@@ -496,9 +493,8 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                             editable
                             placeholder={t.placeholders.classNote}
                         />
-                         <Button className="mt-4" variant="outline" onClick={() => handleOpenFileBankImporter(selectedLesson.id)}>
-                            <FileUp className="mr-2 h-4 w-4"/>
-                            Importar Archivo
+                         <Button className="mt-4" size="icon" variant="outline" onClick={() => handleOpenFileBankImporter(selectedLesson.id)}>
+                            <FileUp className="h-4 w-4"/>
                         </Button>
                     </>
                 );
@@ -511,9 +507,8 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                             editable
                             placeholder={t.placeholders.homework}
                         />
-                         <Button className="mt-4" onClick={() => handleOpenBankImporter(selectedLesson.id, 'homework')}>
-                            <Import className="mr-2 h-4 w-4" />
-                            {t.importFromBank}
+                         <Button className="mt-4" size="icon" variant="outline" onClick={() => handleOpenBankImporter(selectedLesson.id, 'homework')}>
+                            <Import className="h-4 w-4" />
                         </Button>
                     </>
                 );
