@@ -175,7 +175,7 @@ export const suggestion = {
         }
 
         popup = tippy('body', {
-          getReferenceClientRect: props.clientRect as any,
+          getReferenceClientRect: () => props.clientRect as any,
           appendTo: () => document.body,
           content: CommandListComponent,
           showOnCreate: true,
@@ -194,7 +194,7 @@ export const suggestion = {
         }
         
         popup?.[0].setProps({
-          getReferenceClientRect: props.clientRect as any,
+          getReferenceClientRect: () => props.clientRect as any,
         });
       },
       onKeyDown(props: SuggestionKeyDownProps) {
