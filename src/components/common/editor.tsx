@@ -342,7 +342,6 @@ export function Editor({
   const [aiState, setAiState] = useState<'idle' | 'prompting' | 'loading' | 'streaming' | 'done'>('idle');
   const [prompt, setPrompt] = useState('');
   const [aiGeneratedContent, setAiGeneratedContent] = useState('');
-  const [currentPlaceholder, setCurrentPlaceholder] = useState('');
 
   const { translations } = useLanguage();
   const t = translations.editor;
@@ -355,6 +354,7 @@ export function Editor({
           if (node.type.name === 'heading') {
             return t.placeholders.heading;
           }
+          // Only show the placeholder on the first, empty paragraph node when editing.
           if (editable && isEditing && node.isFirstChild && node.isEmpty) {
             return placeholder || t.placeholders.default;
           }
@@ -382,53 +382,39 @@ export function Editor({
       attributes: {
         class: "prose dark:prose-invert max-w-none focus:outline-none",
       },
+       handleKeyDown: (view, event) => {
+          if (aiState === 'idle' && view.state.doc.textContent.length === 0 && event.key === ' ') {
+            event.preventDefault();
+            setAiState('prompting');
+            return true; // Prevent the space from being inserted
+          }
+          return false; // Let tiptap handle other keys
+       }
     },
   });
   
-  useEffect(() => {
-    if (isEditing) {
-      setCurrentPlaceholder(placeholder || t.placeholders.default);
-    } else {
-      setCurrentPlaceholder('');
-    }
-  }, [isEditing, placeholder, t.placeholders.default]);
-  
+  // This effect ensures the editor instance is destroyed and recreated
+  // when the `isEditing` state changes, which is crucial for preventing
+  // stale references that cause the "editor is undefined" error.
   useEffect(() => {
     if (editor) {
         editor.setOptions({
             editable: editable && isEditing && aiState !== 'loading' && aiState !== 'streaming',
         });
     }
-  }, [editor, editable, isEditing, aiState]);
-  
-  const handleKeyDownInEditor = useCallback((event: KeyboardEvent) => {
-    if (!editor || !editable) return;
-    
-    if (event.key === ' ' && editor.isEmpty) {
-      event.preventDefault();
-      setAiState('prompting');
+    return () => {
+        editor?.destroy();
     }
-  }, [editor, editable]);
-
-  useEffect(() => {
-     if (editor) {
-        editor.setOptions({
-             editorProps: {
-                handleKeyDown: (view, event) => {
-                    if (aiState === 'idle' && editor.isEmpty) {
-                        handleKeyDownInEditor(event);
-                    }
-                    return false;
-                }
-            }
-        });
-     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, aiState, handleKeyDownInEditor]);
+  }, [isEditing, editable, aiState]);
   
   
   const handleStartEditing = () => {
     setIsEditing(true);
+    // Reset AI state when starting fresh
+    setAiState('idle');
+    setPrompt('');
+    setAiGeneratedContent('');
     setTimeout(() => editor?.commands.focus(), 0);
   };
 

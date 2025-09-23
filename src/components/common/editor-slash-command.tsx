@@ -67,8 +67,10 @@ interface CommandListRef {
 const CommandList = forwardRef<CommandListRef, { items: Command[]; command: (item: Command) => void; editor: Editor }>((props, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  // Add this guard clause
-  if (!props.editor || !props.editor.isEditable) return null;
+  // This is a critical guard to prevent rendering when the editor is not ready.
+  if (!props.editor || !props.editor.isEditable) {
+    return null;
+  }
 
   const selectItem = (index: number) => {
     const item = props.items[index];
