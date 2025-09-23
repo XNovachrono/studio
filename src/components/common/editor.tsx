@@ -379,13 +379,6 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
         },
     }, [editable, aiState]); // Dependencies to recreate editor instance
 
-    useEffect(() => {
-        // Automatically focus the editor when it becomes editable.
-        if (editor && editable) {
-           setTimeout(() => editor.commands.focus(), 0);
-        }
-    }, [editor, editable]);
-
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
         setAiState('loading');
