@@ -393,7 +393,7 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
             TableCell,
         ],
         content: content,
-        editable: editable && aiState !== 'loading' && aiState !== 'streaming',
+        editable: editable && aiState !== 'loading' && aiState !== 'streaming' && aiState !== 'done',
         onUpdate: ({ editor }) => {
             onChange(editor.getJSON());
         },
@@ -415,18 +415,16 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
         setAiState('loading');
+        setAiGeneratedContent(''); // Clear previous content
         
-        editor?.commands.clearContent();
-
         try {
             const result = await generateEditorContent({ prompt });
             setAiGeneratedContent(result);
-            editor?.chain().focus().setContent(result, true).run();
             setAiState('done');
         } catch(error) {
             console.error("AI Generation failed:", error);
-            editor?.chain().focus().setContent("Sorry, I couldn't generate the content.").run();
-            setAiState('prompting');
+            setAiGeneratedContent("<p>Sorry, I couldn't generate the content.</p>");
+            setAiState('done');
         }
     }
 
@@ -438,8 +436,9 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
     }
 
     const handleAccept = () => {
-        editor?.commands.setContent(aiGeneratedContent, true);
+        editor?.chain().focus().setContent(aiGeneratedContent, true).run();
         onChange(editor?.getJSON());
+        setAiGeneratedContent('');
         setAiState('idle');
         setPrompt('');
     };
@@ -449,8 +448,10 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
     };
 
     const handleModify = () => {
-        setAiState('prompting');
-        editor?.commands.setContent(prompt);
+        editor?.chain().focus().setContent(aiGeneratedContent, true).run();
+        setAiGeneratedContent('');
+        setAiState('idle');
+        setPrompt('');
     };
 
     if (!editable && !editor) {
@@ -468,8 +469,28 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
             exit={{ opacity: 0 }}
             className="w-full relative"
         >
-            <Toolbar editor={editor} />
-            <EditorContent editor={editor} />
+            {aiState !== 'done' && <Toolbar editor={editor} />}
+            
+            {aiState === 'done' ? (
+                 <div className="w-full">
+                    <div 
+                        className="prose dark:prose-invert max-w-none p-2 border rounded-md min-h-[100px]"
+                        dangerouslySetInnerHTML={{ __html: aiGeneratedContent }}
+                    />
+                    <motion.div
+                        key="ai-toolbar"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="w-full mt-2"
+                    >
+                        <AIToolbar state={aiState} onAccept={handleAccept} onRegenerate={handleRegenerate} onModify={handleModify}/>
+                    </motion.div>
+                </div>
+            ) : (
+                <EditorContent editor={editor} />
+            )}
+
 
             <AnimatePresence>
                 {(aiState === 'prompting' || aiState === 'loading') && (
@@ -495,20 +516,6 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
                          ) : (
                             <Button variant="ghost" size="icon" onClick={() => { setAiState('idle'); editor?.commands.clearContent(); } }><X/></Button>
                          )}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {aiState === 'done' && (
-                    <motion.div
-                        key="ai-toolbar"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        className="w-full mt-2"
-                    >
-                        <AIToolbar state={aiState} onAccept={handleAccept} onRegenerate={handleRegenerate} onModify={handleModify}/>
                     </motion.div>
                 )}
             </AnimatePresence>
