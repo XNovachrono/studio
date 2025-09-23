@@ -551,16 +551,16 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
     useEffect(() => {
         if (group.type === 'privado' && group.studentIds.length > 0) {
             const student = studentsById.get(group.studentIds[0]);
-            if (student?.scheduledSlots?.dates?.length) {
+            if (student?.scheduledSlots && student.scheduledSlots.length > 0) {
                 const today = startOfToday();
-                const nextAvailableDate = student.scheduledSlots.dates
-                    .map(d => parseISO(d))
-                    .sort((a, b) => a.getTime() - b.getTime())
-                    .find(d => !isBefore(d, today));
+                const nextAvailableSlot = student.scheduledSlots
+                    .map(s => ({ ...s, dateTime: parseISO(`${s.date}T${s.time}`) }))
+                    .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
+                    .find(s => !isBefore(s.dateTime, today));
 
-                if (nextAvailableDate) {
-                    setDate(nextAvailableDate);
-                    setTime(student.scheduledSlots.time);
+                if (nextAvailableSlot) {
+                    setDate(parseISO(nextAvailableSlot.date));
+                    setTime(nextAvailableSlot.time);
                 }
             }
         }
@@ -714,25 +714,23 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, teacher
                                 <CardHeader>
                                     <CardTitle>Disponibilidad del Estudiante</CardTitle>
                                     <CardDescription>
-                                        Días seleccionados por {privateStudent?.name || 'el estudiante'} para las clases.
+                                        Días y horas seleccionados por {privateStudent?.name || 'el estudiante'} para las clases.
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    {privateStudent?.scheduledSlots?.dates && privateStudent.scheduledSlots.dates.length > 0 ? (
-                                        <>
-                                            <Calendar
-                                                mode="multiple"
-                                                selected={privateStudent.scheduledSlots.dates.map(d => parseISO(d))}
-                                                defaultMonth={parseISO(privateStudent.scheduledSlots.dates[0])}
-                                                className="rounded-md border"
-                                                disabled
-                                            />
-                                            <p className="mt-4 text-sm">
-                                                <strong>Hora preferida:</strong> {privateStudent.scheduledSlots.time}
-                                            </p>
-                                        </>
+                                    {privateStudent?.scheduledSlots && privateStudent.scheduledSlots.length > 0 ? (
+                                        <ScrollArea className="h-72">
+                                            <div className="space-y-2 pr-4">
+                                                {privateStudent.scheduledSlots.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(slot => (
+                                                     <div key={slot.date} className="flex items-center justify-between gap-4 p-2 rounded-md bg-secondary/50">
+                                                        <span className="font-medium">{format(parseISO(slot.date), "PPP", { locale: es })}</span>
+                                                        <Badge variant="outline">{slot.time}</Badge>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
                                     ) : (
-                                        <p className="text-muted-foreground">El estudiante aún no ha seleccionado su horario.</p>
+                                        <p className="text-muted-foreground text-center pt-4">El estudiante aún no ha seleccionado su horario.</p>
                                     )}
                                 </CardContent>
                             </Card>

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "../ui/button";
 import { Editor } from "../common/editor";
-import { format, parse, parseISO } from "date-fns";
+import { format, parse, parseISO, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { PqrsDialog } from "./pqrs-dialog";
 import { Avatar, AvatarFallback } from "../ui/avatar";
@@ -25,9 +25,9 @@ import { User as UserIcon } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { Calendar } from "../ui/calendar";
-import type { DateRange } from "react-day-picker";
 import { Input } from "../ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from "../ui/scroll-area";
 
 
 interface StudentDashboardData {
@@ -38,20 +38,32 @@ interface StudentDashboardData {
 
 const CalendarDialog = ({ user, onOpenChange, isOpen }: { user: StudentProfile, isOpen: boolean, onOpenChange: (open: boolean) => void }) => {
     const { toast } = useToast();
-    const [dates, setDates] = useState<Date[] | undefined>(
-        user.scheduledSlots?.dates.map(d => parseISO(d)) || []
-    );
-    const [time, setTime] = useState(user.scheduledSlots?.time || "18:00");
+    const [slots, setSlots] = useState(user.scheduledSlots || []);
+
+    const selectedDates = useMemo(() => slots.map(s => parseISO(s.date)), [slots]);
+
+    const handleDayClick = (day: Date) => {
+        setSlots(prevSlots => {
+            const isAlreadySelected = prevSlots.some(s => isSameDay(parseISO(s.date), day));
+            if (isAlreadySelected) {
+                return prevSlots.filter(s => !isSameDay(parseISO(s.date), day));
+            } else {
+                const newSlot = { date: format(day, 'yyyy-MM-dd'), time: '18:00' };
+                const newSlots = [...prevSlots, newSlot];
+                return newSlots.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            }
+        });
+    };
+
+    const handleTimeChange = (date: string, time: string) => {
+        setSlots(prevSlots => prevSlots.map(s => s.date === date ? { ...s, time } : s));
+    };
 
     const handleSave = async () => {
         try {
-            const scheduledSlots = {
-                dates: dates?.map(d => format(d, 'yyyy-MM-dd')) || [],
-                time: time,
-            };
-            await updateUserProfile(user.id, { scheduledSlots });
+            await updateUserProfile(user.id, { scheduledSlots: slots });
             toast({ title: "Calendario actualizado", description: "Tus preferencias de horario han sido guardadas." });
-            onOpenChange(false);
+            onOpen-change(false);
         } catch (error) {
             toast({ variant: "destructive", title: "Error", description: "No se pudo guardar tu horario." });
         }
@@ -59,21 +71,35 @@ const CalendarDialog = ({ user, onOpenChange, isOpen }: { user: StudentProfile, 
     
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>Selecciona tu Horario</DialogTitle>
+                     <DialogDescription>Selecciona los días y horas que te gustaría tener clase. Tu docente verá tu disponibilidad.</DialogDescription>
                 </DialogHeader>
-                <div className="py-4 space-y-4">
-                    <p className="text-sm text-muted-foreground">Selecciona los días que te gustaría tener clase. Tu docente verá tu disponibilidad.</p>
+                <div className="py-4 grid md:grid-cols-2 gap-6">
                      <Calendar
                         mode="multiple"
-                        selected={dates}
-                        onSelect={setDates}
-                        className="rounded-md border"
+                        selected={selectedDates}
+                        onDayClick={handleDayClick}
+                        className="rounded-md border self-start"
                     />
-                    <div className="space-y-2">
-                        <label htmlFor="class-time" className="text-sm font-medium">Hora preferida</label>
-                        <Input id="class-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+                    <div className="space-y-4">
+                        <h3 className="font-semibold text-lg">Horarios Seleccionados</h3>
+                        <ScrollArea className="h-72">
+                            <div className="space-y-3 pr-4">
+                                {slots.length > 0 ? slots.map(slot => (
+                                     <div key={slot.date} className="flex items-center justify-between gap-4 p-2 rounded-md bg-secondary/50">
+                                        <span className="font-medium">{format(parseISO(slot.date), "PPP", { locale: es })}</span>
+                                        <Input 
+                                            type="time" 
+                                            value={slot.time}
+                                            onChange={(e) => handleTimeChange(slot.date, e.target.value)}
+                                            className="w-32"
+                                        />
+                                    </div>
+                                )) : <p className="text-sm text-muted-foreground text-center pt-8">Selecciona uno o más días del calendario.</p>}
+                            </div>
+                        </ScrollArea>
                     </div>
                 </div>
                 <DialogFooter>
