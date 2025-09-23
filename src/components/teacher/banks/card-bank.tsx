@@ -29,7 +29,7 @@ import { useLanguage } from "@/context/language-context";
 import { createBankCard, getBankCards, updateBankCard, deleteBankCard } from "@/lib/firestore";
 import { Editor } from "@/components/common/editor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const defaultContent: EditorContent = {
   type: "doc",
@@ -180,41 +180,45 @@ export function CardBank({ user, bankType }: CardBankProps) {
     }
 
     return (
-        <div className="space-y-6">
+        <Accordion type="multiple" className="w-full space-y-2">
             {groupedCards.map(([level, levelCards]) => (
-                <div key={level}>
-                    <h3 className="text-lg font-semibold font-headline mb-2">Nivel: {level}</h3>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {levelCards.map(card => {
-                            const canEdit = user.role === 'admin' || user.id === card.ownerId;
-                            return (
-                                <Card key={card.id}>
-                                <CardHeader>
-                                    <CardTitle className="truncate">{card.name}</CardTitle>
-                                    <CardDescription>{t.author}: {card.ownerName || 'N/A'}</CardDescription>
-                                </CardHeader>
-                                <CardContent className="text-sm text-muted-foreground">
-                                    <p>{t.createdAt}: {new Date(card.createdAt).toLocaleDateString()}</p>
-                                </CardContent>
-                                <CardFooter className="flex justify-end gap-2">
-                                    {canEdit && (
-                                        <>
-                                            <Button variant="outline" size="icon" onClick={() => handleOpenModal(card)}>
-                                            <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="destructive" size="icon" onClick={() => handleDeleteCard(card)}>
-                                            <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </>
-                                    )}
-                                </CardFooter>
-                                </Card>
-                            )
-                        })}
-                    </div>
-                </div>
+                <AccordionItem value={level} key={level}>
+                    <AccordionTrigger className="text-lg font-semibold font-headline px-4 py-2 rounded-md bg-secondary/50 hover:no-underline">
+                        Nivel: {level}
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-4">
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {levelCards.map(card => {
+                                const canEdit = user.role === 'admin' || user.id === card.ownerId;
+                                return (
+                                    <Card key={card.id}>
+                                    <CardHeader>
+                                        <CardTitle className="truncate">{card.name}</CardTitle>
+                                        <CardDescription>{t.author}: {card.ownerName || 'N/A'}</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="text-sm text-muted-foreground">
+                                        <p>{t.createdAt}: {new Date(card.createdAt).toLocaleDateString()}</p>
+                                    </CardContent>
+                                    <CardFooter className="flex justify-end gap-2">
+                                        {canEdit && (
+                                            <>
+                                                <Button variant="outline" size="icon" onClick={() => handleOpenModal(card)}>
+                                                <Edit className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="destructive" size="icon" onClick={() => handleDeleteCard(card)}>
+                                                <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </>
+                                        )}
+                                    </CardFooter>
+                                    </Card>
+                                )
+                            })}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
             ))}
-        </div>
+        </Accordion>
       );
   };
 
