@@ -13,6 +13,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import tippy, { Instance, Props } from 'tippy.js';
 import { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
+import { createRoot, Root } from 'react-dom/client';
 
 interface Command {
   title: string;
@@ -154,22 +155,25 @@ export const suggestion = {
     return commands.filter(item => item.title.toLowerCase().startsWith(query.toLowerCase())).slice(0, 10);
   },
   render: () => {
-    let component: any;
+    let component: HTMLDivElement;
     let popup: Instance<Props>[] | undefined;
+    let root: Root | undefined;
+    let commandListRef: React.RefObject<CommandListRef> | undefined;
 
     return {
       onStart: (props: SuggestionProps<Command>) => {
+        component = document.createElement('div');
+        commandListRef = React.createRef<CommandListRef>();
+
         const CommandListComponent = React.createElement(CommandList, {
           ...props,
-          ref: React.createRef(),
+          ref: commandListRef,
           command: (item: Command) => props.command(item),
         });
-        
-        component = {
-            props: CommandListComponent.props,
-            ref: CommandListComponent.ref,
-        }
 
+        root = createRoot(component);
+        root.render(CommandListComponent);
+        
         if (!props.clientRect) {
             return;
         }
@@ -177,7 +181,7 @@ export const suggestion = {
         popup = tippy('body', {
           getReferenceClientRect: () => props.clientRect as any,
           appendTo: () => document.body,
-          content: CommandListComponent,
+          content: component,
           showOnCreate: true,
           interactive: true,
           trigger: 'manual',
@@ -185,8 +189,13 @@ export const suggestion = {
         });
       },
       onUpdate(props: SuggestionProps<Command>) {
-        if(component?.props) {
-            component.props = { ...component.props, ...props };
+        if (commandListRef) {
+             const CommandListComponent = React.createElement(CommandList, {
+                ...props,
+                ref: commandListRef,
+                command: (item: Command) => props.command(item),
+            });
+             root?.render(CommandListComponent);
         }
         
         if (!props.clientRect) {
@@ -202,10 +211,18 @@ export const suggestion = {
           popup?.[0].hide();
           return true;
         }
-        return component?.ref?.current?.onKeyDown(props);
+        return commandListRef?.current?.onKeyDown(props) || false;
       },
       onExit() {
         popup?.[0].destroy();
+        if (root) {
+            setTimeout(() => {
+                root?.unmount();
+                if (component.parentNode) {
+                    component.parentNode.removeChild(component);
+                }
+            }, 500); // Delay to allow exit animation
+        }
       },
     };
   },
