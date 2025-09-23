@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
 import type { User } from "@/lib/types";
 import { useLanguage } from "@/context/language-context";
+import { getStudentData, getTeacherDataForDashboard, getAdminData } from "@/lib/firestore";
 
 const loginSchemaEs = z.object({
   email: z.string().email("Por favor, introduce un correo electrónico válido."),
@@ -77,11 +78,17 @@ export function LoginForm() {
         });
 
         if (userProfile.role === "teacher") {
+          const teacherData = await getTeacherDataForDashboard(firebaseUser.uid);
+          localStorage.setItem("uncoverly-dashboard-data", JSON.stringify(teacherData));
           router.push("/teacher/dashboard");
         } else if (userProfile.role === "admin") {
+          const adminData = await getAdminData();
+          localStorage.setItem("uncoverly-dashboard-data", JSON.stringify(adminData));
           router.push("/admin/dashboard");
         } else {
-          if (userProfile.hasOnboarded) {
+          if ((userProfile as any).hasOnboarded) {
+            const studentData = await getStudentData(firebaseUser.uid);
+            localStorage.setItem("uncoverly-dashboard-data", JSON.stringify(studentData));
             router.push("/student/dashboard");
           } else {
             router.push("/student/onboarding");

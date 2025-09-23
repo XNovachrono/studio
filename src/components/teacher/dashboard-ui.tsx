@@ -637,31 +637,39 @@ export function TeacherDashboardUI() {
 
   useEffect(() => {
     const storedUser = localStorage.getItem("uncoverly-user");
-    if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        if (parsedUser.role !== 'teacher') {
-            router.push('/login');
-            return;
-        }
-        setUser(parsedUser);
-        
-        const fetchDashboardData = async (teacherId: string) => {
-            setIsLoading(true);
-            try {
-              const teacherData = await getTeacherDataForDashboard(teacherId);
-              setData(teacherData);
-            } catch (error) {
-                console.error("Error fetching teacher data:", error);
-                toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchDashboardData(parsedUser.id);
-
-    } else {
-        router.push("/login");
+    if (!storedUser) {
+      router.push("/login");
+      return;
     }
+    
+    const parsedUser = JSON.parse(storedUser);
+    if (parsedUser.role !== 'teacher') {
+        router.push('/login');
+        return;
+    }
+    setUser(parsedUser);
+
+    const fetchDashboardData = async (teacherId: string) => {
+      const storedData = localStorage.getItem("uncoverly-dashboard-data");
+      if (storedData) {
+        setData(JSON.parse(storedData));
+        setIsLoading(false);
+        localStorage.removeItem("uncoverly-dashboard-data");
+      } else {
+        setIsLoading(true);
+        try {
+          const teacherData = await getTeacherDataForDashboard(teacherId);
+          setData(teacherData);
+        } catch (error) {
+            console.error("Error fetching teacher data:", error);
+            toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
+        } finally {
+            setIsLoading(false);
+        }
+      }
+    };
+    
+    fetchDashboardData(parsedUser.id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 

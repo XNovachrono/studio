@@ -43,37 +43,48 @@ export function StudentDashboardUI() {
 
   useEffect(() => {
     const storedUser = localStorage.getItem("uncoverly-user");
-    if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        if (parsedUser.role !== 'student') {
-            router.push('/login');
-            return;
-        }
-         if (!parsedUser.hasOnboarded) {
-            router.push('/student/onboarding');
-            return;
-        }
-
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const studentData = await getStudentData(parsedUser.id);
-                let lessons: Lesson[] = [];
-                if (studentData.group) {
-                    lessons = await getLessonsForGroup(studentData.group.id);
-                }
-                setData({ ...studentData, lessons });
-            } catch (error) {
-                console.error("Error fetching student data:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchData();
-    } else {
-        router.push("/login");
+    if (!storedUser) {
+      router.push("/login");
+      return;
     }
+
+    const parsedUser = JSON.parse(storedUser);
+    if (parsedUser.role !== 'student') {
+        router.push('/login');
+        return;
+    }
+    if (!parsedUser.hasOnboarded) {
+        router.push('/student/onboarding');
+        return;
+    }
+
+    const fetchDashboardData = async () => {
+      // First, try to load data from localStorage for a faster start
+      const storedData = localStorage.getItem("uncoverly-dashboard-data");
+      if (storedData) {
+        setData(JSON.parse(storedData));
+        setIsLoading(false);
+        // Clean up the stored data to ensure fresh data on next full load
+        localStorage.removeItem("uncoverly-dashboard-data");
+      } else {
+        // If no stored data, fetch from Firestore
+        setIsLoading(true);
+        try {
+            const studentData = await getStudentData(parsedUser.id);
+            let lessons: Lesson[] = [];
+            if (studentData.group) {
+                lessons = await getLessonsForGroup(studentData.group.id);
+            }
+            setData({ ...studentData, lessons });
+        } catch (error) {
+            console.error("Error fetching student data:", error);
+        } finally {
+            setIsLoading(false);
+        }
+      }
+    };
+
+    fetchDashboardData();
   }, [router]);
 
   const handlePqrsClick = (teacher: TeacherInteraction) => {
@@ -103,7 +114,7 @@ export function StudentDashboardUI() {
     };
   }, [data?.group]);
   
-  if (isLoading) {
+  if (isLoading || !data) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
