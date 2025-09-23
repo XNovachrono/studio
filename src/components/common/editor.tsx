@@ -41,30 +41,13 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/language-context";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { generateEditorContent } from "@/ai/flows/editor-flow";
 import { Input } from "../ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import type { EditorContent as EditorContentType } from "@/lib/types";
 import { Separator } from "../ui/separator";
 import { Label } from "../ui/label";
-import { suggestion as slashCommandSuggestion } from './editor-slash-command';
-import { Extension } from '@tiptap/core';
-import suggestion from 'tippy.js';
-
-const SlashCommand = Extension.create({
-  name: 'slashCommand',
-  addOptions() {
-    return {
-      suggestion: slashCommandSuggestion,
-    };
-  },
-  addProseMirrorPlugins() {
-    return [
-      suggestion(this.options.suggestion),
-    ];
-  },
-});
 
 const textColors = [
     { name: 'Default', color: 'inherit' },
@@ -357,7 +340,6 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
             TableRow,
             TableHeader,
             TableCell,
-            SlashCommand,
         ],
         content: content,
         editable: editable && aiState !== 'loading' && aiState !== 'streaming',
