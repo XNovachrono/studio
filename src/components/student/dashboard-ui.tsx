@@ -23,7 +23,7 @@ import { PqrsDialog } from "./pqrs-dialog";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { User as UserIcon } from "lucide-react";
 import { Badge } from "../ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
 import { Calendar } from "../ui/calendar";
 import { Input } from "../ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -63,7 +63,7 @@ const CalendarDialog = ({ user, onOpenChange, isOpen }: { user: StudentProfile, 
         try {
             await updateUserProfile(user.id, { scheduledSlots: slots });
             toast({ title: "Calendario actualizado", description: "Tus preferencias de horario han sido guardadas." });
-            onOpen-change(false);
+            onOpenChange(false);
         } catch (error) {
             toast({ variant: "destructive", title: "Error", description: "No se pudo guardar tu horario." });
         }
