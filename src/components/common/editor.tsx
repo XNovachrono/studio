@@ -50,7 +50,7 @@ import { Separator } from "../ui/separator";
 import { Label } from "../ui/label";
 import { suggestion as slashCommandSuggestion } from './editor-slash-command';
 import { Extension } from '@tiptap/core';
-import suggestion from '@tiptap/suggestion';
+import suggestion from 'tippy.js';
 
 const SlashCommand = Extension.create({
   name: 'slashCommand',
@@ -430,7 +430,6 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
 
     return (
         <motion.div
-            key="editor"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
