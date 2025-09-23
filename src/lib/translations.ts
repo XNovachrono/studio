@@ -4,7 +4,7 @@ export const translations = {
         editor: {
             initialHint: "Toca para continuar con una página vacía o elige una tarjeta",
             placeholders: {
-                default: "Escribe, presiona 'espacio' para la IA o '/' para los comandos",
+                default: "Escribe o importa archivos...",
                 heading: "Título",
             },
             ai: {
@@ -32,7 +32,6 @@ export const translations = {
             title: "Bancos de Contenido",
             tabs: {
                 objectives: "Banco de Objetivos",
-                classes: "Banco de Clases",
                 homework: "Banco de Tareas",
                 images: "Banco de Imágenes",
                 videos: "Banco de Vídeos",
@@ -42,10 +41,6 @@ export const translations = {
                 objective: {
                     title: "Banco de Objetivos",
                     description: "Crea, edita y gestiona tarjetas de objetivos reutilizables para tus clases.",
-                },
-                class: {
-                     title: "Banco de Clases",
-                    description: "Crea, edita y gestiona tarjetas de clases reutilizables.",
                 },
                 homework: {
                     title: "Banco de Tareas",
@@ -346,7 +341,7 @@ export const translations = {
                 retry: "Reintentar",
                 placeholders: {
                      content: "Objetivo general y objetivos específicos de la clase...",
-                     classNote: "Escribe tus notas de clase aquí. Usa '/' para ver los comandos...",
+                     classNote: "Escribe tus notas de clase aquí o importa archivos...",
                      homework: "Detalla las instrucciones de la tarea...",
                      comments: "Añade comentarios privados para otros docentes o administradores...",
                 },
@@ -373,6 +368,16 @@ export const translations = {
                 title: "Importar desde Banco de Objetivos",
                 import: "Importar",
                 noCards: "No hay tarjetas en el banco de objetivos."
+            },
+             fileImporter: {
+                title: "Importar desde Banco de Archivos",
+                import: "Importar",
+                noFiles: "No hay archivos en este banco.",
+                 tabs: {
+                    images: "Imágenes",
+                    videos: "Vídeos",
+                    audios: "Audios",
+                }
             },
             studentDataDialog: {
                 title: "Datos de {studentName}",
@@ -441,7 +446,7 @@ export const translations = {
         editor: {
             initialHint: "Tap to continue with a blank page or choose a template",
             placeholders: {
-                default: "Type, press 'space' for AI or '/' for commands",
+                default: "Type or import files...",
                 heading: "Heading",
             },
             ai: {
@@ -469,7 +474,6 @@ export const translations = {
             title: "Content Banks",
             tabs: {
                 objectives: "Objectives Bank",
-                classes: "Classes Bank",
                 homework: "Homework Bank",
                 images: "Image Bank",
                 videos: "Video Bank",
@@ -479,10 +483,6 @@ export const translations = {
                 objective: {
                     title: "Objectives Bank",
                     description: "Create, edit, and manage reusable objective cards for your classes.",
-                },
-                class: {
-                    title: "Classes Bank",
-                    description: "Create, edit, and manage reusable class cards.",
                 },
                 homework: {
                     title: "Homework Bank",
@@ -783,7 +783,7 @@ export const translations = {
                 retry: "Retry",
                 placeholders: {
                     content: "General and specific objectives for the class...",
-                    classNote: "Write your class notes here. Use '/' to see commands...",
+                    classNote: "Write your class notes here or import files...",
                     homework: "Detail the homework instructions...",
                     comments: "Add private comments for other teachers or admins...",
                 },
@@ -810,6 +810,16 @@ export const translations = {
                 title: "Import from Objectives Bank",
                 import: "Import",
                 noCards: "No cards in the objectives bank."
+            },
+             fileImporter: {
+                title: "Import from File Bank",
+                import: "Import",
+                noFiles: "No files in this bank.",
+                 tabs: {
+                    images: "Images",
+                    videos: "Videos",
+                    audios: "Audios",
+                }
             },
             studentDataDialog: {
                 title: "Data for {studentName}",

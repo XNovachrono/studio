@@ -119,7 +119,7 @@ export interface HomeworkSubmission {
 }
 
 // --- Bank System Types ---
-export type BankType = 'objective' | 'class' | 'homework' | 'image' | 'video' | 'audio';
+export type BankType = 'objective' | 'homework' | 'image' | 'video' | 'audio';
 
 export interface BankCard {
     id: string;

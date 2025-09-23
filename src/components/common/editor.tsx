@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEditor, EditorContent, Editor as TiptapEditor, BubbleMenu } from "@tiptap/react";
@@ -48,6 +49,54 @@ import { AnimatePresence, motion } from "framer-motion";
 import type { EditorContent as EditorContentType } from "@/lib/types";
 import { Separator } from "../ui/separator";
 import { Label } from "../ui/label";
+import { Node } from '@tiptap/core';
+
+const Video = Node.create({
+  name: 'video',
+  group: 'block',
+  atom: true,
+  addAttributes() {
+    return {
+      src: {
+        default: null,
+      },
+    };
+  },
+  parseHTML() {
+    return [
+      {
+        tag: 'video',
+      },
+    ];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['video', { ...HTMLAttributes, controls: 'true' }];
+  },
+});
+
+const Audio = Node.create({
+  name: 'audio',
+  group: 'block',
+  atom: true,
+  addAttributes() {
+    return {
+      src: {
+        default: null,
+      },
+    };
+  },
+  parseHTML() {
+    return [
+      {
+        tag: 'audio',
+      },
+    ];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['audio', { ...HTMLAttributes, controls: 'true' }];
+  },
+});
+
 
 const textColors = [
     { name: 'Default', color: 'inherit' },
@@ -331,6 +380,8 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
                 }
             }),
             Image,
+            Video,
+            Audio,
             Link.configure({ openOnClick: false }),
             Underline,
             TextStyle,
@@ -491,7 +542,7 @@ export function Editor({
 
   if (!editable) {
      const nonEditableEditor = useEditor({
-        extensions: [ StarterKit, Image, Link, Underline, TextStyle, Color, Highlight, Table.configure({ resizable: true }), TableRow, TableHeader, TableCell ],
+        extensions: [ StarterKit, Image, Video, Audio, Link, Underline, TextStyle, Color, Highlight, Table.configure({ resizable: true }), TableRow, TableHeader, TableCell ],
         content: content,
         editable: false,
      });

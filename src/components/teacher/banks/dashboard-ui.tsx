@@ -56,7 +56,6 @@ export function BanksDashboardUI({ isModal = false }: BanksDashboardUIProps) {
           {!isModal && <h1 className="text-3xl font-headline mb-4">{t.title}</h1>}
           <TabsList>
             <TabsTrigger value="objectives">{t.tabs.objectives}</TabsTrigger>
-            <TabsTrigger value="classes">{t.tabs.classes}</TabsTrigger>
             <TabsTrigger value="homework">{t.tabs.homework}</TabsTrigger>
             <TabsTrigger value="images">{t.tabs.images}</TabsTrigger>
             <TabsTrigger value="videos">{t.tabs.videos}</TabsTrigger>
@@ -64,9 +63,6 @@ export function BanksDashboardUI({ isModal = false }: BanksDashboardUIProps) {
           </TabsList>
           <TabsContent value="objectives" className="mt-4">
             <CardBank user={user} bankType="objective" />
-          </TabsContent>
-           <TabsContent value="classes" className="mt-4">
-             <CardBank user={user} bankType="class" />
           </TabsContent>
            <TabsContent value="homework" className="mt-4">
             <CardBank user={user} bankType="homework" />

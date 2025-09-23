@@ -5,7 +5,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History } from "lucide-react";
+import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import {
@@ -19,7 +19,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User, StudentProfile, Group, Lesson, EditorContent, BankCard, AttendanceStatus } from "@/lib/types";
-import { getTeacherDataForDashboard, getLessonsForGroup, createLessonForGroup, updateLesson, getBankCards, addContentToGroup } from "@/lib/firestore";
+import { getTeacherDataForDashboard, getLessonsForGroup, createLessonForGroup, updateLesson, getBankCards, addContentToGroup, getBankFiles } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -145,6 +145,69 @@ const BankCardImporter = ({ onSelectCard, ownerId, isOpen, onOpenChange }: { onS
     )
 }
 
+const FileBankImporter = ({ onSelectFile, isOpen, onOpenChange }: { onSelectFile: (file: BankCard) => void; isOpen: boolean; onOpenChange: (open: boolean) => void; }) => {
+    const [files, setFiles] = useState<BankCard[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const { translations } = useLanguage();
+    const t = translations.teacherDashboard.fileImporter;
+    const [bankType, setBankType] = useState<'image' | 'video' | 'audio'>('image');
+
+    useEffect(() => {
+        if (isOpen) {
+            const fetchFiles = async () => {
+                setIsLoading(true);
+                const imageFiles = await getBankFiles('image');
+                const videoFiles = await getBankFiles('video');
+                const audioFiles = await getBankFiles('audio');
+                setFiles([...imageFiles, ...videoFiles, ...audioFiles]);
+                setIsLoading(false);
+            };
+            fetchFiles();
+        }
+    }, [isOpen]);
+
+    const filteredFiles = files.filter(f => f.type === bankType);
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-3xl">
+                <DialogHeader><DialogTitle>{t.title}</DialogTitle></DialogHeader>
+                 <Tabs value={bankType} onValueChange={(value) => setBankType(value as any)}>
+                    <TabsList>
+                        <TabsTrigger value="image">{t.tabs.images}</TabsTrigger>
+                        <TabsTrigger value="video">{t.tabs.videos}</TabsTrigger>
+                        <TabsTrigger value="audio">{t.tabs.audios}</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value={bankType}>
+                        {isLoading ? (
+                            <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin"/></div>
+                        ) : (
+                            <ScrollArea className="h-[50vh] mt-4">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pr-4">
+                                {filteredFiles.length > 0 ? filteredFiles.map(file => (
+                                    <Card key={file.id}>
+                                        <CardHeader>
+                                            <CardTitle className="text-sm truncate">{file.name}</CardTitle>
+                                            <CardDescription className="text-xs">{file.ownerName}</CardDescription>
+                                        </CardHeader>
+                                        <CardFooter>
+                                            <Button size="sm" onClick={() => onSelectFile(file)} className="w-full">
+                                                <Import className="mr-2 h-4 w-4"/>
+                                                {t.import}
+                                            </Button>
+                                        </CardFooter>
+                                    </Card>
+                                )) : <p className="col-span-full text-center text-muted-foreground p-8">{t.noFiles}</p>}
+                                </div>
+                            </ScrollArea>
+                        )}
+                    </TabsContent>
+                </Tabs>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 
 const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { group: Group, studentsById: Map<string, StudentProfile>, teacherId: string, onLessonCreated: () => void }) => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -156,6 +219,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState<string | null>(null); // Store saving lesson ID
     const [isBankImporterOpen, setBankImporterOpen] = useState(false);
+    const [isFileBankImporterOpen, setFileBankImporterOpen] = useState(false);
     const [activeLessonIdForImport, setActiveLessonIdForImport] = useState<string | null>(null);
     const [activeFieldForImport, setActiveFieldForImport] = useState<keyof Lesson | null>(null);
 
@@ -234,11 +298,44 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
         setActiveFieldForImport(field);
         setBankImporterOpen(true);
     };
+    
+    const handleOpenFileBankImporter = (lessonId: string, field: keyof Lesson) => {
+        setActiveLessonIdForImport(lessonId);
+        setActiveFieldForImport(field);
+        setFileBankImporterOpen(true);
+    };
 
     const handleImportFromBank = (content: EditorContent) => {
         if (activeLessonIdForImport && activeFieldForImport) {
             handleContentChange(activeLessonIdForImport, activeFieldForImport, content);
         }
+    };
+    
+    const handleImportFileFromBank = (file: BankCard) => {
+        if (!activeLessonIdForImport) return;
+
+        const lesson = lessons.find(l => l.id === activeLessonIdForImport);
+        if (!lesson) return;
+
+        const currentEditorContent = editedContent[activeLessonIdForImport]?.classNote || lesson.classNote;
+        
+        let fileNode;
+        if (file.type === 'image') {
+            fileNode = { type: 'image', attrs: { src: file.fileUrl, alt: file.name } };
+        } else if (file.type === 'video') {
+            fileNode = { type: 'video', attrs: { src: file.fileUrl } };
+        } else if (file.type === 'audio') {
+            fileNode = { type: 'audio', attrs: { src: file.fileUrl } };
+        }
+
+        if (fileNode) {
+            const newContent: EditorContent = {
+                ...currentEditorContent,
+                content: [...(currentEditorContent.content || []), { type: 'paragraph' }, fileNode],
+            };
+            handleContentChange(activeLessonIdForImport, 'classNote', newContent);
+        }
+        setFileBankImporterOpen(false);
     };
 
     if (isLoading) {
@@ -263,6 +360,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     return (
         <div className="space-y-4">
              <BankCardImporter ownerId={teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} />
+             <FileBankImporter isOpen={isFileBankImporterOpen} onOpenChange={setFileBankImporterOpen} onSelectFile={handleImportFileFromBank} />
              {lessons.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full">
                     {lessons.map(lesson => {
@@ -308,17 +406,10 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between">
                                         <CardTitle>{t.classNote}</CardTitle>
-                                         <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4"/></Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent>
-                                                <DropdownMenuItem onClick={() => handleOpenBankImporter(lesson.id, 'classNote')}>
-                                                    <Import className="mr-2 h-4 w-4" />
-                                                    {t.importFromBank}
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                         <Button variant="outline" size="sm" onClick={() => handleOpenFileBankImporter(lesson.id, 'classNote')}>
+                                            <FileUp className="mr-2 h-4 w-4"/>
+                                            Importar Archivo
+                                        </Button>
                                     </CardHeader>
                                     <CardContent>
                                        <Editor
