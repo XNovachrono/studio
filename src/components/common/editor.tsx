@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEditor, EditorContent, Editor as TiptapEditor, BubbleMenu } from "@tiptap/react";
@@ -48,6 +49,22 @@ import { AnimatePresence, motion } from "framer-motion";
 import type { EditorContent as EditorContentType } from "@/lib/types";
 import { Separator } from "../ui/separator";
 import { Label } from "../ui/label";
+import { suggestion as slashCommandSuggestion } from './editor-slash-command';
+import { Extension } from '@tiptap/core';
+
+const SlashCommand = Extension.create({
+  name: 'slashCommand',
+  addOptions() {
+    return {
+      suggestion: slashCommandSuggestion,
+    };
+  },
+  addProseMirrorPlugins() {
+    return [
+      require('@tiptap/suggestion').suggestion(this.options.suggestion),
+    ];
+  },
+});
 
 const textColors = [
     { name: 'Default', color: 'inherit' },
@@ -96,7 +113,7 @@ const ColorPicker = ({ editor }: { editor: TiptapEditor }) => {
                         {textColors.map(({ name, color }) => (
                             <button
                                 key={name}
-                                onClick={() => editor.chain().focus().setColor(color).run()}
+                                onClick={() => editor.chain().focus().setColor(color === 'inherit' ? '' : color).run()}
                                 className={cn("h-6 w-6 rounded-full border-2 transition-transform", editor.isActive('textStyle', { color }) ? 'border-primary scale-110' : 'border-transparent')}
                                 style={{ backgroundColor: color === 'inherit' ? 'hsl(var(--foreground))' : color }}
                                 title={name}
@@ -353,6 +370,7 @@ export function Editor({
       TableRow,
       TableHeader,
       TableCell,
+      SlashCommand,
     ],
     content: content,
     editable: editable && isEditing && aiState !== 'loading' && aiState !== 'streaming',
