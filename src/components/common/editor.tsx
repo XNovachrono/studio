@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useEditor, EditorContent, Editor as TiptapEditor, BubbleMenu } from "@tiptap/react";
@@ -541,7 +540,6 @@ export function Editor({
             </motion.div>
         ) : (
              <EditorInstance 
-                key={isEditing ? 'editing' : 'not-editing'}
                 content={content}
                 onChange={onChange}
                 editable={isEditing}
