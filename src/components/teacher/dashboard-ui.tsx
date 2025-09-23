@@ -251,44 +251,56 @@ const GroupGoals = ({ group, onGroupUpdate }: { group: Group, onGroupUpdate: () 
     return (
         <div className="space-y-6">
             <BankCardImporter ownerId={group.teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} />
-            <Card>
-                 <Accordion type="single" collapsible>
-                    <AccordionItem value="item-1">
-                        <AccordionTrigger className="px-6 font-headline text-lg">{t.mainObjective}</AccordionTrigger>
-                        <AccordionContent className="p-6 pt-0">
-                             <Editor
-                                content={mainObjective}
-                                onChange={setMainObjective}
-                                editable
-                                placeholder={t.mainPlaceholder}
-                            />
-                            <Button className="mt-4" onClick={() => handleOpenBankImporter('main')}>
-                                <Import className="mr-2 h-4 w-4" />
-                                {translations.teacherDashboard.lessons.importFromBank}
-                            </Button>
+            <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="item-1">
+                    <Card>
+                        <CardHeader>
+                            <AccordionTrigger>
+                                <CardTitle className="font-headline text-lg">{t.mainObjective}</CardTitle>
+                            </AccordionTrigger>
+                        </CardHeader>
+                        <AccordionContent>
+                            <CardContent>
+                                <Editor
+                                    content={mainObjective}
+                                    onChange={setMainObjective}
+                                    editable
+                                    placeholder={t.mainPlaceholder}
+                                />
+                                <Button className="mt-4" onClick={() => handleOpenBankImporter('main')}>
+                                    <Import className="mr-2 h-4 w-4" />
+                                    {translations.teacherDashboard.lessons.importFromBank}
+                                </Button>
+                            </CardContent>
                         </AccordionContent>
-                    </AccordionItem>
-                </Accordion>
-            </Card>
-            <Card>
-                 <Accordion type="single" collapsible>
-                    <AccordionItem value="item-1">
-                        <AccordionTrigger className="px-6 font-headline text-lg">{t.weeklyObjectives}</AccordionTrigger>
-                        <AccordionContent className="p-6 pt-0">
-                             <Editor
-                                content={weeklyObjectives}
-                                onChange={setWeeklyObjectives}
-                                editable
-                                placeholder={t.weeklyPlaceholder}
-                            />
-                            <Button className="mt-4" onClick={() => handleOpenBankImporter('weekly')}>
-                                <Import className="mr-2 h-4 w-4" />
-                                 {translations.teacherDashboard.lessons.importFromBank}
-                            </Button>
+                    </Card>
+                </AccordionItem>
+            </Accordion>
+             <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="item-1">
+                     <Card>
+                        <CardHeader>
+                             <AccordionTrigger>
+                                <CardTitle className="font-headline text-lg">{t.weeklyObjectives}</CardTitle>
+                            </AccordionTrigger>
+                        </CardHeader>
+                        <AccordionContent>
+                            <CardContent>
+                                 <Editor
+                                    content={weeklyObjectives}
+                                    onChange={setWeeklyObjectives}
+                                    editable
+                                    placeholder={t.weeklyPlaceholder}
+                                />
+                                <Button className="mt-4" onClick={() => handleOpenBankImporter('weekly')}>
+                                    <Import className="mr-2 h-4 w-4" />
+                                     {translations.teacherDashboard.lessons.importFromBank}
+                                </Button>
+                            </CardContent>
                         </AccordionContent>
-                    </AccordionItem>
-                </Accordion>
-            </Card>
+                    </Card>
+                </AccordionItem>
+            </Accordion>
 
             <div className="flex justify-end">
                 <Button onClick={handleSave} disabled={isSaving}>
@@ -561,23 +573,23 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                         </AccordionTrigger>
                         <AccordionContent className="p-4 border-t">
                              <div className="space-y-4">
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="font-headline text-lg flex items-center gap-2"><Video /> {t.recording}</CardTitle>
-                                        <CardDescription>{t.recordingPlaceholder}</CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="flex items-center gap-2">
-                                        <Input 
-                                            placeholder="https://..." 
-                                            value={editedContent[lesson.id]?.recording?.link ?? lesson.recording?.link ?? ""}
-                                            onChange={(e) => handleContentChange(lesson.id, 'recording', { link: e.target.value })}
-                                        />
-                                        <Button onClick={() => handleSaveLesson(lesson.id)} disabled={isSaving === lesson.id}>
-                                            {isSaving === lesson.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="font-headline text-lg flex items-center gap-2"><Video /> {t.recording}</CardTitle>
+                                            <CardDescription>{t.recordingPlaceholder}</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="flex items-center gap-2">
+                                            <Input 
+                                                placeholder="https://..." 
+                                                value={editedContent[lesson.id]?.recording?.link ?? lesson.recording?.link ?? ""}
+                                                onChange={(e) => handleContentChange(lesson.id, 'recording', { link: e.target.value })}
+                                            />
+                                            <Button onClick={() => handleSaveLesson(lesson.id)} disabled={isSaving === lesson.id}>
+                                                {isSaving === lesson.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                            </Button>
+                                        </CardContent>
+                                    </Card>
                                     <Card onClick={() => handleOpenModal(lesson.id, 'content')} className="cursor-pointer hover:bg-accent/50 transition-colors">
                                         <CardHeader>
                                             <CardTitle className="font-headline text-base flex items-center gap-2"><Target/> {t.content}</CardTitle>
