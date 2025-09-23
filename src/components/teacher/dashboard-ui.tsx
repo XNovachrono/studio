@@ -5,7 +5,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp } from "lucide-react";
+import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import {
@@ -363,6 +363,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                     {lessons.map(lesson => {
                         const currentAttendance = editedContent[lesson.id]?.attendance || lesson.attendance;
                         const isLessonSaving = isSaving === lesson.id;
+                        const currentRecordingLink = editedContent[lesson.id]?.recording?.link ?? lesson.recording?.link ?? "";
                         return (
                          <AccordionItem value={lesson.id} key={lesson.id} data-accordion-item-id={lesson.id}>
                             <AccordionTrigger className="font-semibold text-lg hover:no-underline">{lesson.name}</AccordionTrigger>
@@ -374,37 +375,42 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                    </Button>
                                 </div>
 
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="font-headline text-lg flex items-center gap-2"><Video /> {t.recording}</CardTitle>
+                                        <CardDescription>{t.recordingPlaceholder}</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex items-center gap-2">
+                                        <Input 
+                                            placeholder="https://..." 
+                                            value={currentRecordingLink}
+                                            onChange={(e) => handleContentChange(lesson.id, 'recording', { link: e.target.value })}
+                                        />
+                                    </CardContent>
+                                </Card>
+                                
                                 <Accordion type="multiple" className="w-full space-y-4">
                                     <Card>
-                                        <AccordionItem value="recording" className="border-b-0">
-                                            <CardHeader className="p-0">
-                                                <AccordionTrigger className="px-6 py-4">
-                                                    <CardTitle className="text-base font-medium">{t.recording}</CardTitle>
-                                                </AccordionTrigger>
-                                            </CardHeader>
-                                            <AccordionContent className="px-6 pb-4">
-                                                <p className="text-muted-foreground">{t.recordingPlaceholder}</p>
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                    </Card>
-
-                                    <Card>
                                         <AccordionItem value="content" className="border-b-0">
-                                            <CardHeader className="flex flex-row items-center justify-between px-6 py-4">
-                                                <AccordionTrigger className="p-0 flex-1">
-                                                    <CardTitle className="text-base font-medium">{t.content}</CardTitle>
-                                                </AccordionTrigger>
-                                                <DropdownMenu onOpenChange={(e) => e.stopPropagation()}>
-                                                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4"/></Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                                                        <DropdownMenuItem onClick={() => handleOpenBankImporter(lesson.id, 'content')}>
-                                                            <Import className="mr-2 h-4 w-4" />
-                                                            {t.importFromBank}
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                            <CardHeader className="p-0">
+                                                <div className="flex">
+                                                    <AccordionTrigger className="flex-1 px-6 py-4">
+                                                        <CardTitle className="font-headline text-base flex items-center gap-2"><Target/> {t.content}</CardTitle>
+                                                    </AccordionTrigger>
+                                                    <div className="px-6 py-4">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4"/></Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent>
+                                                                <DropdownMenuItem onClick={() => handleOpenBankImporter(lesson.id, 'content')}>
+                                                                    <Import className="mr-2 h-4 w-4" />
+                                                                    {t.importFromBank}
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
+                                                </div>
                                             </CardHeader>
                                             <AccordionContent className="px-6 pb-4">
                                                 <Editor
@@ -419,14 +425,18 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                     
                                      <Card>
                                         <AccordionItem value="classNote" className="border-b-0">
-                                            <CardHeader className="flex flex-row items-center justify-between px-6 py-4">
-                                                <AccordionTrigger className="p-0 flex-1">
-                                                    <CardTitle className="text-base font-medium">{t.classNote}</CardTitle>
-                                                </AccordionTrigger>
-                                                <Button variant="outline" size="sm" onClick={(e) => {e.stopPropagation(); handleOpenFileBankImporter(lesson.id)}}>
-                                                    <FileUp className="mr-2 h-4 w-4"/>
-                                                    Importar Archivo
-                                                </Button>
+                                             <CardHeader className="p-0">
+                                                <div className="flex">
+                                                    <AccordionTrigger className="flex-1 px-6 py-4">
+                                                        <CardTitle className="font-headline text-base flex items-center gap-2"><FileText/> {t.classNote}</CardTitle>
+                                                    </AccordionTrigger>
+                                                     <div className="px-6 py-4">
+                                                        <Button variant="outline" size="sm" onClick={() => handleOpenFileBankImporter(lesson.id)}>
+                                                            <FileUp className="mr-2 h-4 w-4"/>
+                                                            Importar Archivo
+                                                        </Button>
+                                                     </div>
+                                                </div>
                                             </CardHeader>
                                             <AccordionContent className="px-6 pb-4">
                                                 <Editor
@@ -441,21 +451,25 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
 
                                      <Card>
                                         <AccordionItem value="homework" className="border-b-0">
-                                            <CardHeader className="flex flex-row items-center justify-between px-6 py-4">
-                                                <AccordionTrigger className="p-0 flex-1">
-                                                    <CardTitle className="text-base font-medium">{t.homework}</CardTitle>
-                                                </AccordionTrigger>
-                                                <DropdownMenu onOpenChange={(e) => e.stopPropagation()}>
-                                                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4"/></Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                                                        <DropdownMenuItem onClick={() => handleOpenBankImporter(lesson.id, 'homework')}>
-                                                            <Import className="mr-2 h-4 w-4" />
-                                                            {t.importFromBank}
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                            <CardHeader className="p-0">
+                                                <div className="flex">
+                                                    <AccordionTrigger className="flex-1 px-6 py-4">
+                                                        <CardTitle className="font-headline text-base flex items-center gap-2"><BookCheck/> {t.homework}</CardTitle>
+                                                    </AccordionTrigger>
+                                                    <div className="px-6 py-4">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4"/></Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent>
+                                                                <DropdownMenuItem onClick={() => handleOpenBankImporter(lesson.id, 'homework')}>
+                                                                    <Import className="mr-2 h-4 w-4" />
+                                                                    {t.importFromBank}
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
+                                                </div>
                                             </CardHeader>
                                             <AccordionContent className="px-6 pb-4">
                                                 <Editor
@@ -472,7 +486,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                         <AccordionItem value="attendance" className="border-b-0">
                                             <CardHeader className="p-0">
                                                 <AccordionTrigger className="px-6 py-4">
-                                                    <CardTitle className="text-base font-medium">{t.attendance}</CardTitle>
+                                                    <CardTitle className="font-headline text-base flex items-center gap-2"><Users2/> {t.attendance}</CardTitle>
                                                 </AccordionTrigger>
                                             </CardHeader>
                                             <AccordionContent className="px-6 pb-4">
@@ -509,7 +523,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                         <AccordionItem value="comments" className="border-b-0">
                                             <CardHeader className="p-0">
                                                 <AccordionTrigger className="px-6 py-4">
-                                                    <CardTitle className="text-base font-medium">{t.comments}</CardTitle>
+                                                    <CardTitle className="font-headline text-base flex items-center gap-2"><MessageSquareQuote/> {t.comments}</CardTitle>
                                                 </AccordionTrigger>
                                             </CardHeader>
                                             <AccordionContent className="px-6 pb-4">
