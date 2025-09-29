@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -45,6 +46,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 
 
 interface TeacherDashboardData {
+  teacher: User;
   groups: Group[];
   allStudents: StudentProfile[];
   groupHistory: Group[];
@@ -252,10 +254,10 @@ const GroupGoals = ({ group, onGroupUpdate }: { group: Group, onGroupUpdate: () 
             <BankCardImporter ownerId={group.teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} />
             <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="item-1">
-                    <Card>
+                     <Card>
                         <CardHeader>
                              <AccordionTrigger>
-                                 <CardTitle className="font-headline text-lg">{t.mainObjective}</CardTitle>
+                                <CardTitle className="font-headline text-lg">{t.mainObjective}</CardTitle>
                             </AccordionTrigger>
                         </CardHeader>
                         <AccordionContent>
@@ -923,15 +925,19 @@ export function TeacherDashboardUI() {
   const { translations } = useLanguage();
   const t = translations.teacherDashboard;
   
-  const [user, setUser] = useState<User | null>(null);
   const [data, setData] = useState<TeacherDashboardData | null>(null);
   
   const [groupToView, setGroupToView] = useState<Group | null>(null);
   const [isBanksModalOpen, setIsBanksModalOpen] = useState(false);
   
-  const fetchDashboardData = async (userId: string) => {
+  const fetchDashboardData = async (teacherId: string) => {
       try {
-        const teacherData = await getTeacherDataForDashboard(userId);
+        const teacherData = await getTeacherDataForDashboard(teacherId);
+         // Role-based redirection
+        if (teacherData.teacher.role !== 'teacher') {
+            router.push(teacherData.teacher.role === 'admin' ? '/admin/dashboard' : '/student/dashboard');
+            return;
+        }
         setData(teacherData);
         // If a group is being viewed, update its data
         if (groupToView) {
@@ -949,6 +955,7 @@ export function TeacherDashboardUI() {
           console.error("Error fetching teacher data:", error);
           const t_toast = translations.teacherDashboard.toasts;
           toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
+          router.push('/login');
       }
     };
 
@@ -960,13 +967,9 @@ export function TeacherDashboardUI() {
     }
     
     const parsedUser = JSON.parse(storedUser);
-    if (parsedUser.role !== 'teacher') {
-        router.push('/login');
-        return;
-    }
-    setUser(parsedUser);
     fetchDashboardData(parsedUser.id);
-  }, [router, translations.teacherDashboard.toasts]);
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const studentsById = useMemo(() => new Map(data?.allStudents.map(s => [s.id, s])), [data?.allStudents]);
   
@@ -976,13 +979,14 @@ export function TeacherDashboardUI() {
   const historicalGroups = useMemo(() => data?.groupHistory || [], [data?.groupHistory]);
 
 
-  if (!data || !user) {
+  if (!data) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
+  const user = data.teacher;
 
   return (
     <>

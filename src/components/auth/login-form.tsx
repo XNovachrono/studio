@@ -8,7 +8,6 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +22,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
-import type { User } from "@/lib/types";
 import { useLanguage } from "@/context/language-context";
 
 const loginSchemaEs = z.object({
@@ -63,42 +61,23 @@ export function LoginForm() {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const firebaseUser = userCredential.user;
 
-      const userDocRef = doc(db, "users", firebaseUser.uid);
-      const userDocSnap = await getDoc(userDocRef);
+      // Store only basic info, dashboards will fetch detailed profiles
+      localStorage.setItem("uncoverly-user", JSON.stringify({ 
+        id: firebaseUser.uid, 
+        email: firebaseUser.email,
+        // We don't know the name or role yet, but we can pre-fill what we have
+        name: firebaseUser.displayName || firebaseUser.email, 
+      }));
+      
+      toast({
+        title: t.successTitle,
+        description: t.successDescription.replace('{name}', firebaseUser.displayName || 'a Uncoverly'),
+      });
 
-      if (userDocSnap.exists()) {
-        const userProfile = userDocSnap.data() as User;
-        
-        localStorage.setItem("uncoverly-user", JSON.stringify({ ...userProfile, id: firebaseUser.uid }));
-        
-        toast({
-          title: t.successTitle,
-          description: t.successDescription.replace('{name}', userProfile.name),
-        });
-
-        // REDIRECT based on role
-        switch (userProfile.role) {
-          case "teacher":
-            router.push("/teacher/dashboard");
-            break;
-          case "admin":
-            router.push("/admin/dashboard");
-            break;
-          case "student":
-            if ((userProfile as any).hasOnboarded) {
-              router.push("/student/dashboard");
-            } else {
-              router.push("/student/onboarding");
-            }
-            break;
-          default:
-            router.push("/login"); // Fallback
-        }
-        
-      } else {
-         throw new Error(t.errorUserNotFound);
-      }
-
+      // Redirect to a generic student dashboard. The dashboard itself will handle role-based redirection.
+      // This makes the login feel faster as we don't wait for the profile fetch here.
+      router.push("/student/dashboard");
+      
     } catch (error: any) {
       console.error("Firebase Auth Error:", error);
       let description = t.errorUnexpected;

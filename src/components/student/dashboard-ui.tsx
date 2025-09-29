@@ -134,18 +134,21 @@ export function StudentDashboardUI() {
             return;
         }
         const parsedUser = JSON.parse(storedUser);
-         if (parsedUser.role !== 'student') {
-            router.push('/login');
-            return;
-        }
-        if (!parsedUser.hasOnboarded) {
-            router.push('/student/onboarding');
-            return;
-        }
         
         setIsLoading(true);
         try {
             const studentData = await getStudentData(parsedUser.id);
+            
+            // Role-based redirection
+            if (studentData.user.role !== 'student') {
+                router.push(studentData.user.role === 'admin' ? '/admin/dashboard' : '/teacher/dashboard');
+                return;
+            }
+             if (!studentData.user.hasOnboarded) {
+                router.push('/student/onboarding');
+                return;
+            }
+
             let lessons: Lesson[] = [];
             if (studentData.group) {
                 lessons = await getLessonsForGroup(studentData.group.id);
@@ -153,6 +156,8 @@ export function StudentDashboardUI() {
             setData({ ...studentData, lessons });
         } catch (error) {
             console.error("Error fetching student data:", error);
+            // If profile doesn't exist or another error, maybe send back to login
+            router.push("/login");
         } finally {
             setIsLoading(false);
         }
@@ -160,7 +165,8 @@ export function StudentDashboardUI() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handlePqrsClick = (teacher: TeacherInteraction) => {
     setSelectedTeacher(teacher);
@@ -247,7 +253,7 @@ export function StudentDashboardUI() {
                     <CardHeader>
                         <CardTitle className="font-headline text-2xl flex items-center gap-2">
                             <Goal />
-                            {t_goals.title}
+                            {translations.teacherDashboard.goals.title}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>

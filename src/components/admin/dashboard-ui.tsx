@@ -623,14 +623,21 @@ export function AdminDashboardUI() {
   // Group details state
   const [groupToView, setGroupToView] = useState<Group | null>(null);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (adminId: string) => {
     setIsLoading(true);
     try {
-      const adminData = await getAdminData();
+      const adminData = await getAdminData(adminId);
+       // Role-based redirection
+      if (adminData.admin.role !== 'admin') {
+          router.push(adminData.admin.role === 'student' ? '/student/dashboard' : '/teacher/dashboard');
+          return;
+      }
       setData(adminData);
+      setUser(adminData.admin);
     } catch (error) {
       console.error("Error fetching admin data:", error);
       toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
+      router.push('/login');
     } finally {
       setIsLoading(false);
     }
@@ -640,17 +647,12 @@ export function AdminDashboardUI() {
     const storedUser = localStorage.getItem("uncoverly-user");
     if (storedUser) {
       const parsedUser = JSON.parse(storedUser);
-      if (parsedUser.role !== 'admin') {
-        router.push('/login');
-        return;
-      }
-      setUser(parsedUser);
-      fetchDashboardData();
+      fetchDashboardData(parsedUser.id);
     } else {
       router.push("/login");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router]);
+  }, []);
 
   const studentsInGroups = useMemo(() => new Set(data?.groups.flatMap(g => g.studentIds)), [data?.groups]);
   const ungroupedStudents = useMemo(() => data?.allStudents.filter(s => !studentsInGroups.has(s.id)) || [], [data, studentsInGroups]);
@@ -735,7 +737,7 @@ export function AdminDashboardUI() {
         setSelectedStudentIds([]);
         setSelectedTeacherId(null);
         setCreateGroupModalOpen(false);
-        await fetchDashboardData(); 
+        await fetchDashboardData(user!.id); 
     } catch (error) {
         console.error("Error creating group:", error);
         toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.createGroupError });
@@ -764,7 +766,7 @@ export function AdminDashboardUI() {
     }
   };
 
-  if (isLoading || !data) {
+  if (isLoading || !data || !user) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -1005,7 +1007,7 @@ export function AdminDashboardUI() {
         student={editingStudent} 
         isOpen={!!editingStudent} 
         onOpenChange={() => setEditingStudent(null)} 
-        onStudentUpdate={fetchDashboardData}
+        onStudentUpdate={() => fetchDashboardData(user.id)}
       />
 
       {/* Dialog for PQRS Details */}
@@ -1034,7 +1036,7 @@ export function AdminDashboardUI() {
         allTeachers={data.allTeachers}
         isOpen={!!groupToView}
         onOpenChange={() => setGroupToView(null)}
-        onGroupUpdate={fetchDashboardData}
+        onGroupUpdate={() => fetchDashboardData(user.id)}
       />
     </div>
   );

@@ -140,19 +140,22 @@ export const deletePQRSMessage = async (messageId: string): Promise<void> => {
 };
 
 
-export const getAdminData = async (): Promise<{
-    admin: User | null,
+export const getAdminData = async (adminId: string): Promise<{
+    admin: User,
     groups: Group[],
     allStudents: StudentProfile[],
     allTeachers: User[],
     pqrsMessages: PQRSMessage[],
     bankCards: BankCard[],
 }> => {
+    
+    const admin = await getUserProfile(adminId);
+    if (!admin) throw new Error("Admin profile not found.");
+
     const allUsersRef = collection(db, "users");
     const allUsersSnap = await getDocs(allUsersRef);
     const allUsers = allUsersSnap.docs.map(d => ({ id: d.id, ...d.data() })) as User[];
-
-    const admin = allUsers.find(u => u.role === 'admin') || null;
+    
     const allStudents = allUsers.filter(u => u.role === 'student') as StudentProfile[];
     const allTeachers = allUsers.filter(u => u.role === 'teacher');
     
@@ -214,12 +217,14 @@ export const createGroupWithTeacher = async (teacher: User, students: {id: strin
 
 // === Teacher Functions ===
 export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
+    teacher: User,
     groups: Group[],
     allStudents: StudentProfile[],
     groupHistory: Group[],
 }> => {
     // 1. Get teacher's profile to check their history
     const teacherProfile = await getUserProfile(teacherId);
+    if (!teacherProfile) throw new Error("Teacher profile not found.");
     
     // 2. Get all groups currently assigned to this teacher
     const groupsRef = collection(db, "groups");
@@ -270,7 +275,7 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
         });
     }
 
-    return { groups, allStudents, groupHistory };
+    return { teacher: teacherProfile, groups, allStudents, groupHistory };
 }
 
 // Update group objectives
