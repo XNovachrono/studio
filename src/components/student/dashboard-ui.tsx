@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -17,7 +18,7 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "../ui/button";
 import { Editor } from "../common/editor";
-import { format, parse, parseISO, isSameDay } from "date-fns";
+import { format, parse, parseISO, isSameDay, getWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { PqrsDialog } from "./pqrs-dialog";
 import { Avatar, AvatarFallback } from "../ui/avatar";
@@ -39,20 +40,34 @@ interface StudentDashboardData {
 const CalendarDialog = ({ user, onOpenChange, isOpen }: { user: StudentProfile, isOpen: boolean, onOpenChange: (open: boolean) => void }) => {
     const { toast } = useToast();
     const [slots, setSlots] = useState(user.scheduledSlots || []);
+    const maxClassesPerWeek = user.classesPerWeek || 1;
 
     const selectedDates = useMemo(() => slots.map(s => parseISO(s.date)), [slots]);
 
     const handleDayClick = (day: Date) => {
-        setSlots(prevSlots => {
-            const isAlreadySelected = prevSlots.some(s => isSameDay(parseISO(s.date), day));
-            if (isAlreadySelected) {
-                return prevSlots.filter(s => !isSameDay(parseISO(s.date), day));
-            } else {
-                const newSlot = { date: format(day, 'yyyy-MM-dd'), time: '18:00' };
-                const newSlots = [...prevSlots, newSlot];
-                return newSlots.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const isAlreadySelected = slots.some(s => isSameDay(parseISO(s.date), day));
+        
+        if (isAlreadySelected) {
+            // If it's selected, remove it
+            setSlots(prevSlots => prevSlots.filter(s => !isSameDay(parseISO(s.date), day)));
+        } else {
+            // If it's not selected, check the weekly limit before adding
+            const weekNumber = getWeek(day, { weekStartsOn: 1 });
+            const classesInSameWeek = slots.filter(s => getWeek(parseISO(s.date), { weekStartsOn: 1 }) === weekNumber).length;
+
+            if (classesInSameWeek >= maxClassesPerWeek) {
+                toast({
+                    variant: "destructive",
+                    title: "Límite semanal alcanzado",
+                    description: `Ya has seleccionado el máximo de ${maxClassesPerWeek} clases para esta semana.`,
+                });
+                return;
             }
-        });
+
+            // Add the new slot
+            const newSlot = { date: format(day, 'yyyy-MM-dd'), time: '18:00' };
+            setSlots(prevSlots => [...prevSlots, newSlot].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+        }
     };
 
     const handleTimeChange = (date: string, time: string) => {
@@ -84,8 +99,16 @@ const CalendarDialog = ({ user, onOpenChange, isOpen }: { user: StudentProfile, 
                         className="rounded-md border self-start"
                     />
                     <div className="space-y-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base">Clases por Semana</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-sm">Tienes un máximo de <span className="font-bold">{maxClassesPerWeek}</span> clases por semana.</p>
+                            </CardContent>
+                        </Card>
                         <h3 className="font-semibold text-lg">Horarios Seleccionados</h3>
-                        <ScrollArea className="h-72">
+                        <ScrollArea className="h-60">
                             <div className="space-y-3 pr-4">
                                 {slots.length > 0 ? slots.map(slot => (
                                      <div key={slot.date} className="flex items-center justify-between gap-4 p-2 rounded-md bg-secondary/50">
@@ -259,16 +282,32 @@ export function StudentDashboardUI() {
                     <CardContent>
                          <Accordion type="multiple" className="w-full space-y-4">
                             <AccordionItem value="main-objective">
-                                <AccordionTrigger className="font-headline text-lg p-4 bg-secondary/50 rounded-md hover:no-underline">{t_goals.mainObjective}</AccordionTrigger>
-                                <AccordionContent className="p-4 border rounded-b-md">
-                                    <Editor content={data.group.mainObjective} onChange={() => {}} editable={false} />
-                                </AccordionContent>
+                                <Card>
+                                    <CardHeader>
+                                        <AccordionTrigger>
+                                            <CardTitle className="font-headline text-lg">{t_goals.mainObjective}</CardTitle>
+                                        </AccordionTrigger>
+                                    </CardHeader>
+                                    <AccordionContent>
+                                        <CardContent>
+                                            <Editor content={data.group.mainObjective} onChange={() => {}} editable={false} />
+                                        </CardContent>
+                                    </AccordionContent>
+                                </Card>
                             </AccordionItem>
                              <AccordionItem value="weekly-objectives">
-                                <AccordionTrigger className="font-headline text-lg p-4 bg-secondary/50 rounded-md hover:no-underline">{t_goals.weeklyObjectives}</AccordionTrigger>
-                                <AccordionContent className="p-4 border rounded-b-md">
-                                    <Editor content={data.group.weeklyObjectives} onChange={() => {}} editable={false} />
-                                </AccordionContent>
+                                <Card>
+                                    <CardHeader>
+                                        <AccordionTrigger>
+                                            <CardTitle className="font-headline text-lg">{t_goals.weeklyObjectives}</CardTitle>
+                                        </AccordionTrigger>
+                                    </CardHeader>
+                                    <AccordionContent>
+                                        <CardContent>
+                                            <Editor content={data.group.weeklyObjectives} onChange={() => {}} editable={false} />
+                                        </CardContent>
+                                    </AccordionContent>
+                                </Card>
                             </AccordionItem>
                         </Accordion>
                     </CardContent>
@@ -430,3 +469,5 @@ export function StudentDashboardUI() {
     </div>
   );
 }
+
+    

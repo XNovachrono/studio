@@ -122,7 +122,8 @@ export const translations = {
                     startDate: "Fecha Inicio",
                     duration: "Duración (sem)",
                     currentWeek: "Semana Actual",
-                    actions: "Acciones"
+                    actions: "Acciones",
+                    classesPerWeek: "Clases/Sem"
                 }
             },
             groups: {
@@ -212,7 +213,7 @@ export const translations = {
             passwordPlaceholder: "••••••••",
             submitButton: "Acceder",
             successTitle: "Inicio de sesión exitoso",
-            successDescription: "Bienvenido/a, {name}.",
+            successDescription: "Bienvenido/a a Uncoverly.",
             errorTitle: "Error de autenticación",
             errorInvalidCredentials: "Usuario o contraseña incorrectos.",
             errorInvalidEmail: "El formato del correo electrónico no es válido.",
@@ -579,7 +580,8 @@ export const translations = {
                     startDate: "Start Date",
                     duration: "Duration (wks)",
                     currentWeek: "Current Week",
-                    actions: "Actions"
+                    actions: "Actions",
+                    classesPerWeek: "Classes/Wk"
                 }
             },
             groups: {
@@ -669,7 +671,7 @@ export const translations = {
             passwordPlaceholder: "••••••••",
             submitButton: "Sign In",
             successTitle: "Login successful",
-            successDescription: "Welcome, {name}.",
+            successDescription: "Welcome to Uncoverly.",
             errorTitle: "Authentication Error",
             errorInvalidCredentials: "Incorrect username or password.",
             errorInvalidEmail: "The email format is not valid.",
@@ -915,3 +917,5 @@ export const translations = {
         }
     }
 };
+
+    

@@ -359,9 +359,23 @@ const AdminGroupDetailsDialog = ({ group, studentsById, allTeachers, isOpen, onO
                                                  <Button variant="outline" size="sm" onClick={() => setEditingStudent(student)}>
                                                     <Edit className="mr-2 h-4 w-4" /> Editar
                                                 </Button>
-                                                <Button variant="destructive" size="sm" onClick={() => handleRemoveStudent(student.id)}>
-                                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                                                </Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            Esta acción no se puede deshacer. Se eliminará al estudiante de este grupo.
+                                                        </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleRemoveStudent(student.id)}>Eliminar</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </div>
                                         </li>
                                     ))}
@@ -382,6 +396,7 @@ const EditStudentDialog = ({ student, isOpen, onOpenChange, onStudentUpdate }: {
     const [level, setLevel] = useState(student?.level || "");
     const [startDate, setStartDate] = useState<Date | undefined>(student?.courseStartDate ? parseISO(student.courseStartDate) : new Date());
     const [duration, setDuration] = useState(student?.courseDuration || 12);
+    const [classesPerWeek, setClassesPerWeek] = useState(student?.classesPerWeek || 1);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
@@ -389,6 +404,7 @@ const EditStudentDialog = ({ student, isOpen, onOpenChange, onStudentUpdate }: {
             setLevel(student.level || "");
             setStartDate(student.courseStartDate ? parseISO(student.courseStartDate) : new Date());
             setDuration(student.courseDuration || 12);
+            setClassesPerWeek(student.classesPerWeek || (student.plan === 'privado' ? 1 : 0));
         }
     }, [student]);
 
@@ -401,6 +417,10 @@ const EditStudentDialog = ({ student, isOpen, onOpenChange, onStudentUpdate }: {
                 courseStartDate: format(startDate, "yyyy-MM-dd"),
                 courseDuration: duration,
             };
+            if(student.plan === 'privado'){
+                dataToUpdate.classesPerWeek = classesPerWeek;
+            }
+
             await updateUserProfile(student.id, dataToUpdate);
             toast({ title: "Estudiante actualizado", description: `Los datos de ${student.name} se guardaron correctamente.` });
             onStudentUpdate();
@@ -452,6 +472,12 @@ const EditStudentDialog = ({ student, isOpen, onOpenChange, onStudentUpdate }: {
                             <Input id="duration" type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
                         </div>
                     </div>
+                     {student.plan === 'privado' && (
+                        <div className="space-y-2">
+                            <Label htmlFor="classes-per-week">Clases por Semana</Label>
+                            <Input id="classes-per-week" type="number" value={classesPerWeek} onChange={(e) => setClassesPerWeek(Number(e.target.value))} min="1" />
+                        </div>
+                    )}
                     <Card className="bg-secondary/50">
                         <CardContent className="pt-6 text-sm space-y-2">
                             <p><strong>Fecha Final del Curso:</strong> {endDate}</p>
@@ -811,6 +837,7 @@ export function AdminDashboardUI() {
                         <TableHead>{t.students.table.phone}</TableHead>
                         <TableHead>{t.students.table.level}</TableHead>
                         <TableHead>{t.students.table.plan}</TableHead>
+                        <TableHead>{t.students.table.classesPerWeek}</TableHead>
                         <TableHead>{t.students.table.availability}</TableHead>
                         <TableHead>{t.students.table.startDate}</TableHead>
                         <TableHead>{t.students.table.duration}</TableHead>
@@ -844,6 +871,7 @@ export function AdminDashboardUI() {
                             <TableCell>{(student as any).phone || '-'}</TableCell>
                             <TableCell>{student.level || '-'}</TableCell>
                             <TableCell><Badge variant="outline" className="capitalize">{student.plan || '-'}</Badge></TableCell>
+                            <TableCell>{student.plan === 'privado' ? student.classesPerWeek || 1 : 'N/A'}</TableCell>
                             <TableCell>{student.availability || '-'}</TableCell>
                             <TableCell>{startDate ? format(startDate, "P", { locale: es }) : '-'}</TableCell>
                             <TableCell>{student.courseDuration ? `${student.courseDuration} sem` : '-'}</TableCell>
@@ -1041,5 +1069,7 @@ export function AdminDashboardUI() {
     </div>
   );
 }
+
+    
 
     

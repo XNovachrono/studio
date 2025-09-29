@@ -30,6 +30,7 @@ export interface StudentProfile extends User {
   level?: string;
   courseStartDate?: string; // YYYY-MM-DD
   courseDuration?: number; // in weeks
+  classesPerWeek?: number;
   scheduledSlots?: Array<{
     date: string; // YYYY-MM-DD
     time: string; // HH:mm
@@ -141,3 +142,5 @@ export interface BankCard {
     fileUrl?: string;
     filePath?: string;
 }
+
+    
