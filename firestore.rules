@@ -3,60 +3,8 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper function to check user role from their profile
-    function getUserRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
-    }
-    
-    // Users can only read their own profile, but authenticated users can read basic info from others
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.uid == userId || getUserRole(request.auth.uid) == 'admin';
-    }
-
-    // Admins can read all groups. Teachers can read groups they are assigned to. Students can read groups they are in.
-    match /groups/{groupId} {
-      allow read: if request.auth != null && (
-                    getUserRole(request.auth.uid) == 'admin' ||
-                    resource.data.teacherId == request.auth.uid ||
-                    request.auth.uid in resource.data.studentIds
-                  );
-      allow write: if request.auth != null && (
-                     getUserRole(request.auth.uid) == 'admin' || 
-                     resource.data.teacherId == request.auth.uid
-                   );
-    }
-    
-    // Teachers and Admins can manage lessons within the groups they have access to. Students can only read.
-    match /groups/{groupId}/lessons/{lessonId} {
-        allow read: if request.auth != null && (
-                    get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid ||
-                    request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.studentIds ||
-                    getUserRole(request.auth.uid) == 'admin'
-                );
-        allow write: if request.auth != null && (
-                    get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid ||
-                    getUserRole(request.auth.uid) == 'admin'
-                );
-    }
-
-    // Admins can read/delete all PQRS. Students can create them.
-    match /pqrs/{pqrsId} {
-      allow read: if request.auth != null && getUserRole(request.auth.uid) == 'admin';
-      allow create: if request.auth != null && getUserRole(request.auth.uid) == 'student';
-      allow delete: if request.auth != null && getUserRole(request.auth.uid) == 'admin';
-    }
-
-    // Bank cards can be read by any authenticated user (teacher/admin).
-    // Only the owner or an admin can update/delete. Any teacher/admin can create.
-    match /bank_cards/{cardId} {
-        allow read: if request.auth != null && (getUserRole(request.auth.uid) == 'teacher' || getUserRole(request.auth.uid) == 'admin');
-        allow create: if request.auth != null && (getUserRole(request.auth.uid) == 'teacher' || getUserRole(request.auth.uid) == 'admin');
-        allow update, delete: if request.auth != null && (
-                                request.auth.uid == resource.data.ownerId ||
-                                getUserRole(request.auth.uid) == 'admin'
-                              );
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
