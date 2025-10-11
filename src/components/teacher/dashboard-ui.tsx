@@ -1066,7 +1066,7 @@ export function TeacherDashboardUI() {
                 </Button>
             </DialogHeader>
             <div className="flex-1 overflow-auto">
-                  <BanksDashboardUI isModal={true} />
+                  <BanksDashboardUI user={user} isModal={true} />
             </div>
         </DialogContent>
       </Dialog>
