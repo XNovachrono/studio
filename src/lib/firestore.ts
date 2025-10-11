@@ -6,6 +6,9 @@ import {
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { db } from "./firebase";
 import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder, Lesson, EditorContent, BankCard, BankType, ScheduledClass, StudentNote } from "./types";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
+
 
 const storage = getStorage();
 
@@ -31,6 +34,7 @@ const lessonFromDoc = (doc: any): Lesson => {
         id: doc.id,
         ...data,
         createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
+        scheduledTime: data.scheduledTime instanceof Timestamp ? data.scheduledTime.toDate().toISOString() : data.scheduledTime,
     } as Lesson;
 };
 
@@ -140,15 +144,24 @@ export const submitPQRS = async (pqrsData: Omit<PQRSMessage, 'createdAt' | 'id' 
 
 
 // === Student Notes Functions ===
-export const createStudentNote = async (data: Omit<StudentNote, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+export const createStudentNote = async (data: Omit<StudentNote, 'id' | 'createdAt' | 'updatedAt'>) => {
     const notesRef = collection(db, "student_notes");
     const now = Timestamp.now();
-    const newNoteRef = await addDoc(notesRef, {
+    const noteData = {
         ...data,
         createdAt: now,
         updatedAt: now,
+    };
+    
+    addDoc(notesRef, noteData).catch(async (serverError) => {
+        const newNoteRef = doc(notesRef); // Create a temporary reference for path
+        const error = new FirestorePermissionError({
+            path: newNoteRef.path,
+            operation: 'create',
+            requestResourceData: noteData,
+        });
+        errorEmitter.emit('permission-error', error);
     });
-    return newNoteRef.id;
 }
 
 export const getStudentNotes = async (studentId: string): Promise<StudentNote[]> => {
@@ -158,17 +171,33 @@ export const getStudentNotes = async (studentId: string): Promise<StudentNote[]>
     return querySnapshot.docs.map(doc => fromDoc<StudentNote>(doc));
 }
 
-export const updateStudentNote = async (noteId: string, data: Partial<StudentNote>): Promise<void> => {
+export const updateStudentNote = async (noteId: string, data: Partial<StudentNote>) => {
     const noteRef = doc(db, "student_notes", noteId);
-    await updateDoc(noteRef, {
+    const noteData = {
         ...data,
         updatedAt: Timestamp.now(),
+    };
+    
+    updateDoc(noteRef, noteData).catch(async (serverError) => {
+        const error = new FirestorePermissionError({
+            path: noteRef.path,
+            operation: 'update',
+            requestResourceData: noteData,
+        });
+        errorEmitter.emit('permission-error', error);
     });
 }
 
-export const deleteStudentNote = async (noteId: string): Promise<void> => {
+export const deleteStudentNote = async (noteId: string) => {
     const noteRef = doc(db, "student_notes", noteId);
-    await deleteDoc(noteRef);
+    
+    deleteDoc(noteRef).catch(async (serverError) => {
+        const error = new FirestorePermissionError({
+            path: noteRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', error);
+    });
 }
 
 
