@@ -5,7 +5,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal, Notebook, Bold, Italic, Underline, List, ListOrdered, Heading1, Heading2, Palette, Table2 } from "lucide-react";
+import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal, Notebook, Bold, Italic, Underline, List, ListOrdered, Heading1, Heading2, Palette, Table2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import {
@@ -38,7 +38,7 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
-import { format, parseISO, addDays, isBefore, startOfToday } from "date-fns";
+import { format, parseISO, addDays, isBefore, startOfToday, differenceInMinutes, addMinutes, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { TeacherDataSettings } from "./teacher-data-settings";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
@@ -371,25 +371,89 @@ const VideoPlayer = ({ url }: { url: string }) => {
     return <p className="text-sm text-muted-foreground">Enlace de video no compatible. Pega un enlace de YouTube, Vimeo o un enlace directo a un archivo de video.</p>;
 };
 
-const LessonToolbar = ({ editor }: { editor: any }) => {
-    if (!editor) return null;
+const AttendancePopover = ({
+  classStartTime,
+  currentStatus,
+  onSave,
+}: {
+  classStartTime: Date;
+  currentStatus: AttendanceStatus;
+  onSave: (minutes: number) => void;
+}) => {
+    const t = translations.es.teacherDashboard.lessons.attendancePopover;
+    const [minutesLate, setMinutesLate] = useState(typeof currentStatus === 'object' ? currentStatus.tarde : 10);
+    const [arrivalTime, setArrivalTime] = useState(() => {
+        const arrival = addMinutes(classStartTime, minutesLate);
+        return format(arrival, 'HH:mm');
+    });
+
+    const handleMinutesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const mins = parseInt(e.target.value, 10);
+        if (isNaN(mins) || mins < 0) {
+            setMinutesLate(0);
+            setArrivalTime(format(classStartTime, 'HH:mm'));
+            return;
+        }
+        setMinutesLate(mins);
+        const newArrival = addMinutes(classStartTime, mins);
+        setArrivalTime(format(newArrival, 'HH:mm'));
+    };
+
+    const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const timeValue = e.target.value;
+        setArrivalTime(timeValue);
+        try {
+            const parsedTime = parse(timeValue, 'HH:mm', new Date());
+            const diff = differenceInMinutes(parsedTime, classStartTime);
+            setMinutesLate(diff > 0 ? diff : 0);
+        } catch (error) {
+            // Handle invalid time format if necessary
+        }
+    };
+    
+    const handleSaveClick = () => {
+        onSave(minutesLate);
+    };
+
     return (
-        <div className="flex items-center gap-1 border-b pb-2 mb-2">
-            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().toggleBold().run()}><Bold/></Button>
-            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().toggleItalic().run()}><Italic/></Button>
-            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().toggleUnderline().run()}><Underline/></Button>
-            <Separator orientation="vertical" className="h-6"/>
-            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}><Heading1/></Button>
-            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}><Heading2/></Button>
-            <Separator orientation="vertical" className="h-6"/>
-            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().toggleBulletList().run()}><List/></Button>
-            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().toggleOrderedList().run()}><ListOrdered/></Button>
-            <Separator orientation="vertical" className="h-6"/>
-            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table2/></Button>
-            {/* Add color picker popover if needed */}
-        </div>
-    )
-}
+        <PopoverContent className="w-80">
+            <div className="grid gap-4">
+                <div className="space-y-2">
+                    <h4 className="font-medium leading-none">{t.title}</h4>
+                    <p className="text-sm text-muted-foreground">
+                        {t.description.replace('{time}', format(classStartTime, 'p', { locale: es }))}
+                    </p>
+                </div>
+                <div className="grid gap-2">
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <Label htmlFor="minutes">{t.minutesLate}</Label>
+                        <Input
+                            id="minutes"
+                            type="number"
+                            min="0"
+                            value={minutesLate}
+                            onChange={handleMinutesChange}
+                            className="col-span-2 h-8"
+                        />
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <Label htmlFor="arrival-time">{t.arrivalTime}</Label>
+                        <Input
+                            id="arrival-time"
+                            type="time"
+                            value={arrivalTime}
+                            onChange={handleTimeChange}
+                            className="col-span-2 h-8"
+                        />
+                    </div>
+                </div>
+                <Button onClick={handleSaveClick}>{t.saveButton}</Button>
+            </div>
+        </PopoverContent>
+    );
+};
+
+
 
 const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { group: Group, studentsById: Map<string, StudentProfile>, teacherId: string, onLessonCreated: () => void }) => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -487,6 +551,17 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
             [studentId]: status,
         };
         handleContentChange(lessonId, 'attendance', newAttendance);
+        
+        // Also save immediately for quick attendance updates
+        setIsSaving(lessonId);
+         updateLesson(group.id, lessonId, { attendance: newAttendance }).then(() => {
+            setLessons(prev => prev.map(l => l.id === lessonId ? {...l, attendance: newAttendance } : l));
+            setIsSaving(null);
+        }).catch(err => {
+            console.error(err);
+            toast({ variant: "destructive", title: "Error", description: "Could not save attendance." });
+            setIsSaving(null);
+        });
     };
     
     const handleOpenBankImporter = (lessonId: string, field: 'homework') => {
@@ -557,6 +632,14 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
      const renderModalContent = () => {
         if (!selectedLesson) return null;
         
+        const latestClass = group.content.scheduledClasses
+            ?.map(c => ({...c, time: parseISO(c.time)}))
+            .sort((a,b) => b.time.getTime() - a.time.getTime())
+            [0];
+
+        const classStartTime = latestClass?.time || new Date();
+
+
         const attendanceForStudent = (studentId: string): AttendanceStatus => {
             return (editedContent[selectedLessonId!]?.attendance?.[studentId]) ?? selectedLesson.attendance?.[studentId] ?? 'ausente';
         }
@@ -604,41 +687,54 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                     </>
                 );
             case 'attendance':
-                 return (
+                return (
                     <div className="space-y-4">
+                        <Alert>
+                            <Clock className="h-4 w-4" />
+                            <AlertTitle>{t.attendancePopover.classTimeTitle}</AlertTitle>
+                            <AlertDescription>
+                                {t.attendancePopover.classTimeDescription.replace('{time}', format(classStartTime, 'PPpp', { locale: es }))}
+                            </AlertDescription>
+                        </Alert>
                         {groupMembers.map(student => {
                             const studentAttendance = attendanceForStudent(student.id);
                             return (
                                 <div key={student.id} className="flex justify-between items-center p-2 rounded-md bg-secondary/50">
                                     <span>{student.name}</span>
-                                    <div className="flex items-center gap-4">
-                                        <RadioGroup
-                                            value={typeof studentAttendance === 'object' ? 'tarde' : studentAttendance}
-                                            className="flex gap-4"
-                                            onValueChange={(value) => handleAttendanceChange(selectedLesson.id, student.id, value === 'tarde' ? { tarde: 0 } : (value as 'presente' | 'ausente'))}
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant={studentAttendance === 'presente' ? 'default' : 'outline'}
+                                            size="sm"
+                                            onClick={() => handleAttendanceChange(selectedLesson!.id, student.id, 'presente')}
                                         >
-                                            <div className="flex items-center space-x-2">
-                                                <RadioGroupItem value="presente" id={`${selectedLesson.id}-${student.id}-presente`} />
-                                                <Label htmlFor={`${selectedLesson.id}-${student.id}-presente`}>{t.attendanceStates.presente}</Label>
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                                <RadioGroupItem value="ausente" id={`${selectedLesson.id}-${student.id}-ausente`} />
-                                                <Label htmlFor={`${selectedLesson.id}-${student.id}-ausente`}>{t.attendanceStates.ausente}</Label>
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                                <RadioGroupItem value="tarde" id={`${selectedLesson.id}-${student.id}-tarde`} />
-                                                <Label htmlFor={`${selectedLesson.id}-${student.id}-tarde`}>{t.attendanceStates.tarde}</Label>
-                                            </div>
-                                        </RadioGroup>
-                                        {typeof studentAttendance === 'object' && 'tarde' in studentAttendance && (
-                                            <Input
-                                                type="number"
-                                                className="w-20"
-                                                placeholder="min"
-                                                value={studentAttendance.tarde}
-                                                onChange={(e) => handleAttendanceChange(selectedLesson.id, student.id, { tarde: parseInt(e.target.value) || 0 })}
+                                            {t.attendanceStates.presente}
+                                        </Button>
+                                        <Button
+                                            variant={studentAttendance === 'ausente' ? 'destructive' : 'outline'}
+                                            size="sm"
+                                            onClick={() => handleAttendanceChange(selectedLesson!.id, student.id, 'ausente')}
+                                        >
+                                            {t.attendanceStates.ausente}
+                                        </Button>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant={typeof studentAttendance === 'object' ? 'secondary' : 'outline'}
+                                                    size="sm"
+                                                >
+                                                    {t.attendanceStates.tarde}
+                                                    {typeof studentAttendance === 'object' && ` (${studentAttendance.tarde} min)`}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <AttendancePopover 
+                                                classStartTime={classStartTime}
+                                                currentStatus={studentAttendance}
+                                                onSave={(minutes) => {
+                                                    handleAttendanceChange(selectedLesson!.id, student.id, { tarde: minutes });
+                                                    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                                                }}
                                             />
-                                        )}
+                                        </Popover>
                                     </div>
                                 </div>
                             );

@@ -360,6 +360,15 @@ export const translations = {
                     tarde: "Tarde",
                     na: "N/A"
                 },
+                attendancePopover: {
+                    title: "Registrar Tardanza",
+                    description: "Hora de inicio de clase: {time}",
+                    minutesLate: "Minutos tarde",
+                    arrivalTime: "Hora de llegada",
+                    saveButton: "Guardar",
+                    classTimeTitle: "Hora de la Clase",
+                    classTimeDescription: "La hora de inicio registrada para esta clase es: {time}. Los cálculos se basan en esta hora."
+                },
                 importFromBank: "Importar de Banco",
                 importFile: "Importar Archivo",
                 retry: "Reintentar",
@@ -826,6 +835,15 @@ export const translations = {
                     ausente: "Did not attend",
                     tarde: "Late",
                     na: "N/A"
+                },
+                 attendancePopover: {
+                    title: "Register Lateness",
+                    description: "Class start time: {time}",
+                    minutesLate: "Minutes late",
+                    arrivalTime: "Arrival time",
+                    saveButton: "Save",
+                    classTimeTitle: "Class Time",
+                    classTimeDescription: "The registered start time for this class is: {time}. Calculations are based on this time."
                 },
                 importFromBank: "Import from Bank",
                 importFile: "Import File",
