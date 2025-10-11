@@ -71,7 +71,6 @@ const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: Student
         { label: t.phone, value: student.phone },
         { label: t.interests, value: student.interests?.join(', ') },
         { label: t.objective, value: student.objective },
-        { label: t.availability, value: student.availability },
     ];
 
     return (
@@ -933,7 +932,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
 
     const upcomingClasses = useMemo(() => {
         return (group.content?.scheduledClasses || [])
-            .map(c => ({...c, time: parseISO(c.time as any)}))
+            .map(c => ({...c, time: typeof c.time === 'string' ? parseISO(c.time) : c.time}))
             .filter(c => !isBefore(c.time, new Date()))
             .sort((a,b) => a.time.getTime() - b.time.getTime());
     }, [group.content.scheduledClasses]);
@@ -941,7 +940,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
     const nextClass = upcomingClasses[0];
 
     const scheduledDates = useMemo(() => {
-        return (group.content?.scheduledClasses || []).map(c => parseISO(c.time as any));
+        return (group.content?.scheduledClasses || []).map(c => typeof c.time === 'string' ? parseISO(c.time) : c.time);
     }, [group.content.scheduledClasses]);
 
     return (
