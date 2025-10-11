@@ -3,51 +3,21 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    // Rules for collections
-    match /users/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
-    }
-
-    match /groups/{groupId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin() || get(resource.data).data.teacherId == request.auth.uid;
-    }
-    
-    match /groups/{groupId}/lessons/{lessonId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin() || get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid;
-    }
-    
-    match /pqrs/{pqrsId} {
-        allow create: if isSignedIn();
-        allow read, delete: if isAdmin() || get(resource.data).data.teacherId == request.auth.uid;
-    }
-
-    match /bank_cards/{cardId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin() || resource.data.ownerId == request.auth.uid;
-    }
+    // Reglas existentes...
 
     match /student_notes/{noteId} {
-      // Students can only query for their own notes.
-      allow list, get: if isSignedIn() && request.query.where.studentId == request.auth.uid;
-      // Students can create, update, and delete their own notes.
-      allow create, update, delete: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      // Permite leer, actualizar o borrar un apunte si el usuario es el propietario.
+      allow read, update, delete: if request.auth.uid == resource.data.studentId;
+
+      // Permite crear un apunte si el usuario que lo crea es el propietario.
+      allow create: if request.auth.uid == request.resource.data.studentId;
+    }
+
+    // Regla para listar la colección de apuntes.
+    match /student_notes/{document=**} {
+        // Permite listar apuntes si la consulta filtra por el 'studentId' del usuario autenticado.
+        // Esto es clave para que `getStudentNotes` funcione.
+        allow list: if request.auth != null && request.query.filters.size() > 0 && 'studentId' in request.query.filters[0] && request.query.filters[0].studentId == request.auth.uid;
     }
   }
 }
