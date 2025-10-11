@@ -153,32 +153,34 @@ export const createStudentNote = async (data: Omit<StudentNote, 'id' | 'createdA
         updatedAt: now,
     };
     
-    addDoc(notesRef, noteData).catch(async (serverError) => {
-        const newNoteRef = doc(notesRef); // Create a temporary reference for path
+    try {
+        await addDoc(notesRef, noteData);
+    } catch (serverError) {
         const error = new FirestorePermissionError({
-            path: newNoteRef.path,
+            path: notesRef.path,
             operation: 'create',
             requestResourceData: noteData,
         });
         errorEmitter.emit('permission-error', error);
-    });
+        throw error; // Re-throw the error to be caught by the calling component
+    }
 }
 
 export const getStudentNotes = async (studentId: string): Promise<StudentNote[]> => {
     const notesRef = collection(db, "student_notes");
     const q = query(notesRef, where("studentId", "==", studentId), orderBy("updatedAt", "desc"));
     
-    const querySnapshot = await getDocs(q).catch(serverError => {
-        const error = new FirestorePermissionError({
+    try {
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => fromDoc<StudentNote>(doc));
+    } catch (serverError) {
+         const error = new FirestorePermissionError({
             path: notesRef.path,
             operation: 'list',
         });
         errorEmitter.emit('permission-error', error);
-        // Return an empty snapshot to avoid breaking the calling function
-        return { docs: [] };
-    });
-
-    return querySnapshot.docs.map(doc => fromDoc<StudentNote>(doc));
+        throw error; // Re-throw to be caught by the calling component
+    }
 }
 
 export const updateStudentNote = async (noteId: string, data: Partial<StudentNote>) => {
@@ -188,26 +190,32 @@ export const updateStudentNote = async (noteId: string, data: Partial<StudentNot
         updatedAt: Timestamp.now(),
     };
     
-    updateDoc(noteRef, noteData).catch(async (serverError) => {
+    try {
+        await updateDoc(noteRef, noteData);
+    } catch (serverError) {
         const error = new FirestorePermissionError({
             path: noteRef.path,
             operation: 'update',
             requestResourceData: noteData,
         });
         errorEmitter.emit('permission-error', error);
-    });
+        throw error;
+    }
 }
 
 export const deleteStudentNote = async (noteId: string) => {
     const noteRef = doc(db, "student_notes", noteId);
     
-    deleteDoc(noteRef).catch(async (serverError) => {
+    try {
+        await deleteDoc(noteRef);
+    } catch (serverError) {
         const error = new FirestorePermissionError({
             path: noteRef.path,
             operation: 'delete',
         });
         errorEmitter.emit('permission-error', error);
-    });
+        throw error;
+    }
 }
 
 
@@ -591,4 +599,5 @@ export const updateGroupTeacherAndHistory = async (groupId: string, newTeacherId
 
     await batch.commit();
 };
+
 
