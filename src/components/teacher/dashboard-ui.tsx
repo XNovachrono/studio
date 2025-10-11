@@ -660,7 +660,17 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
         if (!selectedLesson) return null;
         
         const isClassTimeValid = !!selectedLesson.scheduledTime;
-        const classStartTime = isClassTimeValid ? parseISO(selectedLesson.scheduledTime) : new Date();
+        
+        let classStartTime = new Date();
+        if (isClassTimeValid) {
+            const timeVal = selectedLesson.scheduledTime;
+            if (typeof timeVal === 'string') {
+                 classStartTime = parseISO(timeVal);
+            } else {
+                // It might already be a Date object if it came from state, though Firestore returns strings/timestamps
+                classStartTime = timeVal;
+            }
+        }
 
         const attendanceForStudent = (studentId: string): AttendanceStatus => {
             const editedAttendance = editedContent[selectedLessonId!]?.attendance;
@@ -669,21 +679,24 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
             }
             return selectedLesson.attendance?.[studentId] ?? 'ausente';
         }
+
+        const contentForField = (field: keyof Lesson) => {
+            return editedContent[selectedLesson.id]?.[field] ?? selectedLesson[field];
+        }
         
         switch(activeModal) {
             case 'objective':
                 return (
                     <Editor
-                        content={editedContent[selectedLesson.id]?.content ?? selectedLesson.content}
+                        content={contentForField('content')}
                         onChange={(newContent) => handleContentChange(selectedLesson.id, 'content', newContent)}
-                        editable
-                        placeholder={t.placeholders.objective}
+                        editable={false}
                     />
                 );
             case 'classNote':
                  return (
                      <Editor
-                        content={editedContent[selectedLesson.id]?.classNote ?? selectedLesson.classNote}
+                        content={contentForField('classNote')}
                         onChange={(newContent) => handleContentChange(selectedLesson.id, 'classNote', newContent)}
                         editable
                         placeholder={t.placeholders.classNote}
@@ -704,7 +717,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                             </Button>
                         </div>
                         <Editor
-                            content={editedContent[selectedLesson.id]?.homework ?? selectedLesson.homework}
+                            content={contentForField('homework')}
                             onChange={(newContent) => handleContentChange(selectedLesson.id, 'homework', newContent)}
                             editable
                             placeholder={t.placeholders.homework}
@@ -782,7 +795,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                         <div>
                             <h4 className="font-semibold mb-2">{t.generalComment}</h4>
                             <Editor
-                                content={editedContent[selectedLesson.id]?.comments || selectedLesson.comments}
+                                content={contentForField('comments')}
                                 onChange={(newContent) => handleContentChange(selectedLesson.id, 'comments', newContent)}
                                 editable
                                 placeholder={t.placeholders.comments}
@@ -932,7 +945,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
 
     const upcomingClasses = useMemo(() => {
         return (group.content?.scheduledClasses || [])
-            .map(c => ({...c, time: typeof c.time === 'string' ? parseISO(c.time) : c.time}))
+            .map(c => ({...c, time: typeof c.time === 'string' ? parseISO(c.time as any) : c.time}))
             .filter(c => !isBefore(c.time, new Date()))
             .sort((a,b) => a.time.getTime() - b.time.getTime());
     }, [group.content.scheduledClasses]);
