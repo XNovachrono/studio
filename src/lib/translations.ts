@@ -367,7 +367,9 @@ export const translations = {
                     arrivalTime: "Hora de llegada",
                     saveButton: "Guardar",
                     classTimeTitle: "Hora de la Clase",
-                    classTimeDescription: "La hora de inicio registrada para esta clase es: {time}. Los cálculos se basan en esta hora."
+                    classTimeDescription: "La hora de inicio registrada para esta clase es: {time}.",
+                    notStartedError: "La clase aún no ha empezado.",
+                    noTimeError: "No se puede registrar la tardanza porque no hay una hora de inicio de clase programada."
                 },
                 importFromBank: "Importar de Banco",
                 importFile: "Importar Archivo",
@@ -836,24 +838,26 @@ export const translations = {
                     tarde: "Late",
                     na: "N/A"
                 },
-                 attendancePopover: {
+                attendancePopover: {
                     title: "Register Lateness",
                     description: "Class start time: {time}",
                     minutesLate: "Minutes late",
                     arrivalTime: "Arrival time",
                     saveButton: "Save",
                     classTimeTitle: "Class Time",
-                    classTimeDescription: "The registered start time for this class is: {time}. Calculations are based on this time."
+                    classTimeDescription: "The registered start time for this class is: {time}.",
+                    notStartedError: "The class has not started yet.",
+                    noTimeError: "Cannot register lateness because there is no scheduled class start time."
                 },
                 importFromBank: "Import from Bank",
                 importFile: "Import File",
                 retry: "Retry",
                 placeholders: {
-                    objective: "Define the objective for this specific class...",
-                    classNote: "Write your class notes here...",
-                    homework: "Detail the self-study instructions here...",
-                    comments: "Add general private comments for the class...",
-                    studentComment: "Add a private comment for",
+                     objective: "Define the objective for this specific class...",
+                     classNote: "Write your class notes here...",
+                     homework: "Detail the self-study instructions here...",
+                     comments: "Add general private comments for the class...",
+                     studentComment: "Add a private comment for",
                 },
                 recordingPlaceholder: "Paste the recording link here...",
             },

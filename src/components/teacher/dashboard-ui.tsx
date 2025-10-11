@@ -375,34 +375,47 @@ const AttendancePopover = ({
   classStartTime,
   currentStatus,
   onSave,
+  isClassTimeValid,
 }: {
   classStartTime: Date;
   currentStatus: AttendanceStatus;
   onSave: (minutes: number) => void;
+  isClassTimeValid: boolean;
 }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.lessons.attendancePopover;
     const [minutesLate, setMinutesLate] = useState(typeof currentStatus === 'object' ? currentStatus.tarde : 10);
     const [arrivalTime, setArrivalTime] = useState(() => {
+        if (!isClassTimeValid) return '';
         const arrival = addMinutes(classStartTime, minutesLate);
         return format(arrival, 'HH:mm');
     });
+
+    useEffect(() => {
+        if (isClassTimeValid) {
+            const arrival = addMinutes(classStartTime, minutesLate);
+            setArrivalTime(format(arrival, 'HH:mm'));
+        }
+    }, [classStartTime, minutesLate, isClassTimeValid]);
 
     const handleMinutesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const mins = parseInt(e.target.value, 10);
         if (isNaN(mins) || mins < 0) {
             setMinutesLate(0);
-            setArrivalTime(format(classStartTime, 'HH:mm'));
+            if (isClassTimeValid) setArrivalTime(format(classStartTime, 'HH:mm'));
             return;
         }
         setMinutesLate(mins);
-        const newArrival = addMinutes(classStartTime, mins);
-        setArrivalTime(format(newArrival, 'HH:mm'));
+        if (isClassTimeValid) {
+            const newArrival = addMinutes(classStartTime, mins);
+            setArrivalTime(format(newArrival, 'HH:mm'));
+        }
     };
 
     const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const timeValue = e.target.value;
         setArrivalTime(timeValue);
+        if (!isClassTimeValid) return;
         try {
             const parsedTime = parse(timeValue, 'HH:mm', new Date());
             const diff = differenceInMinutes(parsedTime, classStartTime);
@@ -416,9 +429,16 @@ const AttendancePopover = ({
         onSave(minutesLate);
     };
 
-    return (
-        <PopoverContent className="w-80">
-            <div className="grid gap-4">
+    const renderContent = () => {
+        if (!isClassTimeValid) {
+            return <p className="text-sm text-destructive">{t.noTimeError}</p>;
+        }
+        if (isBefore(new Date(), classStartTime)) {
+            return <p className="text-sm text-muted-foreground">{t.notStartedError}</p>;
+        }
+
+        return (
+             <div className="grid gap-4">
                 <div className="space-y-2">
                     <h4 className="font-medium leading-none">{t.title}</h4>
                     <p className="text-sm text-muted-foreground">
@@ -450,6 +470,13 @@ const AttendancePopover = ({
                 </div>
                 <Button onClick={handleSaveClick}>{t.saveButton}</Button>
             </div>
+        )
+    };
+
+
+    return (
+        <PopoverContent className="w-80">
+           {renderContent()}
         </PopoverContent>
     );
 };
@@ -635,9 +662,11 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
         
         const latestClass = group.content.scheduledClasses
             ?.map(c => ({...c, time: (typeof c.time === 'string' ? parseISO(c.time) : c.time)}))
+            .filter(c => c.time instanceof Date && !isNaN(c.time.getTime()))
             .sort((a,b) => b.time.getTime() - a.time.getTime())
             [0];
 
+        const isClassTimeValid = !!latestClass;
         const classStartTime = latestClass?.time || new Date();
 
 
@@ -694,13 +723,15 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
             case 'attendance':
                 return (
                     <div className="space-y-4">
-                        <Alert>
-                            <Clock className="h-4 w-4" />
-                            <AlertTitle>{t.attendancePopover.classTimeTitle}</AlertTitle>
-                            <AlertDescription>
-                                {t.attendancePopover.classTimeDescription.replace('{time}', format(classStartTime, 'PPpp', { locale: es }))}
-                            </AlertDescription>
-                        </Alert>
+                        {isClassTimeValid && (
+                            <Alert>
+                                <Clock className="h-4 w-4" />
+                                <AlertTitle>{t.attendancePopover.classTimeTitle}</AlertTitle>
+                                <AlertDescription>
+                                    {t.attendancePopover.classTimeDescription.replace('{time}', format(classStartTime, 'PPpp', { locale: es }))}
+                                </AlertDescription>
+                            </Alert>
+                        )}
                         {groupMembers.map(student => {
                             const studentAttendance = attendanceForStudent(student.id);
                             return (
@@ -738,6 +769,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                                     handleAttendanceChange(selectedLesson!.id, student.id, { tarde: minutes });
                                                     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
                                                 }}
+                                                isClassTimeValid={isClassTimeValid}
                                             />
                                         </Popover>
                                     </div>
@@ -1275,7 +1307,7 @@ export function TeacherDashboardUI() {
               </CardHeader>
               <CardFooter>
                   <Button onClick={() => setIsBanksModalOpen(true)}>
-                      {t.banks.button} <ChevronRight className="ml-2 h-4 w-4" />
+                      {t.banks.button}
                   </Button>
               </CardFooter>
           </Card>
