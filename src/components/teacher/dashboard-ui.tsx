@@ -928,110 +928,77 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
 
 const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName }: { group: Group, studentsById: Map<string, StudentProfile>, onClassScheduled: () => void, teacherName: string }) => {
     const { translations } = useLanguage();
-    const t = translations.teacherDashboard.communication;
-    const t_toast = translations.teacherDashboard.toasts;
+    const t = translations.teacherDashboard.meetings;
     const { toast } = useToast();
-    const [link, setLink] = useState("");
-    const [date, setDate] = useState<Date | undefined>(new Date());
-    const [time, setTime] = useState("18:00");
-    const [isScheduling, setIsScheduling] = useState(false);
 
-    useEffect(() => {
-        if (group.type === 'privado' && group.studentIds.length > 0) {
-            const student = studentsById.get(group.studentIds[0]);
-            if (student?.scheduledSlots && student.scheduledSlots.length > 0) {
-                const today = startOfToday();
-                const nextAvailableSlot = student.scheduledSlots
-                    .map(s => ({ ...s, dateTime: parseISO(`${s.date}T${s.time}`) }))
-                    .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
-                    .find(s => !isBefore(s.dateTime, today));
+    const upcomingClasses = useMemo(() => {
+        return (group.content?.scheduledClasses || [])
+            .map(c => ({...c, time: parseISO(c.time as any)}))
+            .filter(c => !isBefore(c.time, new Date()))
+            .sort((a,b) => a.time.getTime() - b.time.getTime());
+    }, [group.content.scheduledClasses]);
 
-                if (nextAvailableSlot) {
-                    setDate(parseISO(nextAvailableSlot.date));
-                    setTime(nextAvailableSlot.time);
-                }
-            }
-        }
-    }, [group, studentsById]);
+    const nextClass = upcomingClasses[0];
 
-
-    const handleScheduleClass = async () => {
-        if (!link || !date || !time) {
-            toast({ variant: "destructive", description: t_toast.scheduleClassError });
-            return;
-        }
-        setIsScheduling(true);
-
-        const [hours, minutes] = time.split(':').map(Number);
-        const scheduledDateTime = new Date(date);
-        scheduledDateTime.setHours(hours, minutes);
-
-        try {
-            await addContentToGroup(group.id, 'scheduledClass', { link, time: scheduledDateTime }, teacherName);
-            
-            const groupStudents = group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[];
-            await createLessonForGroup(group.id, group.name, groupStudents, scheduledDateTime.toISOString());
-
-            toast({ title: t_toast.scheduleClassSuccessTitle, description: t_toast.scheduleClassSuccessDescription });
-            setLink("");
-            setDate(new Date());
-            setTime("18:00");
-            onClassScheduled(); 
-        } catch (error) {
-            console.error("Error scheduling class:", error);
-            toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.genericError });
-        } finally {
-            setIsScheduling(false);
-        }
-    };
+    const scheduledDates = useMemo(() => {
+        return (group.content?.scheduledClasses || []).map(c => parseISO(c.time as any));
+    }, [group.content.scheduledClasses]);
 
     return (
         <div className="space-y-8">
             <Card>
                 <CardHeader>
-                    <CardTitle>{t.scheduleClass.title}</CardTitle>
-                    <CardDescription>{t.scheduleClass.description}</CardDescription>
+                    <CardTitle>{t.nextClass.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {nextClass ? (
+                         <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
+                           <div>
+                                <p className="font-semibold text-lg">
+                                 {format(nextClass.time, "eeee, d 'de' MMMM, HH:mm", { locale: es })}
+                               </p>
+                               <a href={nextClass.link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">{nextClass.link}</a>
+                           </div>
+                           <a href={nextClass.link} target="_blank" rel="noopener noreferrer">
+                             <Button>{t.nextClass.joinButton}</Button>
+                           </a>
+                        </div>
+                    ) : (
+                        <p className="p-4 text-center text-muted-foreground">{t.nextClass.noClass}</p>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>{t.upcomingClasses.title}</CardTitle>
+                    <CardDescription>{t.upcomingClasses.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="class-link">{t.scheduleClass.link}</Label>
-                        <Input id="class-link" placeholder="https://meet.google.com/..." value={link} onChange={(e) => setLink(e.target.value)} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>{t.scheduleClass.date}</Label>
-                             <Popover>
-                                <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {date ? format(date, "PPP", { locale: es }) : <span>{t.scheduleClass.selectDate}</span>}
-                                </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={date}
-                                    onSelect={setDate}
-                                    initialFocus
-                                />
-                                </PopoverContent>
-                            </Popover>
+                    <Calendar
+                        mode="multiple"
+                        selected={scheduledDates}
+                        className="rounded-md border mx-auto"
+                        classNames={{
+                           day_selected: "bg-primary text-primary-foreground rounded-full",
+                        }}
+                        disabled
+                    />
+                    <ScrollArea className="h-40">
+                        <div className="space-y-2 pr-4">
+                        {upcomingClasses.length > 0 ? upcomingClasses.map(c => (
+                            <div key={c.id} className="flex items-center justify-between p-2 rounded-md bg-secondary/50">
+                                <span className="font-medium text-sm">{format(c.time, "PPPPp", { locale: es })}</span>
+                                <a href={c.link} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm">Unirse</Button></a>
+                            </div>
+                        )) : (
+                            <p className="text-center text-muted-foreground pt-4">{t.upcomingClasses.noClasses}</p>
+                        )}
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="class-time">{t.scheduleClass.time}</Label>
-                            <Input id="class-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-                        </div>
-                    </div>
+                    </ScrollArea>
                 </CardContent>
-                <CardFooter>
-                    <Button onClick={handleScheduleClass} disabled={isScheduling}>
-                        {isScheduling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {t.scheduleClass.button}
-                    </Button>
-                </CardFooter>
             </Card>
+
 
             <Card>
                 <CardHeader>
@@ -1051,6 +1018,7 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.groups;
     const t_program = translations.teacherDashboard.program;
+    const t_meetings = translations.teacherDashboard.meetings;
     const [studentToView, setStudentToView] = useState<StudentProfile | null>(null);
     const [refreshLessonKey, setRefreshLessonKey] = useState(0);
 
@@ -1073,8 +1041,7 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
                     <TabsList className="shrink-0">
                         <TabsTrigger value="program"><Notebook className="mr-2 h-4 w-4"/>{t_program.title}</TabsTrigger>
                         <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Miembros</TabsTrigger>
-                        <TabsTrigger value="communication"><Send className="mr-2 h-4 w-4"/>Comunicación</TabsTrigger>
-                        {isPrivateGroup && <TabsTrigger value="calendar"><CalendarIcon className="mr-2 h-4 w-4"/>Calendario</TabsTrigger>}
+                        <TabsTrigger value="meetings"><Send className="mr-2 h-4 w-4"/>{t_meetings.title}</TabsTrigger>
                     </TabsList>
                     <TabsContent value="program" className="flex-grow overflow-auto p-4">
                         <GroupProgram 
@@ -1101,37 +1068,9 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
                             </ul>
                         </ScrollArea>
                     </TabsContent>
-                     <TabsContent value="communication" className="flex-grow overflow-auto p-4">
+                     <TabsContent value="meetings" className="flex-grow overflow-auto p-4">
                         <GroupCommunication group={group} studentsById={studentsById} onClassScheduled={() => setRefreshLessonKey(k => k + 1)} teacherName={teacherName}/>
                     </TabsContent>
-                    {isPrivateGroup && (
-                        <TabsContent value="calendar" className="flex-grow overflow-auto p-4">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Disponibilidad del Estudiante</CardTitle>
-                                    <CardDescription>
-                                        Días y horas seleccionados por {privateStudent?.name || 'el estudiante'} para las clases.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {privateStudent?.scheduledSlots && privateStudent.scheduledSlots.length > 0 ? (
-                                        <ScrollArea className="h-72">
-                                            <div className="space-y-2 pr-4">
-                                                {privateStudent.scheduledSlots.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(slot => (
-                                                     <div key={slot.date} className="flex items-center justify-between gap-4 p-2 rounded-md bg-secondary/50">
-                                                        <span className="font-medium">{format(parseISO(slot.date), "PPP", { locale: es })}</span>
-                                                        <Badge variant="outline">{slot.time}</Badge>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </ScrollArea>
-                                    ) : (
-                                        <p className="text-muted-foreground text-center pt-4">El estudiante aún no ha seleccionado su horario.</p>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    )}
                 </Tabs>
             </DialogContent>
             <StudentDataDialog student={studentToView} isOpen={!!studentToView} onOpenChange={() => setStudentToView(null)} />

@@ -341,6 +341,24 @@ export const translations = {
                 weeklyPlaceholder: "Define los objetivos específicos para esta semana...",
                 saveButton: "Guardar",
             },
+            meetings: {
+                title: "Reuniones",
+                nextClass: {
+                    title: "Próxima Clase",
+                    joinButton: "Unirse",
+                    noClass: "No hay clases programadas."
+                },
+                upcomingClasses: {
+                    title: "Próximas Clases",
+                    description: "Aquí puedes ver todas las clases programadas para este grupo.",
+                    noClasses: "No hay más clases programadas."
+                },
+                sendReminder: {
+                    title: "Enviar Recordatorio",
+                    description: "Envía un mensaje rápido a todos los miembros del grupo.",
+                    placeholder: "Funcionalidad de recordatorios próximamente."
+                }
+            },
             lessons: {
                 title: "Lecciones",
                 newLesson: "Nueva Lección",
@@ -383,22 +401,6 @@ export const translations = {
                 },
                 recordingPlaceholder: "Pega aquí el enlace de la grabación...",
             },
-             communication: {
-                scheduleClass: {
-                    title: "Programar Clase",
-                    description: "Envía un enlace de clase a los estudiantes. Esto creará automáticamente una nueva lección.",
-                    link: "Enlace de la clase",
-                    date: "Fecha",
-                    time: "Hora",
-                    selectDate: "Seleccionar fecha",
-                    button: "Programar Clase y Crear Lección"
-                },
-                sendReminder: {
-                    title: "Enviar Recordatorio",
-                    description: "Envía un mensaje rápido a todos los miembros del grupo.",
-                    placeholder: "Funcionalidad de recordatorios próximamente."
-                }
-            },
             bankImporter: {
                 title: "Importar desde Banco",
                 import: "Importar",
@@ -436,7 +438,6 @@ export const translations = {
                  lessonSavedTitle: "Lección Guardada",
                  lessonSavedDescription: "Los cambios han sido guardados.",
                  saveLessonError: "No se pudo guardar la lección.",
-                 scheduleClassError: "Por favor, completa todos los campos para programar la clase.",
                  scheduleClassSuccessTitle: "Clase Programada",
                  scheduleClassSuccessDescription: "La clase ha sido programada y se ha creado una nueva lección.",
                  genericError: "Ocurrió un error. Por favor, inténtalo de nuevo.",
@@ -819,6 +820,24 @@ export const translations = {
                 weeklyPlaceholder: "Define the specific objectives for this week...",
                 saveButton: "Save",
             },
+            meetings: {
+                title: "Meetings",
+                nextClass: {
+                    title: "Next Class",
+                    joinButton: "Join",
+                    noClass: "No classes scheduled."
+                },
+                upcomingClasses: {
+                    title: "Upcoming Classes",
+                    description: "Here you can see all scheduled classes for this group.",
+                    noClasses: "No more classes scheduled."
+                },
+                sendReminder: {
+                    title: "Send Reminder",
+                    description: "Send a quick message to all group members.",
+                    placeholder: "Reminder functionality coming soon."
+                }
+            },
             lessons: {
                 title: "Lessons",
                 newLesson: "New Lesson",
@@ -861,23 +880,7 @@ export const translations = {
                 },
                 recordingPlaceholder: "Paste the recording link here...",
             },
-             communication: {
-                scheduleClass: {
-                    title: "Schedule Class",
-                    description: "Send a class link to students. This will automatically create a new lesson.",
-                    link: "Class Link",
-                    date: "Date",
-                    time: "Time",
-                    selectDate: "Select date",
-                    button: "Schedule Class & Create Lesson"
-                },
-                sendReminder: {
-                    title: "Send Reminder",
-                    description: "Send a quick message to all group members.",
-                    placeholder: "Reminder functionality coming soon."
-                }
-            },
-             bankImporter: {
+            bankImporter: {
                 title: "Import from Bank",
                 import: "Import",
                 noCards: "No cards in this bank."
@@ -914,7 +917,6 @@ export const translations = {
                  lessonSavedTitle: "Lesson Saved",
                  lessonSavedDescription: "The changes have been saved.",
                  saveLessonError: "Could not save the lesson.",
-                 scheduleClassError: "Please fill all fields to schedule the class.",
                  scheduleClassSuccessTitle: "Class Scheduled",
                  scheduleClassSuccessDescription: "The class has been scheduled and a new lesson has been created.",
                  genericError: "An error occurred. Please try again.",
@@ -958,3 +960,4 @@ export const translations = {
         }
     }
 };
+
