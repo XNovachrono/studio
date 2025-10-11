@@ -167,7 +167,17 @@ export const createStudentNote = async (data: Omit<StudentNote, 'id' | 'createdA
 export const getStudentNotes = async (studentId: string): Promise<StudentNote[]> => {
     const notesRef = collection(db, "student_notes");
     const q = query(notesRef, where("studentId", "==", studentId), orderBy("updatedAt", "desc"));
-    const querySnapshot = await getDocs(q);
+    
+    const querySnapshot = await getDocs(q).catch(serverError => {
+        const error = new FirestorePermissionError({
+            path: notesRef.path,
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', error);
+        // Return an empty snapshot to avoid breaking the calling function
+        return { docs: [] };
+    });
+
     return querySnapshot.docs.map(doc => fromDoc<StudentNote>(doc));
 }
 
@@ -581,3 +591,4 @@ export const updateGroupTeacherAndHistory = async (groupId: string, newTeacherId
 
     await batch.commit();
 };
+
