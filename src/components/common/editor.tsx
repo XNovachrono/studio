@@ -36,6 +36,7 @@ import {
   Rows,
   Split,
   Heading1,
+  Sigma,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -113,6 +114,41 @@ const highlightColors = [
     { name: 'Green', color: '#b2f2bb' },
     { name: 'Blue', color: '#a5d8ff' },
 ];
+
+const symbols = [
+  '≠', '→', '←', '≈',
+  '±', '≤', '≥', '÷', '×',
+  '∞', '°', '•', '√', 'π', 'Δ',
+  'α', 'β', 'γ', 'δ', 'ε',
+  '©', '®', '™', '€', '£', '¥',
+];
+
+const SymbolPicker = ({ editor }: { editor: TiptapEditor }) => {
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" title="Símbolos">
+                    <Sigma />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-2" sideOffset={10}>
+                 <div className="grid grid-cols-6 gap-1">
+                    {symbols.map(symbol => (
+                        <Button
+                            key={symbol}
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => editor.chain().focus().insertContent(symbol).run()}
+                        >
+                            {symbol}
+                        </Button>
+                    ))}
+                </div>
+            </PopoverContent>
+        </Popover>
+    )
+}
 
 const AIToolbar = ({ state, onAccept, onRegenerate, onModify }: { state: 'idle' | 'loading' | 'streaming' | 'done', onAccept: () => void, onRegenerate: () => void, onModify: () => void }) => {
     const { translations } = useLanguage();
@@ -336,6 +372,7 @@ const Toolbar = ({ editor }: { editor: TiptapEditor | null }) => {
                     
                     {/* Color Picker & Tables */}
                     <ColorPicker editor={editor} />
+                    <SymbolPicker editor={editor} />
                     <InsertTablePopover editor={editor} />
                 </>
             )}
@@ -606,3 +643,4 @@ export function Editor({
     </div>
   );
 }
+
