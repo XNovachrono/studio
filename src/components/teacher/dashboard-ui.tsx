@@ -5,7 +5,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal } from "lucide-react";
+import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal, Notebook } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import {
@@ -43,6 +43,7 @@ import { es } from "date-fns/locale";
 import { TeacherDataSettings } from "./teacher-data-settings";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
+import { Separator } from "../ui/separator";
 
 
 interface TeacherDashboardData {
@@ -208,7 +209,7 @@ const FileBankImporter = ({ onSelectFile, isOpen, onOpenChange }: { onSelectFile
 
 type ModalType = 'content' | 'classNote' | 'homework' | 'attendance' | 'comments' | null;
 
-const GroupGoals = ({ group, onGroupUpdate }: { group: Group, onGroupUpdate: () => void }) => {
+const GroupProgram = ({ group, onGroupUpdate, studentsById, teacherId, onLessonCreated, refreshLessonKey }: { group: Group, onGroupUpdate: () => void, studentsById: Map<string, StudentProfile>, teacherId: string, onLessonCreated: () => void, refreshLessonKey: number }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.goals;
     const t_toast = translations.teacherDashboard.toasts;
@@ -252,60 +253,52 @@ const GroupGoals = ({ group, onGroupUpdate }: { group: Group, onGroupUpdate: () 
     return (
         <div className="space-y-6">
             <BankCardImporter ownerId={group.teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} />
-            <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="item-1">
-                     <Card>
-                        <CardHeader>
-                             <AccordionTrigger>
-                                <CardTitle className="font-headline text-lg">{t.mainObjective}</CardTitle>
-                            </AccordionTrigger>
-                        </CardHeader>
-                        <AccordionContent>
-                            <CardContent>
-                                <Editor
-                                    content={mainObjective}
-                                    onChange={setMainObjective}
-                                    editable
-                                    placeholder={t.mainPlaceholder}
-                                />
-                                <Button className="mt-4" size="icon" variant="outline" onClick={() => handleOpenBankImporter('main')}>
-                                    <Import className="h-4 w-4" />
-                                </Button>
-                            </CardContent>
-                        </AccordionContent>
-                    </Card>
-                </AccordionItem>
-            </Accordion>
-             <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="item-1">
-                     <Card>
-                        <CardHeader>
-                             <AccordionTrigger>
-                                <CardTitle className="font-headline text-lg">{t.weeklyObjectives}</CardTitle>
-                            </AccordionTrigger>
-                        </CardHeader>
-                        <AccordionContent>
-                            <CardContent>
-                                 <Editor
-                                    content={weeklyObjectives}
-                                    onChange={setWeeklyObjectives}
-                                    editable
-                                    placeholder={t.weeklyPlaceholder}
-                                />
-                                <Button className="mt-4" size="icon" variant="outline" onClick={() => handleOpenBankImporter('weekly')}>
-                                    <Import className="h-4 w-4" />
-                                </Button>
-                            </CardContent>
-                        </AccordionContent>
-                    </Card>
-                </AccordionItem>
-            </Accordion>
+            
+            <div>
+                <h3 className="text-xl font-headline mb-2">{t.mainObjective}</h3>
+                <Editor
+                    content={mainObjective}
+                    onChange={setMainObjective}
+                    editable
+                    placeholder={t.mainPlaceholder}
+                />
+                <div className="flex justify-between items-center mt-2">
+                    <Button size="sm" variant="outline" onClick={() => handleOpenBankImporter('main')}>
+                        <Import className="mr-2 h-4 w-4" />
+                        {translations.teacherDashboard.lessons.importFromBank}
+                    </Button>
+                </div>
+            </div>
 
-            <div className="flex justify-end">
+            <Separator />
+            
+            <div>
+                <h3 className="text-xl font-headline mb-2">{t.weeklyObjectives}</h3>
+                <Editor
+                    content={weeklyObjectives}
+                    onChange={setWeeklyObjectives}
+                    editable
+                    placeholder={t.weeklyPlaceholder}
+                />
+                 <div className="flex justify-between items-center mt-2">
+                    <Button size="sm" variant="outline" onClick={() => handleOpenBankImporter('weekly')}>
+                        <Import className="mr-2 h-4 w-4" />
+                        {translations.teacherDashboard.lessons.importFromBank}
+                    </Button>
+                 </div>
+            </div>
+             <div className="flex justify-end">
                 <Button onClick={handleSave} disabled={isSaving}>
                     {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                     {t.saveButton}
                 </Button>
+            </div>
+            
+            <Separator />
+
+            <div>
+                 <h3 className="text-xl font-headline mb-4">Lecciones</h3>
+                 <GroupLessons key={refreshLessonKey} group={group} studentsById={studentsById} teacherId={teacherId} onLessonCreated={onLessonCreated} />
             </div>
         </div>
     );
@@ -792,19 +785,22 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
                       <Badge variant="secondary" className="capitalize">{group.type}</Badge>
                     </DialogDescription>
                 </DialogHeader>
-                <Tabs defaultValue="goals" className="flex-grow flex flex-col overflow-hidden">
+                <Tabs defaultValue="program" className="flex-grow flex flex-col overflow-hidden">
                     <TabsList className="shrink-0">
-                        <TabsTrigger value="goals"><Goal className="mr-2 h-4 w-4"/>{t_goals.title}</TabsTrigger>
-                        <TabsTrigger value="lessons"><BookOpen className="mr-2 h-4 w-4"/>Lecciones</TabsTrigger>
+                        <TabsTrigger value="program"><Notebook className="mr-2 h-4 w-4"/>{t_goals.title}</TabsTrigger>
                         <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Miembros</TabsTrigger>
                         <TabsTrigger value="communication"><Send className="mr-2 h-4 w-4"/>Comunicación</TabsTrigger>
                         {isPrivateGroup && <TabsTrigger value="calendar"><CalendarIcon className="mr-2 h-4 w-4"/>Calendario</TabsTrigger>}
                     </TabsList>
-                    <TabsContent value="goals" className="flex-grow overflow-auto p-4">
-                        <GroupGoals group={group} onGroupUpdate={onGroupUpdate} />
-                    </TabsContent>
-                    <TabsContent value="lessons" className="flex-grow overflow-auto p-4">
-                       <GroupLessons key={refreshLessonKey} group={group} studentsById={studentsById} teacherId={teacherId} onLessonCreated={() => setRefreshLessonKey(k => k + 1)} />
+                    <TabsContent value="program" className="flex-grow overflow-auto p-4">
+                        <GroupProgram 
+                            group={group} 
+                            onGroupUpdate={onGroupUpdate} 
+                            studentsById={studentsById}
+                            teacherId={teacherId}
+                            onLessonCreated={() => setRefreshLessonKey(k => k + 1)}
+                            refreshLessonKey={refreshLessonKey}
+                        />
                     </TabsContent>
                     <TabsContent value="members" className="flex-grow overflow-auto p-4">
                          <ScrollArea className="h-full">

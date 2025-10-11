@@ -261,6 +261,11 @@ export const translations = {
                 description: "Selecciona tus días y horas preferidas para las clases.",
                 button: "Abrir Calendario"
             },
+            goals: {
+                title: "Objetivos",
+                mainObjective: "Objetivos del programa",
+                weeklyObjectives: "Contenidos semanales",
+            },
             lessons: {
                 title: "Mis Lecciones",
                 description: "Aquí encontrarás todas las lecciones de tu grupo.",
@@ -328,12 +333,12 @@ export const translations = {
                 button: "Gestionar Bancos"
             },
             goals: {
-                title: "Objetivos",
-                mainObjective: "Objetivo Principal",
-                weeklyObjectives: "Objetivos Semanales",
+                title: "Programa",
+                mainObjective: "Objetivos del programa",
+                weeklyObjectives: "Contenidos semanales",
                 mainPlaceholder: "Define el objetivo general para este grupo...",
                 weeklyPlaceholder: "Define los objetivos específicos para esta semana...",
-                saveButton: "Guardar Objetivos",
+                saveButton: "Guardar",
             },
             lessons: {
                 newLesson: "Nueva Lección",
@@ -719,6 +724,11 @@ export const translations = {
                 description: "Select your preferred days and times for classes.",
                 button: "Open Calendar"
             },
+            goals: {
+                title: "Goals",
+                mainObjective: "Program Goals",
+                weeklyObjectives: "Weekly Content",
+            },
             lessons: {
                 title: "My Lessons",
                 description: "Here you will find all the lessons for your group.",
@@ -786,12 +796,12 @@ export const translations = {
                 button: "Manage Banks"
             },
             goals: {
-                title: "Goals",
-                mainObjective: "Main Objective",
-                weeklyObjectives: "Weekly Objectives",
+                title: "Program",
+                mainObjective: "Program Goals",
+                weeklyObjectives: "Weekly Content",
                 mainPlaceholder: "Define the overall objective for this group...",
                 weeklyPlaceholder: "Define the specific objectives for this week...",
-                saveButton: "Save Objectives",
+                saveButton: "Save",
             },
             lessons: {
                 newLesson: "New Lesson",
@@ -917,5 +927,3 @@ export const translations = {
         }
     }
 };
-
-    
