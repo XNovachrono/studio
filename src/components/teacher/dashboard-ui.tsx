@@ -380,7 +380,8 @@ const AttendancePopover = ({
   currentStatus: AttendanceStatus;
   onSave: (minutes: number) => void;
 }) => {
-    const t = translations.es.teacherDashboard.lessons.attendancePopover;
+    const { translations } = useLanguage();
+    const t = translations.teacherDashboard.lessons.attendancePopover;
     const [minutesLate, setMinutesLate] = useState(typeof currentStatus === 'object' ? currentStatus.tarde : 10);
     const [arrivalTime, setArrivalTime] = useState(() => {
         const arrival = addMinutes(classStartTime, minutesLate);
@@ -633,7 +634,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
         if (!selectedLesson) return null;
         
         const latestClass = group.content.scheduledClasses
-            ?.map(c => ({...c, time: parseISO(c.time)}))
+            ?.map(c => ({...c, time: (typeof c.time === 'string' ? parseISO(c.time) : c.time)}))
             .sort((a,b) => b.time.getTime() - a.time.getTime())
             [0];
 
@@ -641,7 +642,11 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
 
 
         const attendanceForStudent = (studentId: string): AttendanceStatus => {
-            return (editedContent[selectedLessonId!]?.attendance?.[studentId]) ?? selectedLesson.attendance?.[studentId] ?? 'ausente';
+            const editedAttendance = editedContent[selectedLessonId!]?.attendance;
+            if (editedAttendance && editedAttendance[studentId] !== undefined) {
+                return editedAttendance[studentId];
+            }
+            return selectedLesson.attendance?.[studentId] ?? 'ausente';
         }
         
         switch(activeModal) {
@@ -1288,7 +1293,7 @@ export function TeacherDashboardUI() {
       </div>
       <Dialog open={isBanksModalOpen} onOpenChange={setIsBanksModalOpen}>
         <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
-            <DialogHeader className="p-6 pb-0 relative">
+            <DialogHeader className="p-6 pb-0">
                   <DialogTitle>{t.banks.title}</DialogTitle>
             </DialogHeader>
             <div className="flex-1 overflow-auto">
@@ -1300,3 +1305,6 @@ export function TeacherDashboardUI() {
   );
 }
 
+
+
+    
