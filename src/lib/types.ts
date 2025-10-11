@@ -24,7 +24,6 @@ export interface StudentProfile extends User {
   age?: number;
   phone?: string;
   interests?: string[];
-  availability?: string;
   objective?: string;
   objective_details?: string;
   teacherInteractions?: TeacherInteraction[];
@@ -59,7 +58,7 @@ export interface GroupContent {
 export interface ScheduledClass {
   id: string;
   link: string;
-  time: string; // ISO date string
+  time: string | Date; // ISO date string or Date object
   name: string; // Teacher's name
 }
 
@@ -146,4 +145,13 @@ export interface BankCard {
     filePath?: string;
 }
 
+export interface StudentNote {
+    id: string;
+    studentId: string;
+    title: string;
+    content: EditorContent;
+    lessonId?: string; // Optional: link to a specific lesson
+    createdAt: string; // ISO date string
+    updatedAt: string; // ISO date string
+}
     

@@ -125,6 +125,12 @@ export const translations = {
                     currentWeek: "Semana Actual",
                     actions: "Acciones",
                     classesPerWeek: "Clases/Sem"
+                },
+                viewNotes: "Ver Apuntes",
+                notesViewer: {
+                    title: "Apuntes de {studentName}",
+                    noNotes: "El estudiante aún no ha creado apuntes.",
+                    lesson: "Lección"
                 }
             },
             groups: {
@@ -257,10 +263,47 @@ export const translations = {
                 joinButton: "Unirse a la Clase",
                 noClass: "Tu profesor aún no ha programado la próxima clase."
             },
-            calendar: {
+            scheduleClass: {
                 title: "Agendar Clase",
                 description: "Selecciona los días y horas que te gustaría tener clase para que tu docente agende la sesión.",
                 button: "Agendar Clase"
+            },
+            notes: {
+                title: "Mis Apuntes",
+                description: "Tu espacio personal para tomar notas, organizar ideas y prepararte para tus clases.",
+                manageButton: "Gestionar Apuntes",
+                manager: {
+                    title: "Gestor de Apuntes",
+                    createButton: "Crear Nuevo Apunte",
+                    noNotes: "Aún no has creado ningún apunte. ¡Empieza ahora!",
+                    filterByDate: "Filtrar por fecha...",
+                    filterByLesson: "Filtrar por lección...",
+                    allLessons: "Todas las lecciones",
+                    editButton: "Editar",
+                    deleteButton: "Eliminar",
+                },
+                dialog: {
+                    createTitle: "Crear Nuevo Apunte",
+                    editTitle: "Editar Apunte",
+                    titleLabel: "Título del apunte",
+                    lessonLabel: "Vincular a una lección (opcional)",
+                    lessonPlaceholder: "Seleccionar lección",
+                    noLessons: "No hay lecciones en tu grupo",
+                    saveButton: "Guardar Apunte",
+                    cancelButton: "Cancelar",
+                },
+                deleteDialog: {
+                    title: "¿Estás seguro?",
+                    description: "Esta acción no se puede deshacer. El apunte será eliminado permanentemente.",
+                    confirm: "Eliminar",
+                    cancel: "Cancelar",
+                },
+                 toasts: {
+                    titleRequired: "El título es obligatorio.",
+                    createSuccess: "Apunte creado con éxito.",
+                    updateSuccess: "Apunte actualizado con éxito.",
+                    deleteSuccess: "Apunte eliminado con éxito.",
+                }
             },
             goals: {
                 title: "Objetivos",
@@ -275,7 +318,7 @@ export const translations = {
                 viewRecording: "Ver Grabación",
                 noRecording: "La grabación aún no está disponible.",
                 content: "Contenido",
-                homework: "Homework",
+                homework: "Autoestudio",
                 instructions: "Instrucciones",
                 noInstructions: "No hay instrucciones para esta tarea.",
                 yourSubmission: "Tu Entrega",
@@ -284,7 +327,7 @@ export const translations = {
                 yourStatus: "Tu estado",
                 notRegistered: "No registrado"
             },
-            notes: {
+            classNotes: {
                 title: "Class Note",
                 noNotes: "No hay notas para esta clase."
             },
@@ -315,7 +358,7 @@ export const translations = {
         teacherDashboard: {
             title: "Panel de Docente",
             groups: {
-                title: "Grupos Asignados",
+                title: "Grupos Activos",
                 history: "Historial de Grupos",
                 private: "Grupos Privados",
                 small: "Grupos Pequeños",
@@ -426,7 +469,6 @@ export const translations = {
                 level: "Nivel",
                 interests: "Intereses",
                 objective: "Objetivo",
-                availability: "Disponibilidad",
             },
             toasts: {
                  errorTitle: "Error",
@@ -604,6 +646,12 @@ export const translations = {
                     currentWeek: "Current Week",
                     actions: "Actions",
                     classesPerWeek: "Classes/Wk"
+                },
+                viewNotes: "View Notes",
+                 notesViewer: {
+                    title: "Notes from {studentName}",
+                    noNotes: "The student has not created any notes yet.",
+                    lesson: "Lesson"
                 }
             },
             groups: {
@@ -736,10 +784,47 @@ export const translations = {
                 joinButton: "Join Class",
                 noClass: "Your teacher has not scheduled the next class yet."
             },
-            calendar: {
+            scheduleClass: {
                 title: "Schedule Class",
                 description: "Select the days and times you would like to have class so your teacher can schedule the session.",
                 button: "Schedule Class"
+            },
+            notes: {
+                title: "My Notes",
+                description: "Your personal space to take notes, organize ideas, and prepare for your classes.",
+                manageButton: "Manage Notes",
+                manager: {
+                    title: "Notes Manager",
+                    createButton: "Create New Note",
+                    noNotes: "You haven't created any notes yet. Get started now!",
+                    filterByDate: "Filter by date...",
+                    filterByLesson: "Filter by lesson...",
+                    allLessons: "All lessons",
+                    editButton: "Edit",
+                    deleteButton: "Delete",
+                },
+                dialog: {
+                    createTitle: "Create New Note",
+                    editTitle: "Edit Note",
+                    titleLabel: "Note title",
+                    lessonLabel: "Link to a lesson (optional)",
+                    lessonPlaceholder: "Select lesson",
+                    noLessons: "No lessons in your group",
+                    saveButton: "Save Note",
+                    cancelButton: "Cancel",
+                },
+                deleteDialog: {
+                    title: "Are you sure?",
+                    description: "This action cannot be undone. The note will be permanently deleted.",
+                    confirm: "Delete",
+                    cancel: "Cancel",
+                },
+                toasts: {
+                    titleRequired: "Title is required.",
+                    createSuccess: "Note created successfully.",
+                    updateSuccess: "Note updated successfully.",
+                    deleteSuccess: "Note deleted successfully.",
+                }
             },
             goals: {
                 title: "Goals",
@@ -763,7 +848,7 @@ export const translations = {
                 yourStatus: "Your status",
                 notRegistered: "Not registered"
             },
-            notes: {
+            classNotes: {
                 title: "Class Note",
                 noNotes: "No notes for this class."
             },
@@ -794,7 +879,7 @@ export const translations = {
         teacherDashboard: {
             title: "Teacher Dashboard",
             groups: {
-                title: "Assigned Groups",
+                title: "Active Groups",
                 history: "Group History",
                 private: "Private Groups",
                 small: "Small Groups",
@@ -905,7 +990,6 @@ export const translations = {
                 level: "Level",
                 interests: "Interests",
                 objective: "Objective",
-                availability: "Availability",
             },
             toasts: {
                  errorTitle: "Error",

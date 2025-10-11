@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Calendar as CalendarIcon, Loader2, MessageCircleQuestion, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal } from "lucide-react";
+import { BookOpen, Calendar as CalendarIcon, Loader2, MessageCircleQuestion, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal, Notebook } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/common/dashboard-header";
 import type { User, Group, StudentProfile, Lesson, ScheduledClass, TeacherInteraction } from "@/lib/types";
@@ -29,6 +29,7 @@ import { Calendar } from "../ui/calendar";
 import { Input } from "../ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
+import { StudentNotesManager } from "./notes-manager";
 
 
 interface StudentDashboardData {
@@ -143,8 +144,12 @@ export function StudentDashboardUI() {
   const t = translations.studentDashboard;
   const t_teacher_lessons = translations.teacherDashboard.lessons;
   const t_goals = translations.studentDashboard.goals;
+  const t_schedule = translations.studentDashboard.scheduleClass;
+  const t_notes = translations.studentDashboard.notes;
+
   const [isPqrsDialogOpen, setPqrsDialogOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isNotesManagerOpen, setNotesManagerOpen] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherInteraction | null>(null);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [modalContent, setModalContent] = useState<keyof Lesson | null>(null);
@@ -212,7 +217,7 @@ export function StudentDashboardUI() {
     }
     // Sort classes to find the most recent one (or upcoming one in the future)
     const sortedClasses = [...data.group.content.scheduledClasses].sort(
-      (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
+      (a, b) => new Date(b.time as string).getTime() - new Date(a.time as string).getTime()
     );
     return sortedClasses[0];
   }, [data?.group]);
@@ -258,7 +263,7 @@ export function StudentDashboardUI() {
                     {nextClass ? (
                         <div className="flex flex-col items-center justify-center text-center p-4 rounded-lg bg-secondary/50 space-y-3">
                            <p className="font-semibold text-lg">
-                             {format(new Date(nextClass.time), "eeee, d 'de' MMMM 'de' yyyy 'a las' HH:mm", { locale: es })}
+                             {format(typeof nextClass.time === 'string' ? parseISO(nextClass.time) : nextClass.time, "eeee, d 'de' MMMM 'de' yyyy 'a las' HH:mm", { locale: es })}
                            </p>
                            <a href={nextClass.link} target="_blank" rel="noopener noreferrer">
                              <Button size="lg">{t.nextClass.joinButton}</Button>
@@ -267,6 +272,20 @@ export function StudentDashboardUI() {
                     ) : (
                         <p className="p-4 text-center text-muted-foreground">{t.nextClass.noClass}</p>
                     )}
+                </CardContent>
+            </Card>
+
+            {/* Notes Card */}
+             <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline text-2xl flex items-center gap-2">
+                        <Notebook />
+                        {t_notes.title}
+                    </CardTitle>
+                     <CardDescription>{t_notes.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex justify-center">
+                    <Button onClick={() => setNotesManagerOpen(true)}>{t_notes.manageButton}</Button>
                 </CardContent>
             </Card>
 
@@ -349,12 +368,12 @@ export function StudentDashboardUI() {
                     <CardHeader>
                         <CardTitle className="font-headline text-2xl flex items-center gap-2">
                             <CalendarIcon />
-                            {t.calendar.title}
+                            {t_schedule.title}
                         </CardTitle>
-                        <CardDescription>{t.calendar.description}</CardDescription>
+                        <CardDescription>{t_schedule.description}</CardDescription>
                     </CardHeader>
                     <CardContent className="flex justify-center">
-                        <Button onClick={() => setIsCalendarOpen(true)}>{t.calendar.button}</Button>
+                        <Button onClick={() => setIsCalendarOpen(true)}>{t_schedule.button}</Button>
                     </CardContent>
                 </Card>
             )}
@@ -398,7 +417,7 @@ export function StudentDashboardUI() {
                                         </Card>
                                         <Card onClick={() => handleCardClick(lesson, 'classNote')} className="cursor-pointer hover:bg-accent/50 transition-colors">
                                             <CardHeader>
-                                                <CardTitle className="font-headline text-base flex items-center gap-2"><FileText/> {t.notes.title}</CardTitle>
+                                                <CardTitle className="font-headline text-base flex items-center gap-2"><FileText/> {t.classNotes.title}</CardTitle>
                                             </CardHeader>
                                         </Card>
                                         <Card onClick={() => handleCardClick(lesson, 'homework')} className="cursor-pointer hover:bg-accent/50 transition-colors">
@@ -436,7 +455,7 @@ export function StudentDashboardUI() {
           <DialogHeader>
             <DialogTitle className="font-headline text-2xl">
               {modalContent === 'content' && t.lessons.content}
-              {modalContent === 'classNote' && t.notes.title}
+              {modalContent === 'classNote' && t.classNotes.title}
               {modalContent === 'homework' && t.lessons.homework}
             </DialogTitle>
              <DialogDescription>{activeLesson?.name}</DialogDescription>
@@ -455,16 +474,24 @@ export function StudentDashboardUI() {
         </DialogContent>
       </Dialog>
 
-      {user && selectedTeacher && (
+      {user && currentTeacher && (
         <PqrsDialog 
           isOpen={isPqrsDialogOpen} 
           onOpenChange={setPqrsDialogOpen} 
           student={user}
-          teacher={selectedTeacher}
+          teacher={currentTeacher}
         />
       )}
       {user && isPrivateStudent && (
         <CalendarDialog user={user} isOpen={isCalendarOpen} onOpenChange={setIsCalendarOpen} />
+      )}
+      {user && (
+          <StudentNotesManager 
+            isOpen={isNotesManagerOpen} 
+            onOpenChange={setNotesManagerOpen}
+            student={user}
+            lessons={lessons}
+          />
       )}
     </div>
   );

@@ -1,12 +1,28 @@
 
+
 import { 
     doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc, arrayRemove, addDoc, orderBy, collectionGroup
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { db } from "./firebase";
-import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder, Lesson, EditorContent, BankCard, BankType, ScheduledClass } from "./types";
+import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder, Lesson, EditorContent, BankCard, BankType, ScheduledClass, StudentNote } from "./types";
 
 const storage = getStorage();
+
+// Helper to convert Firestore Timestamps
+const fromDoc = <T extends { createdAt: any, updatedAt?: any }>(doc: any): T => {
+    const data = doc.data();
+    const result: any = {
+        id: doc.id,
+        ...data,
+        createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
+    };
+    if (data.updatedAt) {
+        result.updatedAt = (data.updatedAt as Timestamp).toDate().toISOString();
+    }
+    return result as T;
+};
+
 
 // Helper to convert Firestore Timestamps in lesson objects
 const lessonFromDoc = (doc: any): Lesson => {
@@ -121,6 +137,39 @@ export const submitPQRS = async (pqrsData: Omit<PQRSMessage, 'createdAt' | 'id' 
         createdAt: Timestamp.now(),
     });
 };
+
+
+// === Student Notes Functions ===
+export const createStudentNote = async (data: Omit<StudentNote, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+    const notesRef = collection(db, "student_notes");
+    const now = Timestamp.now();
+    const newNoteRef = await addDoc(notesRef, {
+        ...data,
+        createdAt: now,
+        updatedAt: now,
+    });
+    return newNoteRef.id;
+}
+
+export const getStudentNotes = async (studentId: string): Promise<StudentNote[]> => {
+    const notesRef = collection(db, "student_notes");
+    const q = query(notesRef, where("studentId", "==", studentId), orderBy("updatedAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => fromDoc<StudentNote>(doc));
+}
+
+export const updateStudentNote = async (noteId: string, data: Partial<StudentNote>): Promise<void> => {
+    const noteRef = doc(db, "student_notes", noteId);
+    await updateDoc(noteRef, {
+        ...data,
+        updatedAt: Timestamp.now(),
+    });
+}
+
+export const deleteStudentNote = async (noteId: string): Promise<void> => {
+    const noteRef = doc(db, "student_notes", noteId);
+    await deleteDoc(noteRef);
+}
 
 
 // === Admin Functions ===
@@ -451,6 +500,15 @@ export const addContentToGroup = async (
         await updateDoc(groupRef, {
             'content.scheduledClasses': arrayUnion(scheduledClass)
         });
+        
+        const groupSnap = await getDoc(groupRef);
+        const groupData = groupSnap.data() as Group;
+        const studentIds = groupData.studentIds;
+        const studentsRef = collection(db, 'users');
+        const studentsSnap = await getDocs(query(studentsRef, where('__name__', 'in', studentIds)));
+        const students = studentsSnap.docs.map(doc => doc.data() as StudentProfile);
+        
+        await createLessonForGroup(groupId, groupData.name, students, classDate.toISOString());
     }
 };
 

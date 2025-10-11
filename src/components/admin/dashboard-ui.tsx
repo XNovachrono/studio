@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, PlusCircle, Users, Edit, Calendar as CalendarIcon, MessageCircle, Trash2, Eye, BookOpen, Library, Link as LinkIcon, Bell, Settings, Target, Video, FileText, BookCheck, Users2, MessageSquareQuote } from "lucide-react";
+import { Loader2, PlusCircle, Users, Edit, Calendar as CalendarIcon, MessageCircle, Trash2, Eye, BookOpen, Library, Link as LinkIcon, Bell, Settings, Target, Video, FileText, BookCheck, Users2, MessageSquareQuote, Notebook } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -41,8 +41,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, StudentProfile, PQRSMessage, Group, BankCard, Lesson } from "@/lib/types";
-import { getAdminData, createGroupWithTeacher, updateUserProfile, deletePQRSMessage, getLessonsForGroup, removeStudentsFromGroup, updateGroupTeacherAndHistory } from "@/lib/firestore";
+import type { User, StudentProfile, PQRSMessage, Group, BankCard, Lesson, StudentNote } from "@/lib/types";
+import { getAdminData, createGroupWithTeacher, updateUserProfile, deletePQRSMessage, getLessonsForGroup, removeStudentsFromGroup, updateGroupTeacherAndHistory, getStudentNotes } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -63,7 +63,70 @@ interface AdminDashboardData {
   bankCards: BankCard[];
 }
 
-const ENGLISH_LEVELS = ["A1", "A1.2", "A2", "A2.2", "B1", "B1.2", "C1", "C1.2", "C2"];
+const StudentNotesViewer = ({ student, isOpen, onOpenChange }: { student: StudentProfile | null, isOpen: boolean, onOpenChange: (open: boolean) => void }) => {
+    const { translations } = useLanguage();
+    const t = translations.adminDashboard.students.notesViewer;
+    const [notes, setNotes] = useState<StudentNote[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [viewingNote, setViewingNote] = useState<StudentNote | null>(null);
+
+    useEffect(() => {
+        if (student && isOpen) {
+            setIsLoading(true);
+            getStudentNotes(student.id).then(fetchedNotes => {
+                setNotes(fetchedNotes);
+                setIsLoading(false);
+            });
+        }
+    }, [student, isOpen]);
+
+    if (!student) return null;
+
+    return (
+        <>
+            <Dialog open={isOpen} onOpenChange={onOpenChange}>
+                <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>{t.title.replace('{studentName}', student.name)}</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex-grow overflow-auto py-4">
+                        {isLoading ? (
+                            <div className="flex justify-center items-center h-full">
+                                <Loader2 className="h-8 w-8 animate-spin" />
+                            </div>
+                        ) : notes.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {notes.map(note => (
+                                    <Card key={note.id} className="cursor-pointer hover:bg-secondary/50" onClick={() => setViewingNote(note)}>
+                                        <CardHeader>
+                                            <CardTitle className="text-lg truncate">{note.title}</CardTitle>
+                                            <CardDescription>
+                                                {format(parseISO(note.updatedAt), "PP", { locale: es })}
+                                            </CardDescription>
+                                        </CardHeader>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-center text-muted-foreground pt-10">{t.noNotes}</p>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={!!viewingNote} onOpenChange={() => setViewingNote(null)}>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                         <DialogTitle>{viewingNote?.title}</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4 max-h-[60vh] overflow-y-auto">
+                        {viewingNote && <Editor content={viewingNote.content} onChange={() => {}} editable={false} />}
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
+    );
+};
+
 
 const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: StudentProfile | null; isOpen: boolean; onOpenChange: (open: boolean) => void }) => {
     const { translations } = useLanguage();
@@ -80,7 +143,6 @@ const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: Student
         { label: t.phone, value: student.phone },
         { label: t.interests, value: student.interests?.join(', ') },
         { label: t.objective, value: student.objective },
-        { label: t.availability, value: student.availability },
     ];
 
     return (
@@ -158,7 +220,7 @@ const LessonViewer = ({ group, studentsById }: { group: Group, studentsById: Map
                                 </Card>
                                 <Card onClick={() => handleCardClick(lesson, 'content')} className="cursor-pointer hover:bg-accent/50 transition-colors">
                                     <CardHeader>
-                                        <CardTitle className="font-headline text-base flex items-center gap-2"><Target/> {t_lessons_teacher.content}</CardTitle>
+                                        <CardTitle className="font-headline text-base flex items-center gap-2"><Target/> {t_lessons_teacher.objective}</CardTitle>
                                     </CardHeader>
                                 </Card>
                                 <Card onClick={() => handleCardClick(lesson, 'classNote')} className="cursor-pointer hover:bg-accent/50 transition-colors">
@@ -191,7 +253,7 @@ const LessonViewer = ({ group, studentsById }: { group: Group, studentsById: Map
             <DialogContent className="max-w-3xl">
             <DialogHeader>
                 <DialogTitle className="font-headline text-2xl">
-                    {modalContent === 'content' && t_lessons_teacher.content}
+                    {modalContent === 'content' && t_lessons_teacher.objective}
                     {modalContent === 'classNote' && t_lessons_teacher.classNote}
                     {modalContent === 'homework' && t_lessons_teacher.homework}
                     {modalContent === 'attendance' && t_lessons_teacher.attendance}
@@ -310,7 +372,7 @@ const AdminGroupDetailsDialog = ({ group, studentsById, allTeachers, isOpen, onO
                                         {scheduledClasses.map(c => (
                                             <li key={c.id} className="text-sm p-3 rounded-md bg-secondary/50">
                                                 <p><strong>Enlace:</strong> <a href={c.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{c.link}</a></p>
-                                                <p><strong>Fecha:</strong> {format(new Date(c.time), "PPpp", { locale: es })}</p>
+                                                <p><strong>Fecha:</strong> {format(typeof c.time === 'string' ? parseISO(c.time) : c.time, "PPpp", { locale: es })}</p>
                                             </li>
                                         ))}
                                     </ul>
@@ -592,7 +654,7 @@ const TeacherDetailsDialog = ({ teacher, groups, pqrs, bankCards, isOpen, onOpen
                         ) : <p className="text-center text-muted-foreground">Este docente no tiene grupos asignados.</p>}
                     </TabsContent>
                     <TabsContent value="banks" className="flex-grow overflow-auto">
-                        <BanksDashboardUI />
+                        <BanksDashboardUI user={teacher} />
                     </TabsContent>
                     <TabsContent value="pqrs" className="flex-grow overflow-auto p-4">
                          {pqrs.length > 0 ? (
@@ -639,6 +701,7 @@ export function AdminDashboardUI() {
   
   // Student editing state
   const [editingStudent, setEditingStudent] = useState<StudentProfile | null>(null);
+  const [notesStudent, setNotesStudent] = useState<StudentProfile | null>(null);
   
   // PQRS state
   const [selectedPqrsStudent, setSelectedPqrsStudent] = useState<StudentProfile | null>(null);
@@ -838,7 +901,6 @@ export function AdminDashboardUI() {
                         <TableHead>{t.students.table.level}</TableHead>
                         <TableHead>{t.students.table.plan}</TableHead>
                         <TableHead>{t.students.table.classesPerWeek}</TableHead>
-                        <TableHead>{t.students.table.availability}</TableHead>
                         <TableHead>{t.students.table.startDate}</TableHead>
                         <TableHead>{t.students.table.duration}</TableHead>
                         <TableHead>{t.students.table.currentWeek}</TableHead>
@@ -872,11 +934,13 @@ export function AdminDashboardUI() {
                             <TableCell>{student.level || '-'}</TableCell>
                             <TableCell><Badge variant="outline" className="capitalize">{student.plan || '-'}</Badge></TableCell>
                             <TableCell>{student.plan === 'privado' ? student.classesPerWeek || 1 : 'N/A'}</TableCell>
-                            <TableCell>{student.availability || '-'}</TableCell>
                             <TableCell>{startDate ? format(startDate, "P", { locale: es }) : '-'}</TableCell>
                             <TableCell>{student.courseDuration ? `${student.courseDuration} sem` : '-'}</TableCell>
                             <TableCell>{currentWeek}</TableCell>
                             <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" onClick={() => setNotesStudent(student)} title={t.students.viewNotes}>
+                                    <Notebook className="h-4 w-4" />
+                                </Button>
                                 <Button variant="ghost" size="icon" onClick={() => setEditingStudent(student)}>
                                     <Edit className="h-4 w-4" />
                                 </Button>
@@ -1036,6 +1100,13 @@ export function AdminDashboardUI() {
         isOpen={!!editingStudent} 
         onOpenChange={() => setEditingStudent(null)} 
         onStudentUpdate={() => fetchDashboardData(user.id)}
+      />
+
+      {/* Dialog for Student Notes */}
+      <StudentNotesViewer 
+        student={notesStudent}
+        isOpen={!!notesStudent}
+        onOpenChange={() => setNotesStudent(null)}
       />
 
       {/* Dialog for PQRS Details */}
