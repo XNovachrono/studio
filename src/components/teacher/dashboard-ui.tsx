@@ -661,7 +661,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
         if (!selectedLesson) return null;
         
         const isClassTimeValid = !!selectedLesson.scheduledTime;
-        const classStartTime = isClassTimeValid ? parseISO(selectedLesson.scheduledTime!) : new Date();
+        const classStartTime = isClassTimeValid ? parseISO(selectedLesson.scheduledTime) : new Date();
 
         const attendanceForStudent = (studentId: string): AttendanceStatus => {
             const editedAttendance = editedContent[selectedLessonId!]?.attendance;
@@ -716,13 +716,18 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
             case 'attendance':
                 return (
                     <div className="space-y-4">
-                        {isClassTimeValid && (
+                        {isClassTimeValid ? (
                             <Alert>
                                 <Clock className="h-4 w-4" />
                                 <AlertTitle>{t.attendancePopover.classTimeTitle}</AlertTitle>
                                 <AlertDescription>
                                     {t.attendancePopover.classTimeDescription.replace('{time}', format(classStartTime, 'PPpp', { locale: es }))}
                                 </AlertDescription>
+                            </Alert>
+                        ) : (
+                             <Alert variant="destructive">
+                                <Clock className="h-4 w-4" />
+                                <AlertTitle>{t.attendancePopover.noTimeError}</AlertTitle>
                             </Alert>
                         )}
                         {groupMembers.map(student => {
@@ -827,25 +832,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                         </AccordionTrigger>
                         <AccordionContent className="p-4 border-t">
                              <div className="space-y-4">
-                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle className="font-headline text-lg flex items-center gap-2"><Video /> {t.recording}</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="space-y-2">
-                                            <div className="flex items-center gap-2">
-                                                 <Input 
-                                                    placeholder={t.recordingPlaceholder}
-                                                    value={recordingLink}
-                                                    onChange={(e) => handleContentChange(lesson.id, 'recording', { link: e.target.value })}
-                                                />
-                                                <Button onClick={() => handleSaveLesson(lesson.id)} disabled={isSaving === lesson.id} size="icon">
-                                                    {isSaving === lesson.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                                </Button>
-                                            </div>
-                                            {showVideoPlayer && <div className="mt-2"><VideoPlayer url={recordingLink} /></div>}
-                                        </CardContent>
-                                    </Card>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <Card onClick={() => handleOpenModal(lesson.id, 'objective')} className="cursor-pointer hover:bg-accent/50 transition-colors">
                                         <CardHeader>
                                             <CardTitle className="font-headline text-base flex items-center gap-2"><Target/> {t.objective}</CardTitle>
@@ -871,7 +858,37 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                             <CardTitle className="font-headline text-base flex items-center gap-2"><MessageSquareQuote/> {t.comments}</CardTitle>
                                         </CardHeader>
                                     </Card>
+                                     <Card>
+                                        <CardHeader>
+                                            <CardTitle className="font-headline text-lg flex items-center gap-2"><Video /> {t.recording}</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                 <Input 
+                                                    placeholder={t.recordingPlaceholder}
+                                                    value={recordingLink}
+                                                    onChange={(e) => handleContentChange(lesson.id, 'recording', { link: e.target.value })}
+                                                />
+                                                <Button onClick={() => handleSaveLesson(lesson.id)} disabled={isSaving === lesson.id} size="icon">
+                                                    {isSaving === lesson.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                                </Button>
+                                            </div>
+                                            {showVideoPlayer && <div className="mt-2"><VideoPlayer url={recordingLink} /></div>}
+                                        </CardContent>
+                                    </Card>
                                 </div>
+                                <Card className="mt-4 bg-secondary/30">
+                                    <CardHeader>
+                                        <CardTitle className="text-base flex items-center gap-2"><Clock /> {t.attendancePopover.classTimeTitle}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {lesson.scheduledTime ? (
+                                            <p className="text-sm font-medium">{format(parseISO(lesson.scheduledTime), 'PPpp', { locale: es })}</p>
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground">{t.attendancePopover.noTimeError}</p>
+                                        )}
+                                    </CardContent>
+                                </Card>
                             </div>
                         </AccordionContent>
                     </AccordionItem>

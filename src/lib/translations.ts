@@ -377,7 +377,7 @@ export const translations = {
                 placeholders: {
                      objective: "Define el objetivo para esta clase específica...",
                      classNote: "Escribe tus notas de clase aquí...",
-                     homework: "Detalla las instrucciones para el autoestudio aquí...",
+                     homework: "Detalla las instrucciones para el autoestudio here...",
                      comments: "Añade comentarios privados generales para la clase...",
                      studentComment: "Añade un comentario privado para",
                 },
