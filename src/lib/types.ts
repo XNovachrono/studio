@@ -108,6 +108,7 @@ export interface Lesson {
   name: string;
   number: number;
   createdAt: string; // ISO date string
+  scheduledTime?: string; // ISO date string, time of the class
   recording: {
     link: string;
   };

@@ -660,15 +660,8 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
      const renderModalContent = () => {
         if (!selectedLesson) return null;
         
-        const latestClass = group.content.scheduledClasses
-            ?.map(c => ({...c, time: (typeof c.time === 'string' ? parseISO(c.time) : c.time)}))
-            .filter(c => c.time instanceof Date && !isNaN(c.time.getTime()))
-            .sort((a,b) => b.time.getTime() - a.time.getTime())
-            [0];
-
-        const isClassTimeValid = !!latestClass;
-        const classStartTime = latestClass?.time || new Date();
-
+        const isClassTimeValid = !!selectedLesson.scheduledTime;
+        const classStartTime = isClassTimeValid ? parseISO(selectedLesson.scheduledTime!) : new Date();
 
         const attendanceForStudent = (studentId: string): AttendanceStatus => {
             const editedAttendance = editedContent[selectedLessonId!]?.attendance;
@@ -960,7 +953,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
             await addContentToGroup(group.id, 'scheduledClass', { link, time: scheduledDateTime }, teacherName);
             
             const groupStudents = group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[];
-            await createLessonForGroup(group.id, group.name, groupStudents);
+            await createLessonForGroup(group.id, group.name, groupStudents, scheduledDateTime.toISOString());
 
             toast({ title: t_toast.scheduleClassSuccessTitle, description: t_toast.scheduleClassSuccessDescription });
             setLink("");

@@ -306,7 +306,7 @@ const defaultContent: EditorContent = {
 };
 
 // Create a new lesson for a group
-export const createLessonForGroup = async (groupId: string, groupName: string, students: StudentProfile[]): Promise<void> => {
+export const createLessonForGroup = async (groupId: string, groupName: string, students: StudentProfile[], scheduledTime: string): Promise<void> => {
     const lessonsRef = collection(db, "groups", groupId, "lessons");
     const lessonsSnap = await getDocs(lessonsRef);
     const lessonNumber = lessonsSnap.size + 1;
@@ -321,11 +321,13 @@ export const createLessonForGroup = async (groupId: string, groupName: string, s
         name: newLessonName,
         number: lessonNumber,
         createdAt: Timestamp.now() as any,
+        scheduledTime,
         recording: { link: "" },
         content: defaultContent,
         classNote: defaultContent,
         homework: defaultContent,
         comments: defaultContent,
+        studentComments: {},
         attendance: {},
     };
 
