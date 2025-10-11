@@ -218,7 +218,8 @@ const GroupProgram = ({ group, onGroupUpdate, studentsById, teacherId, onLessonC
     const [weeklyObjectives, setWeeklyObjectives] = useState(group.weeklyObjectives);
     const [isBankImporterOpen, setBankImporterOpen] = useState(false);
     const [importTarget, setImportTarget] = useState<'main' | 'weekly' | null>(null);
-    const [isSaving, setIsSaving] = useState(false);
+    const [isSavingMain, setIsSavingMain] = useState(false);
+    const [isSavingWeekly, setIsSavingWeekly] = useState(false);
 
     const handleOpenBankImporter = (target: 'main' | 'weekly') => {
         setImportTarget(target);
@@ -232,66 +233,84 @@ const GroupProgram = ({ group, onGroupUpdate, studentsById, teacherId, onLessonC
             setWeeklyObjectives(content);
         }
     };
-
-    const handleSave = async () => {
-        setIsSaving(true);
+    
+    const handleSaveMainObjective = async () => {
+        setIsSavingMain(true);
         try {
-            await updateGroupObjectives(group.id, {
-                mainObjective,
-                weeklyObjectives,
-            });
+            await updateGroupObjectives(group.id, { mainObjective });
             toast({ title: t_toast.objectivesSavedTitle });
             onGroupUpdate();
         } catch (error) {
-            console.error("Error saving objectives:", error);
+            console.error("Error saving main objective:", error);
             toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.saveObjectivesError });
         } finally {
-            setIsSaving(false);
+            setIsSavingMain(false);
         }
-    }
+    };
+
+    const handleSaveWeeklyObjectives = async () => {
+        setIsSavingWeekly(true);
+        try {
+            await updateGroupObjectives(group.id, { weeklyObjectives });
+            toast({ title: t_toast.objectivesSavedTitle });
+            onGroupUpdate();
+        } catch (error) {
+            console.error("Error saving weekly objectives:", error);
+            toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.saveObjectivesError });
+        } finally {
+            setIsSavingWeekly(false);
+        }
+    };
+
 
     return (
         <div className="space-y-6">
             <BankCardImporter ownerId={group.teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} />
             
             <div>
-                <h3 className="text-xl font-headline mb-2">{t.mainObjective}</h3>
+                 <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-xl font-headline">{t.mainObjective}</h3>
+                    <div className="flex gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => handleOpenBankImporter('main')}>
+                            <Import className="mr-2 h-4 w-4" />
+                            {translations.teacherDashboard.lessons.importFromBank}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={handleSaveMainObjective} disabled={isSavingMain}>
+                            {isSavingMain ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                            {t.saveButton}
+                        </Button>
+                    </div>
+                </div>
                 <Editor
                     content={mainObjective}
                     onChange={setMainObjective}
                     editable
                     placeholder={t.mainPlaceholder}
                 />
-                <div className="flex justify-between items-center mt-2">
-                    <Button size="sm" variant="outline" onClick={() => handleOpenBankImporter('main')}>
-                        <Import className="mr-2 h-4 w-4" />
-                        {translations.teacherDashboard.lessons.importFromBank}
-                    </Button>
-                </div>
             </div>
 
             <Separator />
             
             <div>
-                <h3 className="text-xl font-headline mb-2">{t.weeklyObjectives}</h3>
+                <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-xl font-headline">{t.weeklyObjectives}</h3>
+                    <div className="flex gap-2">
+                         <Button size="sm" variant="ghost" onClick={() => handleOpenBankImporter('weekly')}>
+                            <Import className="mr-2 h-4 w-4" />
+                            {translations.teacherDashboard.lessons.importFromBank}
+                        </Button>
+                         <Button size="sm" variant="ghost" onClick={handleSaveWeeklyObjectives} disabled={isSavingWeekly}>
+                            {isSavingWeekly ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                            {t.saveButton}
+                        </Button>
+                    </div>
+                </div>
                 <Editor
                     content={weeklyObjectives}
                     onChange={setWeeklyObjectives}
                     editable
                     placeholder={t.weeklyPlaceholder}
                 />
-                 <div className="flex justify-between items-center mt-2">
-                    <Button size="sm" variant="outline" onClick={() => handleOpenBankImporter('weekly')}>
-                        <Import className="mr-2 h-4 w-4" />
-                        {translations.teacherDashboard.lessons.importFromBank}
-                    </Button>
-                 </div>
-            </div>
-             <div className="flex justify-end">
-                <Button onClick={handleSave} disabled={isSaving}>
-                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                    {t.saveButton}
-                </Button>
             </div>
             
             <Separator />

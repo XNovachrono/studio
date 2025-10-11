@@ -356,7 +356,7 @@ export const translations = {
                     tarde: "Tarde",
                     na: "N/A"
                 },
-                importFromBank: "Importar desde banco",
+                importFromBank: "Importar",
                 retry: "Reintentar",
                 placeholders: {
                      content: "Objetivo general y objetivos específicos de la clase...",
@@ -797,7 +797,7 @@ export const translations = {
             },
             goals: {
                 title: "Program",
-                mainObjective: "Program Goals",
+                mainObjective: "Program Objectives",
                 weeklyObjectives: "Weekly Content",
                 mainPlaceholder: "Define the overall objective for this group...",
                 weeklyPlaceholder: "Define the specific objectives for this week...",
@@ -819,7 +819,7 @@ export const translations = {
                     tarde: "Late",
                     na: "N/A"
                 },
-                importFromBank: "Import from bank",
+                importFromBank: "Import",
                 retry: "Retry",
                 placeholders: {
                     content: "General and specific objectives for the class...",
