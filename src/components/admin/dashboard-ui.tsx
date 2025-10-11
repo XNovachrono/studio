@@ -453,9 +453,11 @@ const AdminGroupDetailsDialog = ({ group, studentsById, allTeachers, isOpen, onO
     )
 }
 
+const ENGLISH_LEVELS = ["A1", "A1.2", "A2", "A2.2", "B1", "B1.2", "C1", "C1.2", "C2"];
+
 const EditStudentDialog = ({ student, isOpen, onOpenChange, onStudentUpdate }: { student: StudentProfile | null; isOpen: boolean; onOpenChange: (open: boolean) => void; onStudentUpdate: () => void }) => {
     const { toast } = useToast();
-    const [level, setLevel] = useState(student?.level || "");
+    const [level, setLevel] = useState(student?.level || "sin-nivel");
     const [startDate, setStartDate] = useState<Date | undefined>(student?.courseStartDate ? parseISO(student.courseStartDate) : new Date());
     const [duration, setDuration] = useState(student?.courseDuration || 12);
     const [classesPerWeek, setClassesPerWeek] = useState(student?.classesPerWeek || 1);
@@ -463,7 +465,7 @@ const EditStudentDialog = ({ student, isOpen, onOpenChange, onStudentUpdate }: {
 
     useEffect(() => {
         if (student) {
-            setLevel(student.level || "");
+            setLevel(student.level || "sin-nivel");
             setStartDate(student.courseStartDate ? parseISO(student.courseStartDate) : new Date());
             setDuration(student.courseDuration || 12);
             setClassesPerWeek(student.classesPerWeek || (student.plan === 'privado' ? 1 : 0));
@@ -475,7 +477,7 @@ const EditStudentDialog = ({ student, isOpen, onOpenChange, onStudentUpdate }: {
         setIsSaving(true);
         try {
             const dataToUpdate: Partial<StudentProfile> = {
-                level,
+                level: level === "sin-nivel" ? "" : level,
                 courseStartDate: format(startDate, "yyyy-MM-dd"),
                 courseDuration: duration,
             };
@@ -512,6 +514,7 @@ const EditStudentDialog = ({ student, isOpen, onOpenChange, onStudentUpdate }: {
                         <Select value={level} onValueChange={setLevel}>
                             <SelectTrigger id="level-select"><SelectValue placeholder="Seleccionar nivel" /></SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="sin-nivel">Sin Nivel</SelectItem>
                                 {ENGLISH_LEVELS.map(lvl => <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>)}
                             </SelectContent>
                         </Select>

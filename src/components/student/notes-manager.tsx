@@ -48,7 +48,7 @@ export function StudentNotesManager({ isOpen, onOpenChange, student, lessons }: 
 
     // State for filtering
     const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
-    const [filterLesson, setFilterLesson] = useState<string>('');
+    const [filterLesson, setFilterLesson] = useState<string>('all');
 
     const fetchNotes = async () => {
         setIsLoading(true);
@@ -67,7 +67,7 @@ export function StudentNotesManager({ isOpen, onOpenChange, student, lessons }: 
         if (isOpen) {
             fetchNotes();
         }
-    }, [isOpen]);
+    }, [isOpen, student.id]);
 
     const handleOpenNoteDialog = (note: StudentNote | null = null) => {
         if (note) {
@@ -124,7 +124,7 @@ export function StudentNotesManager({ isOpen, onOpenChange, student, lessons }: 
     const filteredNotes = useMemo(() => {
         return notes.filter(note => {
             const dateMatch = filterDate ? format(parseISO(note.updatedAt), 'yyyy-MM-dd') === format(filterDate, 'yyyy-MM-dd') : true;
-            const lessonMatch = filterLesson ? note.lessonId === filterLesson : true;
+            const lessonMatch = filterLesson !== 'all' ? note.lessonId === filterLesson : true;
             return dateMatch && lessonMatch;
         });
     }, [notes, filterDate, filterLesson]);
@@ -153,7 +153,7 @@ export function StudentNotesManager({ isOpen, onOpenChange, student, lessons }: 
                                         <SelectValue placeholder={t.manager.filterByLesson} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">{t.manager.allLessons}</SelectItem>
+                                        <SelectItem value="all">{t.manager.allLessons}</SelectItem>
                                         {lessons.map(lesson => (
                                             <SelectItem key={lesson.id} value={lesson.id}>{lesson.name}</SelectItem>
                                         ))}
@@ -267,5 +267,3 @@ export function StudentNotesManager({ isOpen, onOpenChange, student, lessons }: 
         </>
     );
 }
-
-
