@@ -5,7 +5,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal, Notebook } from "lucide-react";
+import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal, Notebook, Bold, Italic, Underline, List, ListOrdered, Heading1, Heading2, Palette, Table2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import {
@@ -95,7 +95,7 @@ const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: Student
     );
 };
 
-const BankCardImporter = ({ onSelectCard, ownerId, isOpen, onOpenChange }: { onSelectCard: (content: EditorContent) => void; ownerId: string; isOpen: boolean; onOpenChange: (open: boolean) => void; }) => {
+const BankCardImporter = ({ onSelectCard, ownerId, isOpen, onOpenChange, bankType }: { onSelectCard: (content: EditorContent) => void; ownerId: string; isOpen: boolean; onOpenChange: (open: boolean) => void; bankType: 'objective' | 'homework' }) => {
     const [cards, setCards] = useState<BankCard[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { translations } = useLanguage();
@@ -105,13 +105,13 @@ const BankCardImporter = ({ onSelectCard, ownerId, isOpen, onOpenChange }: { onS
         if (isOpen) {
             const fetchCards = async () => {
                 setIsLoading(true);
-                const fetchedCards = await getBankCards('objective');
+                const fetchedCards = await getBankCards(bankType);
                 setCards(fetchedCards);
                 setIsLoading(false);
             };
             fetchCards();
         }
-    }, [isOpen]);
+    }, [isOpen, bankType]);
 
     const handleSelect = (card: BankCard) => {
         onSelectCard(card.content!);
@@ -207,11 +207,11 @@ const FileBankImporter = ({ onSelectFile, isOpen, onOpenChange }: { onSelectFile
     )
 }
 
-type ModalType = 'content' | 'classNote' | 'homework' | 'attendance' | 'comments' | null;
+type ModalType = 'objective' | 'classNote' | 'homework' | 'attendance' | 'comments' | null;
 
 const GroupProgram = ({ group, onGroupUpdate, studentsById, teacherId, onLessonCreated, refreshLessonKey }: { group: Group, onGroupUpdate: () => void, studentsById: Map<string, StudentProfile>, teacherId: string, onLessonCreated: () => void, refreshLessonKey: number }) => {
     const { translations } = useLanguage();
-    const t = translations.teacherDashboard.goals;
+    const t = translations.teacherDashboard.program;
     const t_toast = translations.teacherDashboard.toasts;
     const { toast } = useToast();
     const [mainObjective, setMainObjective] = useState(group.mainObjective);
@@ -265,7 +265,7 @@ const GroupProgram = ({ group, onGroupUpdate, studentsById, teacherId, onLessonC
 
     return (
         <div className="space-y-6">
-            <BankCardImporter ownerId={group.teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} />
+            <BankCardImporter ownerId={group.teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} bankType="objective" />
             
             <div>
                  <div className="flex justify-between items-center mb-2">
@@ -316,13 +316,80 @@ const GroupProgram = ({ group, onGroupUpdate, studentsById, teacherId, onLessonC
             <Separator />
 
             <div>
-                 <h3 className="text-xl font-headline mb-4">Lecciones</h3>
+                 <h3 className="text-xl font-headline mb-4">{translations.teacherDashboard.lessons.title}</h3>
                  <GroupLessons key={refreshLessonKey} group={group} studentsById={studentsById} teacherId={teacherId} onLessonCreated={onLessonCreated} />
             </div>
         </div>
     );
 };
 
+const getYouTubeId = (url:string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+};
+
+const getVimeoId = (url:string) => {
+    const regExp = /https?:\/\/(?:www\.|player\.)?vimeo.com\/(?:channels\/(?:\w+\/)?|groups\/([^\/]*)\/videos\/|album\/(\d+)\/video\/|video\/|)(\d+)(?:$|\/|\?)/;
+    const match = url.match(regExp);
+    return match ? match[3] : null;
+}
+
+const VideoPlayer = ({ url }: { url: string }) => {
+    const youTubeId = getYouTubeId(url);
+    if (youTubeId) {
+        return (
+            <iframe
+                className="w-full aspect-video rounded-md"
+                src={`https://www.youtube.com/embed/${youTubeId}`}
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+            ></iframe>
+        );
+    }
+
+    const vimeoId = getVimeoId(url);
+    if (vimeoId) {
+        return (
+            <iframe
+                 className="w-full aspect-video rounded-md"
+                src={`https://player.vimeo.com/video/${vimeoId}`}
+                frameBorder="0"
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+            ></iframe>
+        );
+    }
+    
+    // Fallback for direct video links
+    if(url.match(/\.(mp4|webm|ogg)$/)) {
+        return <video src={url} controls className="w-full aspect-video rounded-md" />
+    }
+
+    return <p className="text-sm text-muted-foreground">Enlace de video no compatible. Pega un enlace de YouTube, Vimeo o un enlace directo a un archivo de video.</p>;
+};
+
+const LessonToolbar = ({ editor }: { editor: any }) => {
+    if (!editor) return null;
+    return (
+        <div className="flex items-center gap-1 border-b pb-2 mb-2">
+            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().toggleBold().run()}><Bold/></Button>
+            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().toggleItalic().run()}><Italic/></Button>
+            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().toggleUnderline().run()}><Underline/></Button>
+            <Separator orientation="vertical" className="h-6"/>
+            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}><Heading1/></Button>
+            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}><Heading2/></Button>
+            <Separator orientation="vertical" className="h-6"/>
+            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().toggleBulletList().run()}><List/></Button>
+            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().toggleOrderedList().run()}><ListOrdered/></Button>
+            <Separator orientation="vertical" className="h-6"/>
+            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table2/></Button>
+            {/* Add color picker popover if needed */}
+        </div>
+    )
+}
 
 const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { group: Group, studentsById: Map<string, StudentProfile>, teacherId: string, onLessonCreated: () => void }) => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -401,8 +468,16 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
             }
         }));
     };
+    
+    const handleStudentCommentChange = (lessonId: string, studentId: string, value: EditorContent) => {
+        const currentLesson = lessons.find(l => l.id === lessonId);
+        if (!currentLesson) return;
+        const currentComments = editedContent[lessonId]?.studentComments || currentLesson.studentComments || {};
+        const newComments = { ...currentComments, [studentId]: value };
+        handleContentChange(lessonId, 'studentComments', newComments);
+    };
 
-    const handleAttendanceChange = (lessonId: string, studentId: string, status: AttendanceStatus) => {
+    const handleAttendanceChange = (lessonId: string, studentId: string, status: 'presente' | 'ausente' | {tarde: number} ) => {
         const currentLesson = lessons.find(l => l.id === lessonId);
         if (!currentLesson) return;
         
@@ -414,7 +489,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
         handleContentChange(lessonId, 'attendance', newAttendance);
     };
     
-    const handleOpenBankImporter = (lessonId: string, field: keyof Lesson) => {
+    const handleOpenBankImporter = (lessonId: string, field: 'homework') => {
         setActiveLessonIdForImport(lessonId);
         setActiveFieldForImport(field);
         setBankImporterOpen(true);
@@ -437,7 +512,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
         const lesson = lessons.find(l => l.id === activeLessonIdForImport);
         if (!lesson) return;
 
-        const currentEditorContent = editedContent[activeLessonIdForImport]?.classNote || lesson.classNote;
+        const currentEditorContent = editedContent[activeLessonIdForImport]?.homework || lesson.homework;
         
         let fileNode;
         if (file.type === 'image') {
@@ -453,7 +528,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                 ...currentEditorContent,
                 content: [...(currentEditorContent.content || []), { type: 'paragraph' }, fileNode],
             };
-            handleContentChange(activeLessonIdForImport, 'classNote', newContent);
+            handleContentChange(activeLessonIdForImport, 'homework', newContent);
         }
         setFileBankImporterOpen(false);
     };
@@ -478,24 +553,23 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     }
 
     const selectedLesson = lessons.find(l => l.id === selectedLessonId);
-
-    const renderModalContent = () => {
+    
+     const renderModalContent = () => {
         if (!selectedLesson) return null;
         
+        const attendanceForStudent = (studentId: string) => {
+            return (editedContent[selectedLesson.id]?.attendance || selectedLesson.attendance)?.[studentId] || 'ausente';
+        }
+        
         switch(activeModal) {
-            case 'content':
+            case 'objective':
                 return (
-                    <>
-                        <Editor
-                            content={editedContent[selectedLesson.id]?.content || selectedLesson.content}
-                            onChange={(newContent) => handleContentChange(selectedLesson.id, 'content', newContent)}
-                            editable
-                            placeholder={t.placeholders.content}
-                        />
-                        <Button className="mt-4" size="icon" variant="outline" onClick={() => handleOpenBankImporter(selectedLesson.id, 'content')}>
-                            <Import className="h-4 w-4" />
-                        </Button>
-                    </>
+                    <Editor
+                        content={editedContent[selectedLesson.id]?.content || selectedLesson.content}
+                        onChange={(newContent) => handleContentChange(selectedLesson.id, 'content', newContent)}
+                        editable
+                        placeholder={t.placeholders.content}
+                    />
                 );
             case 'classNote':
                 return (
@@ -505,62 +579,104 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                             onChange={(newContent) => handleContentChange(selectedLesson.id, 'classNote', newContent)}
                             editable
                             placeholder={t.placeholders.classNote}
+                            initialHint={t.placeholders.classNote}
                         />
-                         <Button className="mt-4" size="icon" variant="outline" onClick={() => handleOpenFileBankImporter(selectedLesson.id)}>
-                            <FileUp className="h-4 w-4"/>
-                        </Button>
                     </>
                 );
             case 'homework':
                  return (
                     <>
+                        <div className="flex gap-2 mb-4">
+                            <Button size="sm" variant="outline" onClick={() => handleOpenBankImporter(selectedLesson.id, 'homework')}>
+                                <Import className="mr-2 h-4 w-4" />
+                                {t.importFromBank}
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => handleOpenFileBankImporter(selectedLesson.id)}>
+                                <FileUp className="mr-2 h-4 w-4"/>
+                                {t.importFile}
+                            </Button>
+                        </div>
                         <Editor
                             content={editedContent[selectedLesson.id]?.homework || selectedLesson.homework}
                             onChange={(newContent) => handleContentChange(selectedLesson.id, 'homework', newContent)}
                             editable
                             placeholder={t.placeholders.homework}
+                            initialHint={t.placeholders.homework}
                         />
-                         <Button className="mt-4" size="icon" variant="outline" onClick={() => handleOpenBankImporter(selectedLesson.id, 'homework')}>
-                            <Import className="h-4 w-4" />
-                        </Button>
                     </>
                 );
             case 'attendance':
                  return (
                     <div className="space-y-4">
                         {groupMembers.map(student => (
-                        <div key={student.id} className="flex justify-between items-center">
+                        <div key={student.id} className="flex justify-between items-center p-2 rounded-md bg-secondary/50">
                             <span>{student.name}</span>
-                            <RadioGroup 
-                                defaultValue={(editedContent[selectedLesson.id]?.attendance || selectedLesson.attendance)?.[student.id]} 
-                                className="flex gap-4"
-                                onValueChange={(value) => handleAttendanceChange(selectedLesson.id, student.id, value as AttendanceStatus)}
-                            >
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="presente" id={`${selectedLesson.id}-${student.id}-presente`} />
-                                    <Label htmlFor={`${selectedLesson.id}-${student.id}-presente`}>{t.attendanceStates.presente}</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="ausente" id={`${selectedLesson.id}-${student.id}-ausente`} />
-                                    <Label htmlFor={`${selectedLesson.id}-${student.id}-ausente`}>{t.attendanceStates.ausente}</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="tarde" id={`${selectedLesson.id}-${student.id}-tarde`} />
-                                    <Label htmlFor={`${selectedLesson.id}-${student.id}-tarde`}>{t.attendanceStates.tarde}</Label>
-                                </div>
-                            </RadioGroup>
+                            <div className="flex items-center gap-4">
+                                <RadioGroup 
+                                    defaultValue={typeof attendanceForStudent(student.id) === 'object' ? 'tarde' : attendanceForStudent(student.id) as string}
+                                    className="flex gap-4"
+                                    onValueChange={(value) => handleAttendanceChange(student.id, student.id, value === 'tarde' ? { tarde: 0 } : (value as 'presente' | 'ausente'))}
+                                >
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="presente" id={`${selectedLesson.id}-${student.id}-presente`} />
+                                        <Label htmlFor={`${selectedLesson.id}-${student.id}-presente`}>{t.attendanceStates.presente}</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="ausente" id={`${selectedLesson.id}-${student.id}-ausente`} />
+                                        <Label htmlFor={`${selectedLesson.id}-${student.id}-ausente`}>{t.attendanceStates.ausente}</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="tarde" id={`${selectedLesson.id}-${student.id}-tarde`} />
+                                        <Label htmlFor={`${selectedLesson.id}-${student.id}-tarde`}>{t.attendanceStates.tarde}</Label>
+                                    </div>
+                                </RadioGroup>
+                                {typeof attendanceForStudent(student.id) === 'object' && (
+                                     <Input
+                                        type="number"
+                                        className="w-20"
+                                        placeholder="min"
+                                        defaultValue={(attendanceForStudent(student.id) as {tarde: number}).tarde}
+                                        onChange={(e) => handleAttendanceChange(selectedLesson.id, student.id, { tarde: parseInt(e.target.value) || 0 })}
+                                    />
+                                )}
+                            </div>
                         </div>
                         ))}
                     </div>
                 );
              case 'comments':
+                const studentComments = editedContent[selectedLesson.id]?.studentComments || selectedLesson.studentComments || {};
                 return (
-                    <Editor
-                        content={editedContent[selectedLesson.id]?.comments || selectedLesson.comments}
-                        onChange={(newContent) => handleContentChange(selectedLesson.id, 'comments', newContent)}
-                        editable
-                        placeholder={t.placeholders.comments}
-                    />
+                    <div className="space-y-6">
+                        <div>
+                            <h4 className="font-semibold mb-2">{t.generalComment}</h4>
+                            <Editor
+                                content={editedContent[selectedLesson.id]?.comments || selectedLesson.comments}
+                                onChange={(newContent) => handleContentChange(selectedLesson.id, 'comments', newContent)}
+                                editable
+                                placeholder={t.placeholders.comments}
+                            />
+                        </div>
+                        <Separator />
+                        <div>
+                             <h4 className="font-semibold mb-4">{t.studentComments}</h4>
+                             <Accordion type="multiple" className="w-full space-y-2">
+                                {groupMembers.map(student => (
+                                    <AccordionItem value={student.id} key={student.id} className="border rounded-md">
+                                        <AccordionTrigger className="px-3 py-2 text-sm font-medium hover:no-underline">{student.name}</AccordionTrigger>
+                                        <AccordionContent className="p-3 border-t">
+                                            <Editor
+                                                content={studentComments[student.id] || { type: "doc", content: []}}
+                                                onChange={(newContent) => handleStudentCommentChange(selectedLesson.id, student.id, newContent)}
+                                                editable
+                                                placeholder={`${t.placeholders.studentComment} ${student.name}...`}
+                                            />
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                ))}
+                             </Accordion>
+                        </div>
+                    </div>
                 );
             default:
                 return null;
@@ -570,11 +686,14 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
 
     return (
         <div className="space-y-4">
-             <BankCardImporter ownerId={teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} />
+             <BankCardImporter ownerId={teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} bankType="homework"/>
              <FileBankImporter isOpen={isFileBankImporterOpen} onOpenChange={setFileBankImporterOpen} onSelectFile={handleImportFileFromBank} />
              {lessons.length > 0 ? (
                 <Accordion type="multiple" className="w-full space-y-4">
-                 {lessons.map(lesson => (
+                 {lessons.map(lesson => {
+                     const recordingLink = editedContent[lesson.id]?.recording?.link ?? lesson.recording?.link ?? "";
+                     const showVideoPlayer = recordingLink.startsWith('http');
+                     return (
                      <AccordionItem value={lesson.id} key={lesson.id} className="border rounded-lg bg-background">
                         <AccordionTrigger className="px-4 py-3 font-semibold text-lg hover:no-underline">
                            {lesson.name}
@@ -585,22 +704,24 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                     <Card>
                                         <CardHeader>
                                             <CardTitle className="font-headline text-lg flex items-center gap-2"><Video /> {t.recording}</CardTitle>
-                                            <CardDescription>{t.recordingPlaceholder}</CardDescription>
                                         </CardHeader>
-                                        <CardContent className="flex items-center gap-2">
-                                            <Input 
-                                                placeholder="https://..." 
-                                                value={editedContent[lesson.id]?.recording?.link ?? lesson.recording?.link ?? ""}
-                                                onChange={(e) => handleContentChange(lesson.id, 'recording', { link: e.target.value })}
-                                            />
-                                            <Button onClick={() => handleSaveLesson(lesson.id)} disabled={isSaving === lesson.id}>
-                                                {isSaving === lesson.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                            </Button>
+                                        <CardContent className="space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                 <Input 
+                                                    placeholder={t.recordingPlaceholder}
+                                                    value={recordingLink}
+                                                    onChange={(e) => handleContentChange(lesson.id, 'recording', { link: e.target.value })}
+                                                />
+                                                <Button onClick={() => handleSaveLesson(lesson.id)} disabled={isSaving === lesson.id} size="icon">
+                                                    {isSaving === lesson.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                                </Button>
+                                            </div>
+                                            {showVideoPlayer && <div className="mt-2"><VideoPlayer url={recordingLink} /></div>}
                                         </CardContent>
                                     </Card>
-                                    <Card onClick={() => handleOpenModal(lesson.id, 'content')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                    <Card onClick={() => handleOpenModal(lesson.id, 'objective')} className="cursor-pointer hover:bg-accent/50 transition-colors">
                                         <CardHeader>
-                                            <CardTitle className="font-headline text-base flex items-center gap-2"><Target/> {t.content}</CardTitle>
+                                            <CardTitle className="font-headline text-base flex items-center gap-2"><Target/> {t.objective}</CardTitle>
                                         </CardHeader>
                                     </Card>
                                     <Card onClick={() => handleOpenModal(lesson.id, 'classNote')} className="cursor-pointer hover:bg-accent/50 transition-colors">
@@ -627,7 +748,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                             </div>
                         </AccordionContent>
                     </AccordionItem>
-                 ))}
+                 )})}
                  </Accordion>
             ) : (
                 <p className="p-4 text-center text-muted-foreground">{t.noLessons}</p>
@@ -637,7 +758,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                 <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle className="font-headline text-2xl">
-                           Editar {activeModal === 'content' && t.content}
+                           Editar {activeModal === 'objective' && t.objective}
                                    {activeModal === 'classNote' && t.classNote}
                                    {activeModal === 'homework' && t.homework}
                                    {activeModal === 'attendance' && t.attendance}
@@ -785,7 +906,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
 const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroupUpdate, teacherId, teacherName }: { group: Group | null; studentsById: Map<string, StudentProfile>; isOpen: boolean; onOpenChange: (open: boolean) => void; onGroupUpdate: () => void; teacherId: string; teacherName: string; }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.groups;
-    const t_goals = translations.teacherDashboard.goals;
+    const t_program = translations.teacherDashboard.program;
     const [studentToView, setStudentToView] = useState<StudentProfile | null>(null);
     const [refreshLessonKey, setRefreshLessonKey] = useState(0);
 
@@ -806,7 +927,7 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
                 </DialogHeader>
                 <Tabs defaultValue="program" className="flex-grow flex flex-col overflow-hidden">
                     <TabsList className="shrink-0">
-                        <TabsTrigger value="program"><Notebook className="mr-2 h-4 w-4"/>{t_goals.title}</TabsTrigger>
+                        <TabsTrigger value="program"><Notebook className="mr-2 h-4 w-4"/>{t_program.title}</TabsTrigger>
                         <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Miembros</TabsTrigger>
                         <TabsTrigger value="communication"><Send className="mr-2 h-4 w-4"/>Comunicación</TabsTrigger>
                         {isPrivateGroup && <TabsTrigger value="calendar"><CalendarIcon className="mr-2 h-4 w-4"/>Calendario</TabsTrigger>}
@@ -1072,7 +1193,6 @@ export function TeacherDashboardUI() {
         <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
             <DialogHeader className="p-6 pb-0 relative">
                   <DialogTitle>{t.banks.title}</DialogTitle>
-                <DialogDescription>{t.banks.description}</DialogDescription>
             </DialogHeader>
             <div className="flex-1 overflow-auto">
                   <BanksDashboardUI user={user} isModal={true} />

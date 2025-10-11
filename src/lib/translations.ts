@@ -1,4 +1,5 @@
 
+
 export const translations = {
     es: {
         editor: {
@@ -332,7 +333,7 @@ export const translations = {
                 description: "Gestiona tu material reutilizable para clases, tareas y objetivos.",
                 button: "Gestionar Bancos"
             },
-            goals: {
+            program: {
                 title: "Programa",
                 mainObjective: "Objetivos del programa",
                 weeklyObjectives: "Contenidos semanales",
@@ -341,31 +342,35 @@ export const translations = {
                 saveButton: "Guardar",
             },
             lessons: {
+                title: "Lecciones",
                 newLesson: "Nueva Lección",
                 saveChanges: "Guardar Cambios",
                 noLessons: "No hay lecciones para este grupo. ¡Crea la primera!",
-                recording: "Grabación de la Clase",
-                content: "Objetivos de la Clase",
-                classNote: "Nota de Clase",
-                homework: "Tarea",
+                recording: "Grabación",
+                objective: "Objetivo",
+                classNote: "Notas de clase",
+                homework: "Autoestudio",
                 attendance: "Asistencia",
-                comments: "Comentarios (Solo Docentes/Admin)",
+                comments: "Comentarios",
+                generalComment: "Comentario General (Solo Docentes/Admin)",
+                studentComments: "Comentarios por Estudiante",
                 attendanceStates: {
-                    presente: "Presente",
-                    ausente: "Ausente",
+                    presente: "Asistió",
+                    ausente: "No asistió",
                     tarde: "Tarde",
                     na: "N/A"
                 },
-                importFromBank: "Importar",
+                importFromBank: "Importar de Banco",
+                importFile: "Importar Archivo",
                 retry: "Reintentar",
                 placeholders: {
-                     content: "Objetivo general y objetivos específicos de la clase...",
-                     classNote: "Escribe tus notas de clase aquí o importa archivos...",
-                     homework: "Detalla las instrucciones de la tarea...",
-                     comments: "Añade comentarios privados para otros docentes o administradores...",
+                     objective: "Define el objetivo para esta clase específica...",
+                     classNote: "Escribe tus notas de clase aquí...",
+                     homework: "Detalla las instrucciones para el autoestudio aquí...",
+                     comments: "Añade comentarios privados generales para la clase...",
+                     studentComment: "Añade un comentario privado para",
                 },
-                recordingPlaceholder: "Pega aquí el enlace a la grabación de la clase.",
-                attendancePlaceholder: "Aquí podrás registrar la asistencia.",
+                recordingPlaceholder: "Pega aquí el enlace de la grabación...",
             },
              communication: {
                 scheduleClass: {
@@ -384,9 +389,9 @@ export const translations = {
                 }
             },
             bankImporter: {
-                title: "Importar desde Banco de Objetivos",
+                title: "Importar desde Banco",
                 import: "Importar",
-                noCards: "No hay tarjetas en el banco de objetivos."
+                noCards: "No hay tarjetas en este banco."
             },
              fileImporter: {
                 title: "Importar desde Banco de Archivos",
@@ -795,7 +800,7 @@ export const translations = {
                 description: "Manage your reusable material for classes, homework, and objectives.",
                 button: "Manage Banks"
             },
-            goals: {
+            program: {
                 title: "Program",
                 mainObjective: "Program Objectives",
                 weeklyObjectives: "Weekly Content",
@@ -804,31 +809,35 @@ export const translations = {
                 saveButton: "Save",
             },
             lessons: {
+                title: "Lessons",
                 newLesson: "New Lesson",
                 saveChanges: "Save Changes",
                 noLessons: "No lessons for this group. Create the first one!",
-                recording: "Class Recording",
-                content: "Class Objectives",
-                classNote: "Class Note",
-                homework: "Homework",
+                recording: "Recording",
+                objective: "Objective",
+                classNote: "Class Notes",
+                homework: "Self-study",
                 attendance: "Attendance",
-                comments: "Comments (Teacher/Admin Only)",
+                comments: "Comments",
+                generalComment: "General Comment (Teachers/Admins Only)",
+                studentComments: "Comments per Student",
                 attendanceStates: {
-                    presente: "Present",
-                    ausente: "Absent",
+                    presente: "Attended",
+                    ausente: "Did not attend",
                     tarde: "Late",
                     na: "N/A"
                 },
-                importFromBank: "Import",
+                importFromBank: "Import from Bank",
+                importFile: "Import File",
                 retry: "Retry",
                 placeholders: {
-                    content: "General and specific objectives for the class...",
-                    classNote: "Write your class notes here or import files...",
-                    homework: "Detail the homework instructions...",
-                    comments: "Add private comments for other teachers or admins...",
+                    objective: "Define the objective for this specific class...",
+                    classNote: "Write your class notes here...",
+                    homework: "Detail the self-study instructions here...",
+                    comments: "Add general private comments for the class...",
+                    studentComment: "Add a private comment for",
                 },
-                recordingPlaceholder: "Paste the link to the class recording here.",
-                attendancePlaceholder: "Here you can record attendance.",
+                recordingPlaceholder: "Paste the recording link here...",
             },
              communication: {
                 scheduleClass: {
@@ -847,9 +856,9 @@ export const translations = {
                 }
             },
              bankImporter: {
-                title: "Import from Objectives Bank",
+                title: "Import from Bank",
                 import: "Import",
-                noCards: "No cards in the objectives bank."
+                noCards: "No cards in this bank."
             },
              fileImporter: {
                 title: "Import from File Bank",

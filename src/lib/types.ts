@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'student' | 'teacher' | 'admin';
 export type StudentPlan = 'privado' | 'grupo pequeño' | 'grupo grande';
 
@@ -99,7 +100,7 @@ export type EditorContent = {
   }[];
 };
 
-export type AttendanceStatus = 'presente' | 'ausente' | 'tarde';
+export type AttendanceStatus = 'presente' | 'ausente' | { tarde: number };
 
 export interface Lesson {
   id: string;
@@ -114,6 +115,7 @@ export interface Lesson {
   classNote: EditorContent;
   homework: EditorContent;
   comments: EditorContent; // For teacher/admin private notes
+  studentComments: Record<string, EditorContent>; // Key: studentId
   attendance: Record<string, AttendanceStatus>; // Key: studentId
 }
 

@@ -70,7 +70,7 @@ const Video = Node.create({
     ];
   },
   renderHTML({ HTMLAttributes }) {
-    return ['video', { ...HTMLAttributes, controls: 'true' }];
+    return ['video', { ...HTMLAttributes, controls: 'true', class: 'w-full rounded-md' }];
   },
 });
 
@@ -480,7 +480,7 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
             {aiState === 'done' && (
                  <div className="w-full">
                     <div 
-                        className="prose dark:prose-invert max-w-none p-2 border rounded-md min-h-[100px]"
+                        className="prose dark:prose-invert max-w-none p-2 border rounded-md min-h-[100px] bg-secondary/20"
                         dangerouslySetInnerHTML={{ __html: aiGeneratedContent }}
                     />
                     <motion.div
@@ -550,14 +550,28 @@ export function Editor({
     setPrompt('');
     setAiGeneratedContent('');
   };
+  
+    // When content is updated from outside and the editor is not being used, reflect the change.
+    useEffect(() => {
+        if (!isEditing && !isContentEmpty(content)) {
+            setIsEditing(true);
+        }
+    }, [content, isEditing]);
 
   if (!editable) {
      const nonEditableEditor = useEditor({
         extensions: [ StarterKit, Image, Video, Audio, Link, Underline, TextStyle, Color, Highlight, Table.configure({ resizable: true }), TableRow, TableHeader, TableCell ],
         content: content,
         editable: false,
+        editorProps: {
+            attributes: {
+                class: "prose dark:prose-invert max-w-none focus:outline-none",
+            },
+        }
      });
-     return <EditorContent editor={nonEditableEditor} className="prose dark:prose-invert max-w-none"/>
+     return <div className="max-h-[60vh] overflow-auto">
+        <EditorContent editor={nonEditableEditor} />
+     </div>
   }
 
   return (
