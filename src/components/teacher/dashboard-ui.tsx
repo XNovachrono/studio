@@ -477,7 +477,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
         handleContentChange(lessonId, 'studentComments', newComments);
     };
 
-    const handleAttendanceChange = (lessonId: string, studentId: string, status: 'presente' | 'ausente' | {tarde: number} ) => {
+    const handleAttendanceChange = (lessonId: string, studentId: string, status: AttendanceStatus ) => {
         const currentLesson = lessons.find(l => l.id === lessonId);
         if (!currentLesson) return;
         
@@ -557,31 +557,29 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
      const renderModalContent = () => {
         if (!selectedLesson) return null;
         
-        const attendanceForStudent = (studentId: string) => {
-            return (editedContent[selectedLesson.id]?.attendance || selectedLesson.attendance)?.[studentId] || 'ausente';
+        const attendanceForStudent = (studentId: string): AttendanceStatus => {
+            return (editedContent[selectedLessonId!]?.attendance?.[studentId]) ?? selectedLesson.attendance?.[studentId] ?? 'ausente';
         }
         
         switch(activeModal) {
             case 'objective':
                 return (
                     <Editor
-                        content={editedContent[selectedLesson.id]?.content || selectedLesson.content}
+                        content={editedContent[selectedLesson.id]?.content ?? selectedLesson.content}
                         onChange={(newContent) => handleContentChange(selectedLesson.id, 'content', newContent)}
                         editable
-                        placeholder={t.placeholders.content}
+                        placeholder={t.placeholders.objective}
                     />
                 );
             case 'classNote':
-                return (
-                     <>
-                        <Editor
-                            content={editedContent[selectedLesson.id]?.classNote || selectedLesson.classNote}
-                            onChange={(newContent) => handleContentChange(selectedLesson.id, 'classNote', newContent)}
-                            editable
-                            placeholder={t.placeholders.classNote}
-                            initialHint={t.placeholders.classNote}
-                        />
-                    </>
+                 return (
+                     <Editor
+                        content={editedContent[selectedLesson.id]?.classNote ?? selectedLesson.classNote}
+                        onChange={(newContent) => handleContentChange(selectedLesson.id, 'classNote', newContent)}
+                        editable
+                        placeholder={t.placeholders.classNote}
+                        initialHint={t.placeholders.classNote}
+                    />
                 );
             case 'homework':
                  return (
@@ -597,7 +595,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                             </Button>
                         </div>
                         <Editor
-                            content={editedContent[selectedLesson.id]?.homework || selectedLesson.homework}
+                            content={editedContent[selectedLesson.id]?.homework ?? selectedLesson.homework}
                             onChange={(newContent) => handleContentChange(selectedLesson.id, 'homework', newContent)}
                             editable
                             placeholder={t.placeholders.homework}
@@ -608,40 +606,43 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
             case 'attendance':
                  return (
                     <div className="space-y-4">
-                        {groupMembers.map(student => (
-                        <div key={student.id} className="flex justify-between items-center p-2 rounded-md bg-secondary/50">
-                            <span>{student.name}</span>
-                            <div className="flex items-center gap-4">
-                                <RadioGroup 
-                                    defaultValue={typeof attendanceForStudent(student.id) === 'object' ? 'tarde' : attendanceForStudent(student.id) as string}
-                                    className="flex gap-4"
-                                    onValueChange={(value) => handleAttendanceChange(student.id, student.id, value === 'tarde' ? { tarde: 0 } : (value as 'presente' | 'ausente'))}
-                                >
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="presente" id={`${selectedLesson.id}-${student.id}-presente`} />
-                                        <Label htmlFor={`${selectedLesson.id}-${student.id}-presente`}>{t.attendanceStates.presente}</Label>
+                        {groupMembers.map(student => {
+                            const studentAttendance = attendanceForStudent(student.id);
+                            return (
+                                <div key={student.id} className="flex justify-between items-center p-2 rounded-md bg-secondary/50">
+                                    <span>{student.name}</span>
+                                    <div className="flex items-center gap-4">
+                                        <RadioGroup
+                                            value={typeof studentAttendance === 'object' ? 'tarde' : studentAttendance}
+                                            className="flex gap-4"
+                                            onValueChange={(value) => handleAttendanceChange(selectedLesson.id, student.id, value === 'tarde' ? { tarde: 0 } : (value as 'presente' | 'ausente'))}
+                                        >
+                                            <div className="flex items-center space-x-2">
+                                                <RadioGroupItem value="presente" id={`${selectedLesson.id}-${student.id}-presente`} />
+                                                <Label htmlFor={`${selectedLesson.id}-${student.id}-presente`}>{t.attendanceStates.presente}</Label>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <RadioGroupItem value="ausente" id={`${selectedLesson.id}-${student.id}-ausente`} />
+                                                <Label htmlFor={`${selectedLesson.id}-${student.id}-ausente`}>{t.attendanceStates.ausente}</Label>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <RadioGroupItem value="tarde" id={`${selectedLesson.id}-${student.id}-tarde`} />
+                                                <Label htmlFor={`${selectedLesson.id}-${student.id}-tarde`}>{t.attendanceStates.tarde}</Label>
+                                            </div>
+                                        </RadioGroup>
+                                        {typeof studentAttendance === 'object' && 'tarde' in studentAttendance && (
+                                            <Input
+                                                type="number"
+                                                className="w-20"
+                                                placeholder="min"
+                                                value={studentAttendance.tarde}
+                                                onChange={(e) => handleAttendanceChange(selectedLesson.id, student.id, { tarde: parseInt(e.target.value) || 0 })}
+                                            />
+                                        )}
                                     </div>
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="ausente" id={`${selectedLesson.id}-${student.id}-ausente`} />
-                                        <Label htmlFor={`${selectedLesson.id}-${student.id}-ausente`}>{t.attendanceStates.ausente}</Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="tarde" id={`${selectedLesson.id}-${student.id}-tarde`} />
-                                        <Label htmlFor={`${selectedLesson.id}-${student.id}-tarde`}>{t.attendanceStates.tarde}</Label>
-                                    </div>
-                                </RadioGroup>
-                                {typeof attendanceForStudent(student.id) === 'object' && (
-                                     <Input
-                                        type="number"
-                                        className="w-20"
-                                        placeholder="min"
-                                        defaultValue={(attendanceForStudent(student.id) as {tarde: number}).tarde}
-                                        onChange={(e) => handleAttendanceChange(selectedLesson.id, student.id, { tarde: parseInt(e.target.value) || 0 })}
-                                    />
-                                )}
-                            </div>
-                        </div>
-                        ))}
+                                </div>
+                            );
+                        })}
                     </div>
                 );
              case 'comments':
@@ -1202,3 +1203,4 @@ export function TeacherDashboardUI() {
     </>
   );
 }
+
