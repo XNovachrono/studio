@@ -1,23 +1,36 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Reglas existentes...
 
-    match /student_notes/{noteId} {
-      // Permite leer, actualizar o borrar un apunte si el usuario es el propietario.
-      allow read, update, delete: if request.auth.uid == resource.data.studentId;
-
-      // Permite crear un apunte si el usuario que lo crea es el propietario.
-      allow create: if request.auth.uid == request.resource.data.studentId;
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Regla para listar la colección de apuntes.
-    match /student_notes/{document=**} {
-        // Permite listar apuntes si la consulta filtra por el 'studentId' del usuario autenticado.
-        // Esto es clave para que `getStudentNotes` funcione.
-        allow list: if request.auth != null && request.query.filters.size() > 0 && 'studentId' in request.query.filters[0] && request.query.filters[0].studentId == request.auth.uid;
+    match /groups/{groupId} {
+      allow read, write: if request.auth != null; 
+    }
+    
+    match /groups/{groupId}/lessons/{lessonId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /pqrs/{pqrsId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /bank_cards/{cardId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /student_notes/{noteId} {
+      allow read, get, delete, update: if request.auth.uid == resource.data.studentId;
+      allow create: if request.auth.uid == request.resource.data.studentId;
+      allow list: if request.query.where.studentId == request.auth.uid;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
