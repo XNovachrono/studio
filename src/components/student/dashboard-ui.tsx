@@ -142,7 +142,7 @@ export function StudentDashboardUI() {
   const { translations } = useLanguage();
   const t = translations.studentDashboard;
   const t_teacher_lessons = translations.teacherDashboard.lessons;
-  const t_goals = translations.teacherDashboard.goals;
+  const t_goals = translations.studentDashboard.goals;
   const [isPqrsDialogOpen, setPqrsDialogOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherInteraction | null>(null);
@@ -276,7 +276,7 @@ export function StudentDashboardUI() {
                     <CardHeader>
                         <CardTitle className="font-headline text-2xl flex items-center gap-2">
                             <Goal />
-                            {translations.teacherDashboard.goals.title}
+                            {t_goals.title}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
