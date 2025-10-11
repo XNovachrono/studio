@@ -469,5 +469,3 @@ export function StudentDashboardUI() {
     </div>
   );
 }
-
-    

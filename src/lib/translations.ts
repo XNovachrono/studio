@@ -258,9 +258,9 @@ export const translations = {
                 noClass: "Tu profesor aún no ha programado la próxima clase."
             },
             calendar: {
-                title: "Calendario",
-                description: "Selecciona tus días y horas preferidas para las clases.",
-                button: "Abrir Calendario"
+                title: "Agendar Clase",
+                description: "Selecciona los días y horas que te gustaría tener clase para que tu docente agende la sesión.",
+                button: "Agendar Clase"
             },
             goals: {
                 title: "Objetivos",
@@ -298,7 +298,7 @@ export const translations = {
                 title: "Enviar PQRS a {teacherName}",
                 description: "Tu mensaje será enviado directamente a tu profesor.",
                 messageLabel: "Tu mensaje",
-                messagePlaceholder: "Escribe tu petición, queja, reclamo o sugerencia aquí...",
+                messagePlaceholder: "Escribe tu petición, queja, reclamo o sugerencia here...",
                 anonymousLabel: "Enviar como anónimo",
                 cancelButton: "Cancelar",
                 submitButton: "Enviar Mensaje",
@@ -737,9 +737,9 @@ export const translations = {
                 noClass: "Your teacher has not scheduled the next class yet."
             },
             calendar: {
-                title: "Calendar",
-                description: "Select your preferred days and times for classes.",
-                button: "Open Calendar"
+                title: "Schedule Class",
+                description: "Select the days and times you would like to have class so your teacher can schedule the session.",
+                button: "Schedule Class"
             },
             goals: {
                 title: "Goals",
@@ -960,5 +960,3 @@ export const translations = {
         }
     }
 };
-
-
