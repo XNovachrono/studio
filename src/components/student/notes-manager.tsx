@@ -233,13 +233,13 @@ export function StudentNotesManager({ isOpen, onOpenChange, student, lessons }: 
                                 <Label htmlFor="note-lesson">{t.dialog.lessonLabel}</Label>
                                 <Select
                                     value={editingNote?.lessonId || ''}
-                                    onValueChange={val => setEditingNote(prev => ({...prev!, lessonId: val}))}
+                                    onValueChange={val => setEditingNote(prev => ({...prev!, lessonId: val === 'no-lesson' ? '' : val}))}
                                 >
                                     <SelectTrigger id="note-lesson">
                                         <SelectValue placeholder={t.dialog.lessonPlaceholder} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Sin vincular</SelectItem>
+                                        <SelectItem value="no-lesson">Sin vincular</SelectItem>
                                         {lessons.length > 0 ? lessons.map(lesson => (
                                             <SelectItem key={lesson.id} value={lesson.id}>{lesson.name}</SelectItem>
                                         )) : <p className="p-2 text-sm text-muted-foreground">{t.dialog.noLessons}</p>}
@@ -267,4 +267,5 @@ export function StudentNotesManager({ isOpen, onOpenChange, student, lessons }: 
         </>
     );
 }
+
 
