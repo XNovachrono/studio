@@ -1,48 +1,66 @@
 rules_version = '2';
+
+// Helper function to check if a user is signed in
+function isSignedIn() {
+  return request.auth != null;
+}
+
+// Helper function to check if a user is an admin
+function isAdmin() {
+  return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+}
+
+// Helper function to check if a user is the owner of a document
+function isOwner(userId) {
+  return isSignedIn() && request.auth.uid == userId;
+}
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Un usuario solo puede leer su propio perfil, pero puede actualizarlo.
     match /users/{userId} {
-      allow read, update, delete: if request.auth.uid == userId;
-      allow create: if isSignedIn();
-    }
-
-    // Los usuarios autenticados pueden leer grupos y lecciones, pero solo el profesor del grupo puede actualizar.
-    match /groups/{groupId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn(); // Permitir la creación de grupos a usuarios autenticados (controlado por la app)
-      allow update: if isSignedIn() && request.auth.uid == resource.data.teacherId;
-      allow delete: if isSignedIn() && request.auth.uid == resource.data.teacherId;
-
-      match /lessons/{lessonId} {
-        allow read: if isSignedIn();
-        allow create, update, delete: if isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid;
-      }
-    }
-
-    // Los usuarios autenticados pueden leer los bancos, pero solo el dueño puede escribir.
-    match /bank_cards/{cardId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn() && request.auth.uid == request.resource.data.ownerId;
-        allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.ownerId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-    }
-
-    // Los estudiantes pueden crear PQRS. Solo el estudiante que lo creó, el profesor implicado o un admin pueden leerlos.
-    match /pqrs/{pqrsId} {
-      allow read: if isSignedIn() && (request.auth.uid == resource.data.studentId || request.auth.uid == resource.data.teacherId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
-      allow delete: if isSignedIn() && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      // Admins can read anyone's profile. Users can read their own profile.
+      allow read: if isAdmin() || isOwner(userId);
+      // Admins can write to anyone's profile. Users can write to their own.
+      allow write: if isAdmin() || isOwner(userId);
     }
     
-    // Un estudiante solo puede leer y escribir sus propios apuntes.
+    match /groups/{groupId} {
+      // Allow read for any signed-in user (app logic will filter which groups they see)
+      allow read: if isSignedIn();
+      // Allow write only for admins or the assigned teacher of the group
+      allow write: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.teacherId);
+    }
+
+    match /groups/{groupId}/lessons/{lessonId} {
+       // Allow read for any signed-in user (app logic handles visibility)
+      allow read: if isSignedIn();
+      // Allow write only for admins or the teacher of the parent group
+      allow write: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid);
+    }
+
+    match /pqrs/{pqrId} {
+      // Allow admins and teachers to read all PQRS. Students can't read this collection.
+      allow read: if isAdmin() || (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher');
+      // Allow any signed-in user to create (submit) a PQRS message
+      allow create: if isSignedIn();
+      // Allow only admins to delete
+      allow delete: if isAdmin();
+    }
+    
+    match /bank_cards/{cardId} {
+        // Any signed-in user can read from the banks
+        allow read: if isSignedIn();
+        // Only admins or the owner can create, update, or delete
+        allow write: if isAdmin() || isOwner(request.resource.data.ownerId);
+    }
+
     match /student_notes/{noteId} {
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
-      allow read, update, delete: if isSignedIn() && request.auth.uid == resource.data.studentId;
+      // A user can query the list if they are filtering by their own studentId
+      // They can also read an individual note if they are the owner
+      allow read: if isSignedIn() && (isOwner(resource.data.studentId));
+      // A user can write a note (create, update, delete) if they are the owner.
+      allow write: if isOwner(request.resource.data.studentId);
     }
   }
 }
