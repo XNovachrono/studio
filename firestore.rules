@@ -1,67 +1,58 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
+    
+    // --- Helper Functions ---
     function isSignedIn() {
-      return request.auth.uid != null;
+      return request.auth != null && request.auth.uid != null;
     }
 
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // --- Users Collection ---
     match /users/{userId} {
-      allow read, write: if request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    match /groups/{groupId} {
-      // Allow any signed-in user to read group info, security is on who can modify
       allow read: if isSignedIn();
-      // Only the teacher of the group or an admin can modify it
-      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' 
-                    || resource.data.teacherId == request.auth.uid;
+      allow write: if isOwner(userId) || isAdmin();
     }
     
-    match /groups/{groupId}/lessons/{lessonId} {
-      // Allow students in the group, the group's teacher, or an admin to read lessons
-      allow read: if isSignedIn() && (
-                    get(/databases/$(database)/documents/groups/$(groupId)).data.studentIds.hasAny([request.auth.uid])
-                    || get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid
-                    || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-                  );
-      // Only the teacher of the group or an admin can write lessons
-      allow write: if isSignedIn() && (
-                    get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid
-                    || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-                  );
-    }
-
-    match /student_notes/{noteId} {
-      // Allow a user to list their own notes
-      allow list: if request.query.where.studentId == request.auth.uid;
-      // Allow a user to read, update, or delete their own note
-      allow get, update, delete: if request.auth.uid == resource.data.studentId;
-      // Allow a user to create a note for themselves
-      allow create: if request.auth.uid == request.resource.data.studentId;
-    }
-    
-    match /pqrs/{pqrsId} {
-      allow create: if isSignedIn();
-      // Only the involved student, teacher, or an admin can read/delete
-      allow read, delete: if isSignedIn() && (
-                    request.auth.uid == resource.data.studentId
-                    || request.auth.uid == resource.data.teacherId
-                    || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-                  );
-    }
-    
-    match /bank_cards/{cardId} {
-        // Any signed-in user can read from the banks
+    // --- Groups Collection ---
+    match /groups/{groupId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid;
+      
+      // --- Lessons Subcollection ---
+      match /lessons/{lessonId} {
         allow read: if isSignedIn();
-        // Only the owner or an admin can create, update, or delete
-        allow write: if isSignedIn() && (
-                     request.auth.uid == request.resource.data.ownerId
-                     || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-                   );
+        allow write: if isAdmin() || get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid;
+      }
+    }
+    
+    // --- Student Notes Collection ---
+    match /student_notes/{noteId} {
+      allow read: if isSignedIn();
+      // Only the student who owns the note can create, update, or delete it.
+      allow create, update: if request.auth.uid == request.resource.data.studentId;
+      allow delete: if request.auth.uid == resource.data.studentId;
+    }
+    
+    // --- PQRS Collection ---
+    match /pqrs/{pqrsId} {
+        allow read: if isSignedIn();
+        allow create: if isOwner(request.resource.data.studentId);
+        allow delete: if isAdmin();
     }
 
+    // --- Bank Cards Collection ---
+    match /bank_cards/{cardId} {
+        allow read: if isSignedIn();
+        allow create: if isOwner(request.resource.data.ownerId);
+        allow update, delete: if isOwner(resource.data.ownerId) || isAdmin();
+    }
   }
 }
