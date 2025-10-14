@@ -254,25 +254,14 @@ export const deletePQRSMessage = async (messageId: string): Promise<void> => {
 };
 
 
-export const getAdminData = async (adminId: string): Promise<{
-    admin: User,
-    groups: Group[],
-    allStudents: StudentProfile[],
-    allTeachers: User[],
-    pqrsMessages: PQRSMessage[],
-    bankCards: BankCard[],
-}> => {
-    
-    const admin = await getUserProfile(adminId);
-    if (!admin) throw new Error("Admin profile not found.");
+export const getUsersInRole = async (role: UserRole): Promise<User[]> => {
+  const usersRef = collection(db, 'users');
+  const q = query(usersRef, where('role', '==', role));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
+};
 
-    const allUsersRef = collection(db, "users");
-    const allUsersSnap = await getDocs(allUsersRef);
-    const allUsers = allUsersSnap.docs.map(d => ({ id: d.id, ...d.data() })) as User[];
-    
-    const allStudents = allUsers.filter(u => u.role === 'student') as StudentProfile[];
-    const allTeachers = allUsers.filter(u => u.role === 'teacher');
-    
+export const getAllGroups = async (): Promise<Group[]> => {
     const groupsRef = collection(db, "groups");
     const groupsSnap = await getDocs(groupsRef);
     const groups = groupsSnap.docs.map(d => {
@@ -286,14 +275,13 @@ export const getAdminData = async (adminId: string): Promise<{
         }
         return { id: d.id, ...groupData } as Group
     });
+    return groups;
+}
 
-    const pqrsMessages = await getAllPqrsMessages();
-
+export const getAllBankCards = async (): Promise<BankCard[]> => {
     const bankCardsRef = collection(db, "bank_cards");
     const bankCardsSnap = await getDocs(bankCardsRef);
-    const bankCards = bankCardsSnap.docs.map(bankCardFromDoc);
-    
-    return { admin, groups, allStudents, allTeachers, pqrsMessages, bankCards };
+    return bankCardsSnap.docs.map(bankCardFromDoc);
 }
 
 
@@ -628,6 +616,7 @@ export const updateGroupTeacherAndHistory = async (groupId: string, newTeacherId
 
     await batch.commit();
 };
+
 
 
 

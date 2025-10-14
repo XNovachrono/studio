@@ -41,8 +41,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, StudentProfile, PQRSMessage, Group, BankCard, Lesson, StudentNote } from "@/lib/types";
-import { getAdminData, createGroupWithTeacher, updateUserProfile, deletePQRSMessage, getLessonsForGroup, removeStudentsFromGroup, updateGroupTeacherAndHistory, getStudentNotes } from "@/lib/firestore";
+import type { User, StudentProfile, PQRSMessage, Group, BankCard, Lesson, StudentNote, UserRole } from "@/lib/types";
+import {
+    createGroupWithTeacher,
+    updateUserProfile,
+    deletePQRSMessage,
+    getLessonsForGroup,
+    removeStudentsFromGroup,
+    updateGroupTeacherAndHistory,
+    getStudentNotes,
+    getUserProfile,
+    getUsersInRole,
+    getAllGroups,
+    getAllPqrsMessages,
+    getAllBankCards
+} from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -56,7 +69,7 @@ import { Editor } from "../common/editor";
 
 interface AdminDashboardData {
   admin: User | null;
-  groups: any[];
+  groups: Group[];
   allStudents: StudentProfile[];
   allTeachers: User[];
   pqrsMessages: PQRSMessage[];
@@ -693,7 +706,7 @@ export function AdminDashboardUI() {
   const t_toast = translations.adminDashboard.toasts;
 
   const [user, setUser] = useState<User | null>(null);
-  const [data, setData] = useState<AdminDashboardData | null>(null);
+  const [data, setData] = useState<Omit<AdminDashboardData, 'admin'> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Group creation state
@@ -718,14 +731,24 @@ export function AdminDashboardUI() {
   const fetchDashboardData = async (adminId: string) => {
     setIsLoading(true);
     try {
-      const adminData = await getAdminData(adminId);
-       // Role-based redirection
-      if (adminData.admin.role !== 'admin') {
-          router.push(adminData.admin.role === 'student' ? '/student/dashboard' : '/teacher/dashboard');
-          return;
-      }
-      setData(adminData);
-      setUser(adminData.admin);
+        const adminUser = await getUserProfile(adminId);
+        if (!adminUser || adminUser.role !== 'admin') {
+            router.push('/login');
+            toast({ variant: "destructive", title: "Acceso denegado" });
+            return;
+        }
+        setUser(adminUser);
+
+        const [allStudents, allTeachers, groups, pqrsMessages, bankCards] = await Promise.all([
+            getUsersInRole('student') as Promise<StudentProfile[]>,
+            getUsersInRole('teacher'),
+            getAllGroups(),
+            getAllPqrsMessages(),
+            getAllBankCards()
+        ]);
+        
+        setData({ allStudents, allTeachers, groups, pqrsMessages, bankCards });
+
     } catch (error) {
       console.error("Error fetching admin data:", error);
       toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
@@ -739,7 +762,11 @@ export function AdminDashboardUI() {
     const storedUser = localStorage.getItem("uncoverly-user");
     if (storedUser) {
       const parsedUser = JSON.parse(storedUser);
-      fetchDashboardData(parsedUser.id);
+      if (parsedUser.id) {
+        fetchDashboardData(parsedUser.id);
+      } else {
+         router.push("/login");
+      }
     } else {
       router.push("/login");
     }
@@ -802,7 +829,7 @@ export function AdminDashboardUI() {
   };
 
   const handleConfirmCreateGroup = async () => {
-    if (!selectedTeacherId || !data) {
+    if (!selectedTeacherId || !data || !user) {
         toast({ variant: "destructive", title: t_toast.createGroupErrorTitle, description: t_toast.noTeacherSelectedError });
         return;
     }
@@ -829,7 +856,7 @@ export function AdminDashboardUI() {
         setSelectedStudentIds([]);
         setSelectedTeacherId(null);
         setCreateGroupModalOpen(false);
-        await fetchDashboardData(user!.id); 
+        await fetchDashboardData(user.id); 
     } catch (error) {
         console.error("Error creating group:", error);
         toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.createGroupError });
@@ -1098,12 +1125,12 @@ export function AdminDashboardUI() {
       </Dialog>
       
       {/* Dialog for Editing Student */}
-      <EditStudentDialog 
+      {user && <EditStudentDialog 
         student={editingStudent} 
         isOpen={!!editingStudent} 
         onOpenChange={() => setEditingStudent(null)} 
         onStudentUpdate={() => fetchDashboardData(user.id)}
-      />
+      />}
 
       {/* Dialog for Student Notes */}
       <StudentNotesViewer 
@@ -1132,14 +1159,14 @@ export function AdminDashboardUI() {
       />
       
        {/* Dialog for Group Details (Admin) */}
-      <AdminGroupDetailsDialog 
+      {user && <AdminGroupDetailsDialog 
         group={groupToView}
         studentsById={studentsById}
         allTeachers={data.allTeachers}
         isOpen={!!groupToView}
         onOpenChange={() => setGroupToView(null)}
         onGroupUpdate={() => fetchDashboardData(user.id)}
-      />
+      />}
     </div>
   );
 }
