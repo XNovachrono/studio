@@ -38,7 +38,7 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
-import { format, parse, parseISO, addDays, isBefore, startOfToday, differenceInMinutes, addMinutes } from "date-fns";
+import { format, parse, parseISO, addDays, isBefore, startOfToday, differenceInMinutes, addMinutes, subWeeks } from "date-fns";
 import { es } from "date-fns/locale";
 import { TeacherDataSettings } from "./teacher-data-settings";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
@@ -989,17 +989,14 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
 
 
     const upcomingClasses = useMemo(() => {
+        const oneWeekAgo = subWeeks(startOfToday(), 1);
         return (group.content?.scheduledClasses || [])
             .map(c => ({...c, time: new Date(c.time as any)}))
-            .filter(c => c.time && !isNaN(c.time.getTime()) && !isBefore(c.time, new Date()))
-            .sort((a,b) => a.time.getTime() - b.time.getTime());
+            .filter(c => c.time && !isNaN(c.time.getTime()) && !isBefore(c.time, oneWeekAgo))
+            .sort((a,b) => a.time.getTime() - b.time.getTime())
+            .slice(0, 3);
     }, [group.content.scheduledClasses]);
 
-    const nextClass = upcomingClasses[0];
-
-    const scheduledDates = useMemo(() => {
-        return (group.content?.scheduledClasses || []).map(c => new Date(c.time as any));
-    }, [group.content.scheduledClasses]);
 
     return (
         <div className="space-y-8">
@@ -1008,8 +1005,10 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
                     <CardTitle>{t.nextClass.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    {nextClass ? (
-                         <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
+                    {upcomingClasses.length > 0 ? (
+                        <div className="space-y-3">
+                        {upcomingClasses.map((nextClass) => (
+                         <div key={nextClass.id} className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
                            <div>
                                 <p className="font-semibold text-lg">
                                  {format(nextClass.time, "eeee, d 'de' MMMM, HH:mm", { locale: es })}
@@ -1019,6 +1018,8 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
                            <a href={nextClass.link} target="_blank" rel="noopener noreferrer">
                              <Button>{t.nextClass.joinButton}</Button>
                            </a>
+                        </div>
+                        ))}
                         </div>
                     ) : (
                         <p className="p-4 text-center text-muted-foreground">{t.nextClass.noClass}</p>
