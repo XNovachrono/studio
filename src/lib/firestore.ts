@@ -340,11 +340,22 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
     const teacherProfile = await getUserProfile(teacherId);
     if (!teacherProfile) throw new Error("Teacher profile not found.");
     
-    // 2. Get all groups currently assigned to this teacher
-    const groupsRef = collection(db, "groups");
-    const qGroups = query(groupsRef, where("teacherId", "==", teacherId));
-    const groupsSnap = await getDocs(qGroups);
-    const groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
+    let groups: Group[] = [];
+    try {
+        // 2. Get all groups currently assigned to this teacher
+        const groupsRef = collection(db, "groups");
+        const qGroups = query(groupsRef, where("teacherId", "==", teacherId));
+        const groupsSnap = await getDocs(qGroups);
+        groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
+    } catch (serverError) {
+        const error = new FirestorePermissionError({
+            path: 'groups',
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
+
 
     // 3. Get all groups from the teacher's history
     let groupHistory: Group[] = [];
@@ -617,6 +628,7 @@ export const updateGroupTeacherAndHistory = async (groupId: string, newTeacherId
 
     await batch.commit();
 };
+
 
 
 
