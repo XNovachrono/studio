@@ -5,7 +5,7 @@ import {
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { db } from "./firebase";
-import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder, Lesson, EditorContent, BankCard, BankType, ScheduledClass, StudentNote } from "./types";
+import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder, Lesson, EditorContent, BankCard, BankType, ScheduledClass, StudentNote, UserRole } from "./types";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 
@@ -255,10 +255,19 @@ export const deletePQRSMessage = async (messageId: string): Promise<void> => {
 
 
 export const getUsersInRole = async (role: UserRole): Promise<User[]> => {
-  const usersRef = collection(db, 'users');
-  const q = query(usersRef, where('role', '==', role));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('role', '==', role));
+    try {
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
+    } catch (serverError) {
+        const error = new FirestorePermissionError({
+            path: usersRef.path,
+            operation: 'list'
+        });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
 
 export const getAllGroups = async (): Promise<Group[]> => {
@@ -616,6 +625,7 @@ export const updateGroupTeacherAndHistory = async (groupId: string, newTeacherId
 
     await batch.commit();
 };
+
 
 
 
