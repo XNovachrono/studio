@@ -1,69 +1,48 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
-    function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    function isTeacher() {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
-    }
-
-    // --- Users Collection ---
-    // Anyone can create a user (sign up), but only the user themselves or an admin can read/update it.
+    // Un usuario solo puede leer su propio perfil, pero puede actualizarlo.
     match /users/{userId} {
-      allow read, update: if isOwner(userId) || isAdmin();
-      allow create: if request.auth.uid != null;
+      allow read, update, delete: if request.auth.uid == userId;
+      allow create: if isSignedIn();
     }
 
-    // --- Groups Collection ---
-    // Admins can read all groups. Teachers and students can only read groups they are part of.
-    // Only teachers or admins can update a group. Only admins can create/delete.
+    // Los usuarios autenticados pueden leer grupos y lecciones, pero solo el profesor del grupo puede actualizar.
     match /groups/{groupId} {
-      allow read: if request.auth.uid != null;
-      allow update: if isTeacher() || isAdmin();
-      allow create, delete: if isAdmin();
+      allow read: if isSignedIn();
+      allow create: if isSignedIn(); // Permitir la creación de grupos a usuarios autenticados (controlado por la app)
+      allow update: if isSignedIn() && request.auth.uid == resource.data.teacherId;
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.teacherId;
 
-      // --- Lessons Subcollection ---
-      // Only the teacher of the group or an admin can manage lessons.
-      // Students in the group can read the lessons.
       match /lessons/{lessonId} {
-        allow read: if request.auth.uid in resource.data.studentIds || isOwner(resource.data.teacherId) || isAdmin();
-        allow write: if isOwner(resource.data.teacherId) || isAdmin();
+        allow read: if isSignedIn();
+        allow create, update, delete: if isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid;
       }
     }
-    
-    // --- Bank Cards Collection ---
-    // Any authenticated user can read bank cards.
-    // Only the owner or an admin can create, update, or delete their own cards.
+
+    // Los usuarios autenticados pueden leer los bancos, pero solo el dueño puede escribir.
     match /bank_cards/{cardId} {
-      allow read: if request.auth.uid != null;
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update, delete: if isOwner(resource.data.ownerId) || isAdmin();
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.auth.uid == request.resource.data.ownerId;
+        allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.ownerId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+    }
+
+    // Los estudiantes pueden crear PQRS. Solo el estudiante que lo creó, el profesor implicado o un admin pueden leerlos.
+    match /pqrs/{pqrsId} {
+      allow read: if isSignedIn() && (request.auth.uid == resource.data.studentId || request.auth.uid == resource.data.teacherId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
+      allow delete: if isSignedIn() && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
     }
     
-    // --- PQRS Collection ---
-    // Students can create messages.
-    // The involved teacher or an admin can read/delete them.
-    match /pqrs/{messageId} {
-      allow create: if isOwner(request.resource.data.studentId);
-      allow read, delete: if isOwner(resource.data.teacherId) || isAdmin();
-    }
-    
-    // --- Student Notes Collection ---
-    // This rule allows any authenticated user to perform list queries on the collection.
-    // The application logic ensures that users only query for their own notes.
-    // Write operations (create, update, delete) are restricted to the owner of the note.
+    // Un estudiante solo puede leer y escribir sus propios apuntes.
     match /student_notes/{noteId} {
-      allow read: if request.auth.uid != null;
-      allow write: if request.auth.uid == request.resource.data.studentId;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
+      allow read, update, delete: if isSignedIn() && request.auth.uid == resource.data.studentId;
     }
   }
 }
