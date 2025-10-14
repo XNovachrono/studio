@@ -6,7 +6,6 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { LanguageProvider } from "@/context/language-context";
 import { useEffect } from "react";
-import { FirebaseErrorListener } from "@/components/common/FirebaseErrorListener";
 
 // export const metadata: Metadata = {
 //   title: "Uncoverly",
@@ -43,7 +42,6 @@ export default function RootLayout({
           {children}
         </LanguageProvider>
         <Toaster />
-        <FirebaseErrorListener />
       </body>
     </html>
   );

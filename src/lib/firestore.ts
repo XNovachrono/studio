@@ -260,11 +260,9 @@ export const deletePQRSMessage = async (messageId: string): Promise<void> => {
 export const getUsersInRole = async (role: UserRole): Promise<User[]> => {
     const usersRef = collection(db, 'users');
     try {
-        // Fetch all users first
-        const querySnapshot = await getDocs(usersRef);
-        const allUsers = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
-        // Filter by role on the client side
-        return allUsers.filter(user => user.role === role);
+        const q = query(usersRef, where("role", "==", role));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
     } catch (serverError) {
         console.error("Firestore error in getUsersInRole: ", serverError);
         const error = new FirestorePermissionError({
