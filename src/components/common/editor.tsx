@@ -606,8 +606,15 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
     const editor = useEditor({
         extensions: [
             StarterKit.configure({ heading: false }),
-            Heading.configure({ levels: [1, 2, 3, 4] }).withAttributes({
-                id: { default: null },
+            Heading.configure({ levels: [1, 2, 3, 4] }).extend({
+                addAttributes() {
+                    return {
+                        ...this.parent?.(),
+                        id: {
+                            default: null,
+                        },
+                    };
+                },
             }),
             Placeholder.configure({
                 placeholder: ({ node }) => {
@@ -803,7 +810,7 @@ export function Editor({
 
   if (!editable) {
      const nonEditableEditor = useEditor({
-        extensions: [ StarterKit.configure({ heading: false }), Heading.configure({ levels: [1, 2, 3, 4] }).withAttributes({ id: { default: null } }), Image, Video, Audio, Link, Underline, TextStyle, FontFamily, FontSize, Color, Highlight, Table.configure({ resizable: true }), TableRow, TableHeader, TableCell ],
+        extensions: [ StarterKit, Heading.configure({ levels: [1, 2, 3, 4] }).extend({ addAttributes() { return { ...this.parent?.(), id: { default: null, }, }; } }), Image, Video, Audio, Link, Underline, TextStyle, FontFamily, FontSize, Color, Highlight, Table.configure({ resizable: true }), TableRow, TableHeader, TableCell ],
         content: content,
         editable: false,
         editorProps: {
