@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal, Notebook, Bold, Italic, Underline, List, ListOrdered, Heading1, Heading2, Palette, Table2, Clock, CheckCircle } from "lucide-react";
@@ -990,7 +990,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
 
     const upcomingClasses = useMemo(() => {
         return (group.content?.scheduledClasses || [])
-            .map(c => ({ ...c, time: new Date(c.time as any) }))
+            .map(c => ({...c, time: new Date(c.time as any)}))
             .filter(c => c.time && !isNaN(c.time.getTime()) && !isBefore(c.time, new Date()))
             .sort((a,b) => a.time.getTime() - b.time.getTime());
     }, [group.content.scheduledClasses]);
@@ -1427,5 +1427,7 @@ export function TeacherDashboardUI() {
 }
 
 
+
+    
 
     
