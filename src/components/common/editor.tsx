@@ -15,6 +15,7 @@ import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
+import Heading from '@tiptap/extension-heading';
 import {
   Bold,
   Italic,
@@ -37,6 +38,8 @@ import {
   Split,
   Heading1,
   Sigma,
+  CaseSensitive,
+  ListTree,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -51,6 +54,86 @@ import type { EditorContent as EditorContentType } from "@/lib/types";
 import { Separator } from "../ui/separator";
 import { Label } from "../ui/label";
 import { Node } from '@tiptap/core';
+
+// Custom Font Size Extension
+const FontSize = Node.create({
+    name: 'fontSize',
+    addOptions() {
+        return {
+            types: ['textStyle'],
+        };
+    },
+    addGlobalAttributes() {
+        return [
+            {
+                types: this.options.types,
+                attributes: {
+                    fontSize: {
+                        default: null,
+                        parseHTML: element => element.style.fontSize.replace(/['"]+/g, ''),
+                        renderHTML: attributes => {
+                            if (!attributes.fontSize) {
+                                return {};
+                            }
+                            return {
+                                style: `font-size: ${attributes.fontSize}`,
+                            };
+                        },
+                    },
+                },
+            },
+        ];
+    },
+    addCommands() {
+        return {
+            setFontSize: (fontSize) => ({ chain }) => {
+                return chain().setMark('textStyle', { fontSize }).run();
+            },
+            unsetFontSize: () => ({ chain }) => {
+                return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run();
+            },
+        };
+    },
+});
+
+// Custom Font Family Extension
+const FontFamily = Node.create({
+    name: 'fontFamily',
+    addOptions() {
+        return {
+            types: ['textStyle'],
+        };
+    },
+    addGlobalAttributes() {
+        return [
+            {
+                types: this.options.types,
+                attributes: {
+                    fontFamily: {
+                        default: null,
+                        parseHTML: element => element.style.fontFamily.replace(/['"]+/g, ''),
+                        renderHTML: attributes => {
+                            if (!attributes.fontFamily) {
+                                return {};
+                            }
+                            return {
+                                style: `font-family: ${attributes.fontFamily}`,
+                            };
+                        },
+                    },
+                },
+            },
+        ];
+    },
+    addCommands() {
+        return {
+            setFontFamily: (fontFamily) => ({ chain }) => {
+                return chain().setMark('textStyle', { fontFamily }).run();
+            },
+        };
+    },
+});
+
 
 const Video = Node.create({
   name: 'video',
@@ -123,6 +206,14 @@ const symbols = [
   '©', '®', '™', '€', '£', '¥',
 ];
 
+const fontSizes = [ '12px', '14px', '16px', '18px', '24px', '30px', '36px'];
+const fontFamilies = [
+    { name: 'Inter', value: 'Inter, sans-serif' },
+    { name: 'Lato', value: 'Lato, sans-serif' },
+    { name: 'Montserrat', value: 'Montserrat, sans-serif' },
+    { name: 'Roboto Slab', value: '"Roboto Slab", serif' }
+];
+
 const SymbolPicker = ({ editor }: { editor: TiptapEditor }) => {
     return (
         <Popover>
@@ -149,6 +240,53 @@ const SymbolPicker = ({ editor }: { editor: TiptapEditor }) => {
         </Popover>
     )
 }
+
+const GenerateToc = ({ editor }: { editor: TiptapEditor }) => {
+    const handleGenerateToc = () => {
+        const headings: { level: number; text: string; id: string }[] = [];
+        const transaction = editor.state.tr;
+        
+        editor.state.doc.forEach((node, pos) => {
+            if (node.type.name === 'heading') {
+                const id = `heading-${pos}`;
+                 if (node.attrs.id !== id) {
+                    transaction.setNodeMarkup(pos, undefined, { ...node.attrs, id });
+                }
+                headings.push({
+                    level: node.attrs.level,
+                    text: node.textContent,
+                    id: id,
+                });
+            }
+        });
+
+        transaction.setMeta('addToHistory', false);
+        transaction.setMeta('preventUpdate', true);
+        editor.view.dispatch(transaction);
+        
+        const tocContent = headings.map(heading => ({
+            type: 'paragraph',
+            content: [{
+                type: 'text',
+                marks: [{
+                    type: 'link',
+                    attrs: { href: `#${heading.id}` }
+                }],
+                text: `${'  '.repeat(heading.level - 1)}${heading.text}`
+            }]
+        }));
+
+        if (tocContent.length > 0) {
+            editor.chain().focus().insertContentAt(0, [{ type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Índice' }] }, ...tocContent, {type: 'paragraph'}]).run();
+        }
+    };
+
+    return (
+        <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={handleGenerateToc} title="Insertar Índice">
+            <ListTree />
+        </Button>
+    );
+};
 
 const AIToolbar = ({ state, onAccept, onRegenerate, onModify }: { state: 'idle' | 'loading' | 'streaming' | 'done', onAccept: () => void, onRegenerate: () => void, onModify: () => void }) => {
     const { translations } = useLanguage();
@@ -246,6 +384,66 @@ const TextStyleSelector = ({ editor }: { editor: TiptapEditor }) => {
     );
 }
 
+const FontSizeSelector = ({ editor }: { editor: TiptapEditor }) => {
+    const activeSize = fontSizes.find(size => editor.isActive('textStyle', { fontSize: size })) || '16px';
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-20">
+                    {activeSize}
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-1" sideOffset={10}>
+                <div className="flex flex-col">
+                    {fontSizes.map(size => (
+                        <Button
+                            key={size}
+                            variant={editor.isActive('textStyle', { fontSize: size }) ? 'secondary' : 'ghost'}
+                            size="sm"
+                            className="w-full justify-start"
+                            onClick={() => editor.chain().focus().setFontSize(size).run()}
+                        >
+                            {size}
+                        </Button>
+                    ))}
+                </div>
+            </PopoverContent>
+        </Popover>
+    )
+}
+
+const FontFamilySelector = ({ editor }: { editor: TiptapEditor }) => {
+    const activeFamily = fontFamilies.find(family => editor.isActive('textStyle', { fontFamily: family.value })) || fontFamilies[0];
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8">
+                    <CaseSensitive className="h-4 w-4 mr-2" />
+                    {activeFamily.name}
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-1" sideOffset={10}>
+                <div className="flex flex-col">
+                    {fontFamilies.map(family => (
+                        <Button
+                            key={family.name}
+                            variant={editor.isActive('textStyle', { fontFamily: family.value }) ? 'secondary' : 'ghost'}
+                            size="sm"
+                            className="w-full justify-start"
+                            style={{ fontFamily: family.value }}
+                            onClick={() => editor.chain().focus().setFontFamily(family.value).run()}
+                        >
+                            {family.name}
+                        </Button>
+                    ))}
+                </div>
+            </PopoverContent>
+        </Popover>
+    )
+}
+
 const TableTools = ({ editor }: { editor: TiptapEditor }) => {
     const RemoveColumnsIcon = () => (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v11"/><path d="m16 16-4 4-4-4"/><path d="M9 3H3v18h6"/><path d="m16 3 5 5-5 5"/></svg>
@@ -331,6 +529,8 @@ const Toolbar = ({ editor }: { editor: TiptapEditor | null }) => {
 
                     {/* Text Style & Formatting */}
                     <TextStyleSelector editor={editor} />
+                    <FontFamilySelector editor={editor} />
+                    <FontSizeSelector editor={editor} />
                     <Button
                         variant={editor.isActive("bold") ? "secondary" : "ghost"}
                         size="icon"
@@ -374,6 +574,7 @@ const Toolbar = ({ editor }: { editor: TiptapEditor | null }) => {
                     <ColorPicker editor={editor} />
                     <SymbolPicker editor={editor} />
                     <InsertTablePopover editor={editor} />
+                    <GenerateToc editor={editor} />
                 </>
             )}
         </BubbleMenu>
@@ -404,7 +605,10 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
 
     const editor = useEditor({
         extensions: [
-            StarterKit.configure({}),
+            StarterKit.configure({ heading: false }),
+            Heading.configure({ levels: [1, 2, 3, 4] }).withAttributes({
+                id: { default: null },
+            }),
             Placeholder.configure({
                 placeholder: ({ node }) => {
                     if (node.type.name === 'heading') {
@@ -422,6 +626,8 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
             Link.configure({ openOnClick: false }),
             Underline,
             TextStyle,
+            FontFamily,
+            FontSize,
             Color,
             Highlight.configure({ multicolor: true }),
             Table.configure({ resizable: true, handleWidth: 5, cellMinWidth: 25 }),
@@ -597,7 +803,7 @@ export function Editor({
 
   if (!editable) {
      const nonEditableEditor = useEditor({
-        extensions: [ StarterKit, Image, Video, Audio, Link, Underline, TextStyle, Color, Highlight, Table.configure({ resizable: true }), TableRow, TableHeader, TableCell ],
+        extensions: [ StarterKit.configure({ heading: false }), Heading.configure({ levels: [1, 2, 3, 4] }).withAttributes({ id: { default: null } }), Image, Video, Audio, Link, Underline, TextStyle, FontFamily, FontSize, Color, Highlight, Table.configure({ resizable: true }), TableRow, TableHeader, TableCell ],
         content: content,
         editable: false,
         editorProps: {
@@ -643,4 +849,3 @@ export function Editor({
     </div>
   );
 }
-
