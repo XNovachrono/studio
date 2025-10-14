@@ -65,22 +65,31 @@ const pqrsFromDoc = (doc: any): PQRSMessage => {
 // Function to get a user profile
 export const getUserProfile = async (userId: string): Promise<User | null> => {
     const userDocRef = doc(db, "users", userId);
-    const userDocSnap = await getDoc(userDocRef);
+    try {
+        const userDocSnap = await getDoc(userDocRef);
 
-    if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
-        // Convert Timestamps for teacherInteractions
-        if (userData.teacherInteractions) {
-            userData.teacherInteractions = userData.teacherInteractions.map((interaction: any) => ({
-                ...interaction,
-                lastInteraction: interaction.lastInteraction instanceof Timestamp 
-                    ? interaction.lastInteraction.toDate().toISOString() 
-                    : interaction.lastInteraction,
-            }));
+        if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            // Convert Timestamps for teacherInteractions
+            if (userData.teacherInteractions) {
+                userData.teacherInteractions = userData.teacherInteractions.map((interaction: any) => ({
+                    ...interaction,
+                    lastInteraction: interaction.lastInteraction instanceof Timestamp 
+                        ? interaction.lastInteraction.toDate().toISOString() 
+                        : interaction.lastInteraction,
+                }));
+            }
+            return { id: userDocSnap.id, ...userData } as User;
         }
-        return { id: userDocSnap.id, ...userData } as User;
+        return null;
+    } catch (serverError) {
+         const error = new FirestorePermissionError({
+            path: userDocRef.path,
+            operation: 'get',
+        });
+        errorEmitter.emit('permission-error', error);
+        throw error;
     }
-    return null;
 }
 
 // Function to update a user profile (used in onboarding and by admin)
@@ -156,11 +165,10 @@ export const submitPQRS = async (pqrsData: Omit<PQRSMessage, 'createdAt' | 'id' 
 // === Student Notes Functions ===
 export const createStudentNote = async (data: Omit<StudentNote, 'id' | 'createdAt' | 'updatedAt'>) => {
     const notesRef = collection(db, "student_notes");
-    const now = Timestamp.now();
     const noteData = {
         ...data,
-        createdAt: now,
-        updatedAt: now,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
     };
     
     try {
@@ -172,7 +180,7 @@ export const createStudentNote = async (data: Omit<StudentNote, 'id' | 'createdA
             requestResourceData: noteData,
         });
         errorEmitter.emit('permission-error', error);
-        throw error; // Re-throw the error to be caught by the calling component
+        throw error;
     }
 }
 
@@ -189,7 +197,7 @@ export const getStudentNotes = async (studentId: string): Promise<StudentNote[]>
             operation: 'list',
         });
         errorEmitter.emit('permission-error', error);
-        throw error; // Re-throw to be caught by the calling component
+        throw error;
     }
 }
 
@@ -609,6 +617,7 @@ export const updateGroupTeacherAndHistory = async (groupId: string, newTeacherId
 
     await batch.commit();
 };
+
 
 
 
