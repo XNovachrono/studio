@@ -254,6 +254,7 @@ export const translations = {
                 credentialsSuccessDescription: "Tu correo y contraseña han sido actualizados.",
                 errorTitle: "Error",
                 credentialsError: "No se pudieron actualizar las credenciales. Error: {message}",
+                wrongPasswordError: "La contraseña actual es incorrecta. Por favor, inténtalo de nuevo.",
             }
         },
         studentDashboard: {
@@ -775,6 +776,7 @@ export const translations = {
                 credentialsSuccessDescription: "Your email and password have been updated.",
                 errorTitle: "Error",
                 credentialsError: "Could not update credentials. Error: {message}",
+                wrongPasswordError: "The current password is incorrect. Please try again.",
             }
         },
         studentDashboard: {

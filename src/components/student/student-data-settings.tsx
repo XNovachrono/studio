@@ -83,7 +83,11 @@ export function StudentDataSettings({ user, isOpen, onOpenChange }: StudentDataS
             toast({ title: t.toasts.credentialsSuccessTitle, description: t.toasts.credentialsSuccessDescription });
             onOpenChange(false);
         } catch (error: any) {
-             toast({ variant: 'destructive', title: t.toasts.errorTitle, description: t.toasts.credentialsError.replace('{message}', error.message) });
+            let description = t.toasts.credentialsError.replace('{message}', error.message);
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                description = t.toasts.wrongPasswordError;
+            }
+             toast({ variant: 'destructive', title: t.toasts.errorTitle, description });
         } finally {
             setIsCredentialsSubmitting(false);
         }
