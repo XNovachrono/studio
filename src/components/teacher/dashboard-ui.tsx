@@ -668,7 +668,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                  classStartTime = parseISO(timeVal);
             } else {
                 // It might already be a Date object if it came from state, though Firestore returns strings/timestamps
-                classStartTime = timeVal;
+                classStartTime = timeVal as Date;
             }
         }
 
@@ -941,7 +941,43 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
 const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName }: { group: Group, studentsById: Map<string, StudentProfile>, onClassScheduled: () => void, teacherName: string }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.meetings;
+    const t_toasts = translations.teacherDashboard.toasts;
     const { toast } = useToast();
+    
+    const [date, setDate] = useState<Date | undefined>();
+    const [time, setTime] = useState('18:00');
+    const [link, setLink] = useState('');
+    const [isScheduling, setIsScheduling] = useState(false);
+
+    const handleScheduleClass = async () => {
+        if (!date || !time || !link) {
+            toast({ variant: 'destructive', title: t_toasts.errorTitle, description: "Por favor completa todos los campos para programar la clase." });
+            return;
+        }
+        
+        setIsScheduling(true);
+        try {
+            const [hours, minutes] = time.split(':').map(Number);
+            const scheduledDateTime = new Date(date);
+            scheduledDateTime.setHours(hours, minutes);
+
+            await addContentToGroup(group.id, 'scheduledClass', {
+                link,
+                time: scheduledDateTime.toISOString(),
+            }, teacherName);
+            
+            toast({ title: t_toasts.scheduleClassSuccessTitle, description: t_toasts.scheduleClassSuccessDescription });
+            onClassScheduled();
+            setDate(undefined);
+            setLink('');
+        } catch (error) {
+             console.error("Error scheduling class:", error);
+            toast({ variant: 'destructive', title: t_toasts.errorTitle, description: t_toasts.genericError });
+        } finally {
+            setIsScheduling(false);
+        }
+    };
+
 
     const upcomingClasses = useMemo(() => {
         return (group.content?.scheduledClasses || [])
@@ -956,7 +992,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
     const nextClass = upcomingClasses[0];
 
     const scheduledDates = useMemo(() => {
-        return (group.content?.scheduledClasses || []).map(c => typeof c.time === 'string' ? parseISO(c.time) : c.time);
+        return (group.content?.scheduledClasses || []).map(c => typeof c.time === 'string' ? parseISO(c.time) : (c.time as Date));
     }, [group.content.scheduledClasses]);
 
     return (
@@ -970,7 +1006,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
                          <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
                            <div>
                                 <p className="font-semibold text-lg">
-                                 {format(nextClass.time, "eeee, d 'de' MMMM, HH:mm", { locale: es })}
+                                 {format(new Date(nextClass.time), "eeee, d 'de' MMMM, HH:mm", { locale: es })}
                                </p>
                                <a href={nextClass.link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">{nextClass.link}</a>
                            </div>
@@ -1014,16 +1050,57 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
                 </CardContent>
             </Card>
 
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>{t.sendReminder.title}</CardTitle>
-                    <CardDescription>{t.sendReminder.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground">{t.sendReminder.placeholder}</p>
-                </CardContent>
-            </Card>
+            {group.type !== 'privado' && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>{t.scheduleClass.title}</CardTitle>
+                        <CardDescription>{t.scheduleClass.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex gap-4">
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className="w-[240px] justify-start text-left font-normal"
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {date ? format(date, "PPP", { locale: es }) : <span>{t.scheduleClass.datePlaceholder}</span>}
+                                </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={date}
+                                    onSelect={setDate}
+                                    disabled={(d) => isBefore(d, startOfToday())}
+                                    initialFocus
+                                />
+                                </PopoverContent>
+                            </Popover>
+                            <Input
+                                type="time"
+                                value={time}
+                                onChange={(e) => setTime(e.target.value)}
+                                className="w-32"
+                            />
+                        </div>
+                         <div>
+                            <Label htmlFor="class-link">{t.scheduleClass.link}</Label>
+                            <Input
+                                id="class-link"
+                                placeholder={t.scheduleClass.linkPlaceholder}
+                                value={link}
+                                onChange={(e) => setLink(e.target.value)}
+                            />
+                        </div>
+                        <Button onClick={handleScheduleClass} disabled={isScheduling}>
+                            {isScheduling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {t.scheduleClass.button}
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 };

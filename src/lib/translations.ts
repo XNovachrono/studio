@@ -397,10 +397,13 @@ export const translations = {
                     description: "Aquí puedes ver todas las clases programadas para este grupo.",
                     noClasses: "No hay más clases programadas."
                 },
-                sendReminder: {
-                    title: "Enviar Recordatorio",
-                    description: "Envía un mensaje rápido a todos los miembros del grupo.",
-                    placeholder: "Funcionalidad de recordatorios próximamente."
+                scheduleClass: {
+                    title: "Programar Nueva Clase",
+                    description: "Programa una nueva sesión para este grupo. Se creará una lección automáticamente.",
+                    datePlaceholder: "Seleccionar fecha",
+                    link: "Enlace de la reunión",
+                    linkPlaceholder: "https://zoom.us/j/...",
+                    button: "Programar Clase",
                 }
             },
             lessons: {
@@ -919,10 +922,13 @@ export const translations = {
                     description: "Here you can see all scheduled classes for this group.",
                     noClasses: "No more classes scheduled."
                 },
-                sendReminder: {
-                    title: "Send Reminder",
-                    description: "Send a quick message to all group members.",
-                    placeholder: "Reminder functionality coming soon."
+                scheduleClass: {
+                    title: "Schedule New Class",
+                    description: "Schedule a new session for this group. A lesson will be created automatically.",
+                    datePlaceholder: "Select date",
+                    link: "Meeting link",
+                    linkPlaceholder: "https://zoom.us/j/...",
+                    button: "Schedule Class",
                 }
             },
             lessons: {
