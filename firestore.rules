@@ -3,44 +3,65 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     function isSignedIn() {
       return request.auth.uid != null;
     }
 
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow write: if request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow read, write: if request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     match /groups/{groupId} {
+      // Allow any signed-in user to read group info, security is on who can modify
       allow read: if isSignedIn();
-      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || request.auth.uid == resource.data.teacherId;
+      // Only the teacher of the group or an admin can modify it
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' 
+                    || resource.data.teacherId == request.auth.uid;
     }
     
     match /groups/{groupId}/lessons/{lessonId} {
-        allow read: if isSignedIn();
-        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId;
+      // Allow students in the group, the group's teacher, or an admin to read lessons
+      allow read: if isSignedIn() && (
+                    get(/databases/$(database)/documents/groups/$(groupId)).data.studentIds.hasAny([request.auth.uid])
+                    || get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid
+                    || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+                  );
+      // Only the teacher of the group or an admin can write lessons
+      allow write: if isSignedIn() && (
+                    get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid
+                    || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+                  );
     }
-    
+
     match /student_notes/{noteId} {
-      // Allow list if the query is constrained to the user's own notes
-      allow list: if request.auth.uid != null && request.query.where.studentId.value == request.auth.uid;
-      // Allow get, update, delete on a specific document if the user is the owner
+      // Allow a user to list their own notes
+      allow list: if request.query.where.studentId == request.auth.uid;
+      // Allow a user to read, update, or delete their own note
       allow get, update, delete: if request.auth.uid == resource.data.studentId;
-      // Allow create if the new document's studentId matches the user's ID
+      // Allow a user to create a note for themselves
       allow create: if request.auth.uid == request.resource.data.studentId;
     }
     
     match /pqrs/{pqrsId} {
-        allow read: if isSignedIn();
-        allow create: if request.auth.uid == request.resource.data.studentId;
-        allow delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow create: if isSignedIn();
+      // Only the involved student, teacher, or an admin can read/delete
+      allow read, delete: if isSignedIn() && (
+                    request.auth.uid == resource.data.studentId
+                    || request.auth.uid == resource.data.teacherId
+                    || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+                  );
     }
     
     match /bank_cards/{cardId} {
+        // Any signed-in user can read from the banks
         allow read: if isSignedIn();
-        allow write: if request.auth.uid == request.resource.data.ownerId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        // Only the owner or an admin can create, update, or delete
+        allow write: if isSignedIn() && (
+                     request.auth.uid == request.resource.data.ownerId
+                     || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+                   );
     }
+
   }
 }
