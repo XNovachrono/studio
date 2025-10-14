@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "../ui/button";
 import { Editor } from "../common/editor";
-import { format, parse, parseISO, isSameDay, getWeek } from "date-fns";
+import { format, parse, parseISO, isSameDay, getWeek, isFuture } from "date-fns";
 import { es } from "date-fns/locale";
 import { PqrsDialog } from "./pqrs-dialog";
 import { Avatar, AvatarFallback } from "../ui/avatar";
@@ -81,6 +81,7 @@ const CalendarDialog = ({ user, onOpenChange, isOpen }: { user: StudentProfile, 
             toast({ title: "Calendario actualizado", description: "Tus preferencias de horario han sido guardadas." });
             onOpenChange(false);
         } catch (error) {
+            console.error(error);
             toast({ variant: "destructive", title: "Error", description: "No se pudo guardar tu horario." });
         }
     };
@@ -98,6 +99,7 @@ const CalendarDialog = ({ user, onOpenChange, isOpen }: { user: StudentProfile, 
                         selected={selectedDates}
                         onDayClick={handleDayClick}
                         className="rounded-md border self-start"
+                        disabled={(date) => !isFuture(date) && !isSameDay(date, new Date())}
                     />
                     <div className="space-y-4">
                         <Card>

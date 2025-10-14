@@ -392,10 +392,10 @@ export const translations = {
                     joinButton: "Unirse",
                     noClass: "No hay clases programadas."
                 },
-                upcomingClasses: {
-                    title: "Próximas Clases",
-                    description: "Aquí puedes ver todas las clases programadas para este grupo.",
-                    noClasses: "No hay más clases programadas."
+                availability: {
+                    title: "Disponibilidad del Estudiante",
+                    description: "Horarios preferidos por {studentName}",
+                    scheduleButton: "Programar"
                 },
                 scheduleClass: {
                     title: "Programar Nueva Clase",
@@ -917,10 +917,10 @@ export const translations = {
                     joinButton: "Join",
                     noClass: "No classes scheduled."
                 },
-                upcomingClasses: {
-                    title: "Upcoming Classes",
-                    description: "Here you can see all scheduled classes for this group.",
-                    noClasses: "No more classes scheduled."
+                 availability: {
+                    title: "Student Availability",
+                    description: "Preferred times for {studentName}",
+                    scheduleButton: "Schedule"
                 },
                 scheduleClass: {
                     title: "Schedule New Class",

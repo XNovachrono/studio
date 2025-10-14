@@ -5,7 +5,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal, Notebook, Bold, Italic, Underline, List, ListOrdered, Heading1, Heading2, Palette, Table2, Clock } from "lucide-react";
+import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal, Notebook, Bold, Italic, Underline, List, ListOrdered, Heading1, Heading2, Palette, Table2, Clock, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import {
@@ -38,7 +38,7 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
-import { format, parseISO, addDays, isBefore, startOfToday, differenceInMinutes, addMinutes, parse } from "date-fns";
+import { format, parse, parseISO, addDays, isBefore, startOfToday, differenceInMinutes, addMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { TeacherDataSettings } from "./teacher-data-settings";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
@@ -938,7 +938,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     );
 };
 
-const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName }: { group: Group, studentsById: Map<string, StudentProfile>, onClassScheduled: () => void, teacherName: string }) => {
+const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName, onScheduleFromAvailability }: { group: Group, studentsById: Map<string, StudentProfile>, onClassScheduled: () => void, teacherName: string, onScheduleFromAvailability: (date: Date, time: string) => void }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.meetings;
     const t_toasts = translations.teacherDashboard.toasts;
@@ -948,6 +948,15 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
     const [time, setTime] = useState('18:00');
     const [link, setLink] = useState('');
     const [isScheduling, setIsScheduling] = useState(false);
+    
+    const privateStudent = group.type === 'privado' && group.studentIds.length > 0 ? studentsById.get(group.studentIds[0]) : null;
+
+    useEffect(() => {
+        onScheduleFromAvailability = (newDate, newTime) => {
+            setDate(newDate);
+            setTime(newTime);
+        };
+    }, [onScheduleFromAvailability]);
 
     const handleScheduleClass = async () => {
         if (!date || !time || !link) {
@@ -981,10 +990,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
 
     const upcomingClasses = useMemo(() => {
         return (group.content?.scheduledClasses || [])
-            .map(c => {
-                const time = new Date(c.time as any);
-                return { ...c, time };
-            })
+            .map(c => ({ ...c, time: new Date(c.time as any) }))
             .filter(c => c.time && !isNaN(c.time.getTime()) && !isBefore(c.time, new Date()))
             .sort((a,b) => a.time.getTime() - b.time.getTime());
     }, [group.content.scheduledClasses]);
@@ -992,7 +998,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
     const nextClass = upcomingClasses[0];
 
     const scheduledDates = useMemo(() => {
-        return (group.content?.scheduledClasses || []).map(c => typeof c.time === 'string' ? parseISO(c.time) : (c.time as Date));
+        return (group.content?.scheduledClasses || []).map(c => new Date(c.time as any));
     }, [group.content.scheduledClasses]);
 
     return (
@@ -1006,7 +1012,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
                          <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
                            <div>
                                 <p className="font-semibold text-lg">
-                                 {format(new Date(nextClass.time), "eeee, d 'de' MMMM, HH:mm", { locale: es })}
+                                 {format(nextClass.time, "eeee, d 'de' MMMM, HH:mm", { locale: es })}
                                </p>
                                <a href={nextClass.link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">{nextClass.link}</a>
                            </div>
@@ -1019,88 +1025,81 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
                     )}
                 </CardContent>
             </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>{t.upcomingClasses.title}</CardTitle>
-                    <CardDescription>{t.upcomingClasses.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <Calendar
-                        mode="multiple"
-                        selected={scheduledDates}
-                        className="rounded-md border mx-auto"
-                        classNames={{
-                           day_selected: "bg-primary text-primary-foreground rounded-full",
-                        }}
-                        disabled
-                    />
-                    <ScrollArea className="h-40">
-                        <div className="space-y-2 pr-4">
-                        {upcomingClasses.length > 0 ? upcomingClasses.map(c => (
-                            <div key={c.id} className="flex items-center justify-between p-2 rounded-md bg-secondary/50">
-                                <span className="font-medium text-sm">{format(c.time, "PPPPp", { locale: es })}</span>
-                                <a href={c.link} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm">Unirse</Button></a>
-                            </div>
-                        )) : (
-                            <p className="text-center text-muted-foreground pt-4">{t.upcomingClasses.noClasses}</p>
-                        )}
-                        </div>
-                    </ScrollArea>
-                </CardContent>
-            </Card>
-
-            {group.type !== 'privado' && (
+            
+             {privateStudent?.scheduledSlots && privateStudent.scheduledSlots.length > 0 && (
                 <Card>
                     <CardHeader>
-                        <CardTitle>{t.scheduleClass.title}</CardTitle>
-                        <CardDescription>{t.scheduleClass.description}</CardDescription>
+                        <CardTitle>{t.availability.title}</CardTitle>
+                        <CardDescription>{t.availability.description.replace('{studentName}', privateStudent.name)}</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex gap-4">
-                             <Popover>
-                                <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className="w-[240px] justify-start text-left font-normal"
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {date ? format(date, "PPP", { locale: es }) : <span>{t.scheduleClass.datePlaceholder}</span>}
-                                </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    mode="single"
-                                    selected={date}
-                                    onSelect={setDate}
-                                    disabled={(d) => isBefore(d, startOfToday())}
-                                    initialFocus
-                                />
-                                </PopoverContent>
-                            </Popover>
-                            <Input
-                                type="time"
-                                value={time}
-                                onChange={(e) => setTime(e.target.value)}
-                                className="w-32"
-                            />
-                        </div>
-                         <div>
-                            <Label htmlFor="class-link">{t.scheduleClass.link}</Label>
-                            <Input
-                                id="class-link"
-                                placeholder={t.scheduleClass.linkPlaceholder}
-                                value={link}
-                                onChange={(e) => setLink(e.target.value)}
-                            />
-                        </div>
-                        <Button onClick={handleScheduleClass} disabled={isScheduling}>
-                            {isScheduling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {t.scheduleClass.button}
-                        </Button>
+                    <CardContent>
+                        <ScrollArea className="h-40">
+                             <div className="space-y-2 pr-4">
+                                {privateStudent.scheduledSlots.map(slot => (
+                                    <div key={slot.date+slot.time} className="flex items-center justify-between p-2 rounded-md bg-secondary/50">
+                                        <span className="font-medium text-sm">{format(parseISO(slot.date), 'PPPP', {locale: es})} a las {slot.time}</span>
+                                        <Button size="sm" variant="outline" onClick={() => onScheduleFromAvailability(parseISO(slot.date), slot.time)}>
+                                            <CalendarIcon className="mr-2 h-4 w-4"/>
+                                            {t.availability.scheduleButton}
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
                     </CardContent>
                 </Card>
             )}
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>{t.scheduleClass.title}</CardTitle>
+                    <CardDescription>{t.scheduleClass.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex flex-wrap gap-4">
+                         <Popover>
+                            <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className="w-[240px] justify-start text-left font-normal"
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {date ? format(date, "PPP", { locale: es }) : <span>{t.scheduleClass.datePlaceholder}</span>}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={date}
+                                onSelect={setDate}
+                                disabled={(d) => isBefore(d, startOfToday())}
+                                initialFocus
+                            />
+                            </PopoverContent>
+                        </Popover>
+                        <Input
+                            type="time"
+                            value={time}
+                            onChange={(e) => setTime(e.target.value)}
+                            className="w-32"
+                        />
+                    </div>
+                     <div>
+                        <Label htmlFor="class-link">{t.scheduleClass.link}</Label>
+                        <Input
+                            id="class-link"
+                            placeholder={t.scheduleClass.linkPlaceholder}
+                            value={link}
+                            onChange={(e) => setLink(e.target.value)}
+                        />
+                    </div>
+                    <Button onClick={handleScheduleClass} disabled={isScheduling}>
+                        {isScheduling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {t.scheduleClass.button}
+                    </Button>
+                </CardContent>
+            </Card>
+
         </div>
     );
 };
@@ -1113,6 +1112,12 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
     const t_meetings = translations.teacherDashboard.meetings;
     const [studentToView, setStudentToView] = useState<StudentProfile | null>(null);
     const [refreshLessonKey, setRefreshLessonKey] = useState(0);
+
+    // This is a placeholder ref since we need to pass a function to GroupCommunication
+    // that can be updated from inside this component. The actual function will be
+    // defined inside GroupCommunication's useEffect.
+    const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
+
 
     if (!group) return null;
 
@@ -1145,23 +1150,66 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
                             refreshLessonKey={refreshLessonKey}
                         />
                     </TabsContent>
-                    <TabsContent value="members" className="flex-grow overflow-auto p-4">
-                         <ScrollArea className="h-full">
-                            <ul className="space-y-2 pr-4">
-                                {groupMembers.map(student => (
-                                    <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
-                                        <span className="text-sm">{student.name}</span>
-                                        <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
-                                            <Eye className="mr-2 h-4 w-4" />
-                                            {t.viewData}
-                                        </Button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </ScrollArea>
+                    <TabsContent value="members" className="flex-grow overflow-auto p-4 space-y-4">
+                         <Card>
+                            <CardHeader><CardTitle>Miembros del Grupo</CardTitle></CardHeader>
+                            <CardContent>
+                                <ScrollArea className="h-full">
+                                    <ul className="space-y-2 pr-4">
+                                        {groupMembers.map(student => (
+                                            <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
+                                                <span className="text-sm">{student.name}</span>
+                                                <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
+                                                    <Eye className="mr-2 h-4 w-4" />
+                                                    {t.viewData}
+                                                </Button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </ScrollArea>
+                            </CardContent>
+                        </Card>
+                         {isPrivateGroup && privateStudent?.scheduledSlots && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Disponibilidad del Estudiante</CardTitle>
+                                    <CardDescription>Horarios preferidos por {privateStudent.name}</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <ScrollArea className="h-40">
+                                        <ul className="space-y-2 pr-4">
+                                            {privateStudent.scheduledSlots.length > 0 ? privateStudent.scheduledSlots.map(slot => (
+                                                <li key={slot.date+slot.time} className="flex items-center justify-between p-2 rounded-md bg-secondary/50">
+                                                    <span className="text-sm font-medium">{format(parseISO(slot.date), "eeee, dd 'de' MMMM", {locale: es})} a las {slot.time}</span>
+                                                    <Button size="sm" onClick={() => scheduleFromAvailabilityRef.current(parseISO(slot.date), slot.time)}>
+                                                        <CheckCircle className="mr-2 h-4 w-4"/>
+                                                        Programar
+                                                    </Button>
+                                                </li>
+                                            )) : <p className="text-center text-muted-foreground">El estudiante no ha definido su disponibilidad.</p>}
+                                        </ul>
+                                    </ScrollArea>
+                                </CardContent>
+                            </Card>
+                        )}
                     </TabsContent>
                      <TabsContent value="meetings" className="flex-grow overflow-auto p-4">
-                        <GroupCommunication group={group} studentsById={studentsById} onClassScheduled={() => setRefreshLessonKey(k => k + 1)} teacherName={teacherName}/>
+                        <GroupCommunication 
+                            group={group} 
+                            studentsById={studentsById} 
+                            onClassScheduled={() => setRefreshLessonKey(k => k + 1)} 
+                            teacherName={teacherName}
+                            onScheduleFromAvailability={(date, time) => {
+                                // This is a bit of a hack to communicate between sibling components.
+                                // We're using a ref that the GroupCommunication component will populate.
+                                const meetingsTab = document.querySelector('[data-radix-collection-item][data-state="inactive"][value="meetings"]');
+                                if (meetingsTab) (meetingsTab as HTMLElement).click();
+                                
+                                setTimeout(() => {
+                                    scheduleFromAvailabilityRef.current(date, time);
+                                }, 100);
+                            }}
+                        />
                     </TabsContent>
                 </Tabs>
             </DialogContent>
