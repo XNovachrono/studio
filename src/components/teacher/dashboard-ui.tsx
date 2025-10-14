@@ -1123,13 +1123,10 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
     // that can be updated from inside this component. The actual function will be
     // defined inside GroupCommunication's useEffect.
     const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
-
-
-    if (!group) return null;
-
-    const groupMembers = group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[];
-    const isPrivateGroup = group.type === 'privado';
-    const privateStudent = isPrivateGroup && groupMembers.length > 0 ? groupMembers[0] : null;
+    
+    const groupMembers = useMemo(() => group?.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[] || [], [group, studentsById]);
+    const isPrivateGroup = useMemo(() => group?.type === 'privado', [group]);
+    const privateStudent = useMemo(() => isPrivateGroup && groupMembers.length > 0 ? groupMembers[0] : null, [isPrivateGroup, groupMembers]);
 
     const filteredSlots = useMemo(() => {
         if (!privateStudent?.scheduledSlots) return [];
@@ -1139,6 +1136,8 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
             .filter(slot => !isBefore(slot.dateObj, oneWeekAgo))
             .slice(0, 3);
     }, [privateStudent]);
+
+    if (!group) return null;
 
 
     return (
