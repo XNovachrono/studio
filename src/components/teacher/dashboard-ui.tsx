@@ -1036,15 +1036,20 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
                     <CardContent>
                         <ScrollArea className="h-40">
                              <div className="space-y-2 pr-4">
-                                {privateStudent.scheduledSlots.map(slot => (
+                                {(privateStudent.scheduledSlots || [])
+                                    .map(slot => ({ ...slot, dateObj: parseISO(slot.date) }))
+                                    .filter(slot => !isBefore(slot.dateObj, subWeeks(startOfToday(), 1)))
+                                    .slice(0, 3)
+                                    .map(slot => (
                                     <div key={slot.date+slot.time} className="flex items-center justify-between p-2 rounded-md bg-secondary/50">
-                                        <span className="font-medium text-sm">{format(parseISO(slot.date), 'PPPP', {locale: es})} a las {slot.time}</span>
-                                        <Button size="sm" variant="outline" onClick={() => onScheduleFromAvailability(parseISO(slot.date), slot.time)}>
+                                        <span className="font-medium text-sm">{format(slot.dateObj, 'PPPP', {locale: es})} a las {slot.time}</span>
+                                        <Button size="sm" variant="outline" onClick={() => onScheduleFromAvailability(slot.dateObj, slot.time)}>
                                             <CalendarIcon className="mr-2 h-4 w-4"/>
                                             {t.availability.scheduleButton}
                                         </Button>
                                     </div>
                                 ))}
+                                {privateStudent.scheduledSlots.length === 0 && <p className="text-center text-muted-foreground">El estudiante no ha definido su disponibilidad.</p>}
                             </div>
                         </ScrollArea>
                     </CardContent>
@@ -1126,6 +1131,16 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
     const isPrivateGroup = group.type === 'privado';
     const privateStudent = isPrivateGroup && groupMembers.length > 0 ? groupMembers[0] : null;
 
+    const filteredSlots = useMemo(() => {
+        if (!privateStudent?.scheduledSlots) return [];
+        const oneWeekAgo = subWeeks(startOfToday(), 1);
+        return (privateStudent.scheduledSlots || [])
+            .map(slot => ({ ...slot, dateObj: parseISO(slot.date) }))
+            .filter(slot => !isBefore(slot.dateObj, oneWeekAgo))
+            .slice(0, 3);
+    }, [privateStudent]);
+
+
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
@@ -1170,7 +1185,7 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
                                 </ScrollArea>
                             </CardContent>
                         </Card>
-                         {isPrivateGroup && privateStudent?.scheduledSlots && (
+                         {isPrivateGroup && privateStudent && (
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Disponibilidad del Estudiante</CardTitle>
@@ -1179,15 +1194,15 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
                                 <CardContent>
                                     <ScrollArea className="h-40">
                                         <ul className="space-y-2 pr-4">
-                                            {privateStudent.scheduledSlots.length > 0 ? privateStudent.scheduledSlots.map(slot => (
+                                            {filteredSlots.length > 0 ? filteredSlots.map(slot => (
                                                 <li key={slot.date+slot.time} className="flex items-center justify-between p-2 rounded-md bg-secondary/50">
-                                                    <span className="text-sm font-medium">{format(parseISO(slot.date), "eeee, dd 'de' MMMM", {locale: es})} a las {slot.time}</span>
-                                                    <Button size="sm" onClick={() => scheduleFromAvailabilityRef.current(parseISO(slot.date), slot.time)}>
+                                                    <span className="text-sm font-medium">{format(slot.dateObj, "eeee, dd 'de' MMMM", {locale: es})} a las {slot.time}</span>
+                                                    <Button size="sm" onClick={() => scheduleFromAvailabilityRef.current(slot.dateObj, slot.time)}>
                                                         <CheckCircle className="mr-2 h-4 w-4"/>
                                                         Programar
                                                     </Button>
                                                 </li>
-                                            )) : <p className="text-center text-muted-foreground">El estudiante no ha definido su disponibilidad.</p>}
+                                            )) : <p className="text-center text-muted-foreground pt-10">El estudiante no ha definido su disponibilidad.</p>}
                                         </ul>
                                     </ScrollArea>
                                 </CardContent>
