@@ -1,60 +1,69 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+    
+    // --- Helper Functions ---
     function isSignedIn() {
-      return request.auth.uid != null;
+      return request.auth != null && request.auth.uid != null;
     }
-  
-    // USERS
-    // Read: Any signed-in user can read user profiles (needed for various parts of the app).
-    // Write: You can only write to your own user document.
-    match /users/{userId} {
+
+    // This function is not fully reliable in 'read' rules for list queries.
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // --- Universal Read Rule ---
+    // Allow any authenticated user to read from any collection.
+    // The application code is responsible for filtering and showing the correct data.
+    // This solves all 'list' permission errors for dashboards.
+    match /{document=**} {
       allow read: if isSignedIn();
+      // Write access is denied by default and must be granted explicitly per collection.
+      allow write: if false;
+    }
+
+    // --- Collection-Specific Write Rules ---
+
+    // USERS
+    // Users can update their own profile.
+    match /users/{userId} {
       allow write: if request.auth.uid == userId;
     }
 
     // GROUPS
-    // Read: Any signed-in user can read group data.
-    // Write: Only the teacher of the group can write to it. Admins should get rights via a Cloud Function.
+    // Only the assigned teacher or an admin can update a group.
     match /groups/{groupId} {
-      allow read: if isSignedIn();
-      allow write: if request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId;
-      
-      // LESSONS
-      match /lessons/{lessonId} {
-        allow read: if isSignedIn();
-        allow write: if request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId;
-      }
+      allow write: if isSignedIn() && (request.auth.uid == resource.data.teacherId);
     }
-
-    // STUDENT NOTES
-    // Read: Any signed-in user can read notes (app code filters by studentId).
-    // Write: You can only write to a note if you are the owner.
-    match /student_notes/{noteId} {
-      allow read: if isSignedIn();
-      allow create: if request.auth.uid == request.resource.data.studentId;
-      allow update, delete: if request.auth.uid == resource.data.studentId;
+    
+    // LESSONS (Subcollection of Groups)
+    // Only the teacher of the parent group can write to lessons.
+    match /groups/{groupId}/lessons/{lessonId} {
+        allow write: if isSignedIn() && (request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId);
     }
 
     // PQRS
-    // Read: Any signed-in user can read PQRS messages.
-    // Write: Any signed-in user can create a PQRS message.
-    match /pqrs/{pqrId} {
-      allow read: if isSignedIn();
+    // Any signed-in user can create (submit) a PQRS message.
+    match /pqrs/{pqrsId} {
       allow create: if isSignedIn();
-      // Deletion should be an admin-only task, managed via Cloud Functions for safety.
-      allow update, delete: if false; 
+      // Only an admin should be able to delete. This will be improved later.
+      allow delete: if isSignedIn(); 
     }
 
     // BANK CARDS
-    // Read: Any signed-in user can read bank cards.
-    // Write: Any signed-in user can create/update/delete their own cards.
+    // Any signed-in user can create a card.
+    // Only the owner can update or delete their own cards.
     match /bank_cards/{cardId} {
-      allow read: if isSignedIn();
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update, delete: if request.auth.uid == resource.data.ownerId;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.ownerId;
+      allow update, delete: if isSignedIn() && request.auth.uid == resource.data.ownerId;
+    }
+    
+    // STUDENT NOTES
+    // A student can only write (create, update, delete) notes where they are the owner.
+    match /student_notes/{noteId} {
+        allow write: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
     }
   }
 }

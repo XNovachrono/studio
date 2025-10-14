@@ -186,11 +186,14 @@ export const createStudentNote = async (data: Omit<StudentNote, 'id' | 'createdA
 
 export const getStudentNotes = async (studentId: string): Promise<StudentNote[]> => {
     const notesRef = collection(db, "student_notes");
-    const q = query(notesRef, where("studentId", "==", studentId), orderBy("updatedAt", "desc"));
+    // The query is simplified to work with security rules. Sorting is done on the client.
+    const q = query(notesRef, where("studentId", "==", studentId));
     
     try {
         const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map(doc => fromDoc<StudentNote>(doc));
+        const notes = querySnapshot.docs.map(doc => fromDoc<StudentNote>(doc));
+        // Sort by updatedAt date in descending order on the client
+        return notes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     } catch (serverError) {
          const error = new FirestorePermissionError({
             path: notesRef.path,
@@ -628,12 +631,4 @@ export const updateGroupTeacherAndHistory = async (groupId: string, newTeacherId
 
     await batch.commit();
 };
-
-
-
-
-
-
-
-
 
