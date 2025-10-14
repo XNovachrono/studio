@@ -945,8 +945,11 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
 
     const upcomingClasses = useMemo(() => {
         return (group.content?.scheduledClasses || [])
-            .map(c => ({ ...c, time: new Date(c.time as any) }))
-            .filter(c => !isBefore(c.time, new Date()))
+            .map(c => {
+                const time = new Date(c.time as any);
+                return { ...c, time };
+            })
+            .filter(c => c.time && !isNaN(c.time.getTime()) && !isBefore(c.time, new Date()))
             .sort((a,b) => a.time.getTime() - b.time.getTime());
     }, [group.content.scheduledClasses]);
 
