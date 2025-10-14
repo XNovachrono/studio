@@ -3,67 +3,45 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // --- Helper Functions ---
+
     function isSignedIn() {
-      return request.auth != null && request.auth.uid != null;
+      return request.auth != null;
     }
 
-    // This function is not fully reliable in 'read' rules for list queries.
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
-    // --- Universal Read Rule ---
-    // Allow any authenticated user to read from any collection.
-    // The application code is responsible for filtering and showing the correct data.
-    // This solves all 'list' permission errors for dashboards.
+    // Universal read access for any signed-in user.
+    // Security is enforced by strict write rules and application logic.
     match /{document=**} {
       allow read: if isSignedIn();
-      // Write access is denied by default and must be granted explicitly per collection.
-      allow write: if false;
     }
 
-    // --- Collection-Specific Write Rules ---
-
-    // USERS
-    // Users can update their own profile.
+    // Specific write rules per collection
     match /users/{userId} {
+      // A user can only write to their own document. Admins need a cloud function for elevated privileges.
       allow write: if request.auth.uid == userId;
     }
 
-    // GROUPS
-    // Only the assigned teacher or an admin can update a group.
     match /groups/{groupId} {
-      allow write: if isSignedIn() && (request.auth.uid == resource.data.teacherId);
-    }
-    
-    // LESSONS (Subcollection of Groups)
-    // Only the teacher of the parent group can write to lessons.
-    match /groups/{groupId}/lessons/{lessonId} {
-        allow write: if isSignedIn() && (request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId);
+      // The assigned teacher can write to the group.
+      allow write: if request.auth.uid == resource.data.teacherId || request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId;
     }
 
-    // PQRS
-    // Any signed-in user can create (submit) a PQRS message.
-    match /pqrs/{pqrsId} {
-      allow create: if isSignedIn();
-      // Only an admin should be able to delete. This will be improved later.
-      allow delete: if isSignedIn(); 
-    }
-
-    // BANK CARDS
-    // Any signed-in user can create a card.
-    // Only the owner can update or delete their own cards.
     match /bank_cards/{cardId} {
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.ownerId;
-      allow update, delete: if isSignedIn() && request.auth.uid == resource.data.ownerId;
+      // Any signed-in user can create a card, but only the owner can update or delete it.
+      allow create: if isSignedIn();
+      allow update, delete: if request.auth.uid == resource.data.ownerId;
     }
-    
-    // STUDENT NOTES
-    // A student can only write (create, update, delete) notes where they are the owner.
+
+    match /pqrs/{pqrsId} {
+      // Any signed-in user can create a PQRS message.
+      allow create: if isSignedIn();
+      // Deletion is not allowed by default from client for security/auditing.
+    }
+
     match /student_notes/{noteId} {
-        allow write: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
+      // A user can create/update a note if the studentId in the new data is their own UID.
+      allow create, update: if request.auth.uid == request.resource.data.studentId;
+      // A user can delete a note if the studentId in the *existing* document is their own UID.
+      allow delete: if request.auth.uid == resource.data.studentId;
     }
   }
 }
