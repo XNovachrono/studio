@@ -209,9 +209,14 @@ const symbols = [
 const fontSizes = [ '12px', '14px', '16px', '18px', '24px', '30px', '36px'];
 const fontFamilies = [
     { name: 'Inter', value: 'Inter, sans-serif' },
+    { name: 'Arial', value: 'Arial, sans-serif' },
     { name: 'Lato', value: 'Lato, sans-serif' },
+    { name: 'Times New Roman', value: '"Times New Roman", serif' },
     { name: 'Montserrat', value: 'Montserrat, sans-serif' },
-    { name: 'Roboto Slab', value: '"Roboto Slab", serif' }
+    { name: 'Roboto Slab', value: '"Roboto Slab", serif' },
+    { name: 'Poppins', value: 'Poppins, sans-serif' },
+    { name: 'Merriweather', value: 'Merriweather, serif' },
+    { name: 'Oswald', value: 'Oswald, sans-serif' },
 ];
 
 const SymbolPicker = ({ editor }: { editor: TiptapEditor }) => {
@@ -856,3 +861,5 @@ export function Editor({
     </div>
   );
 }
+
+    
