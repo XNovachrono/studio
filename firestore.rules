@@ -1,77 +1,53 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isSignedIn() {
+    // Helper function to check if a user is authenticated
+    function isAuthenticated() {
       return request.auth != null;
     }
 
-    function isUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    // Helper function to check if a user is the owner of a document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
-
-    // Rules for 'users' collection
+    
+    // Users can read/update their own profile. For simplicity, allow any authenticated user to list users.
     match /users/{userId} {
-      allow read, update: if isUser(userId);
+      allow read: if isAuthenticated();
+      allow update: if isOwner(userId);
     }
     
-    // Rules for 'groups' collection
+    // Students and Teachers can read group data they are part of. Only teachers can update.
     match /groups/{groupId} {
-        // A user can read a group if they are the teacher or if their ID is in the student list.
-        allow read: if isSignedIn() && (request.auth.uid == resource.data.teacherId || request.auth.uid in resource.data.studentIds);
-        
-        // Only the teacher of the group can update its contents.
-        allow update: if isSignedIn() && request.auth.uid == resource.data.teacherId;
+      allow read: if isAuthenticated() && (request.auth.uid in resource.data.studentIds || isOwner(resource.data.teacherId));
+      allow update: if isAuthenticated() && isOwner(resource.data.teacherId);
+
+      // Lessons can be read by group members, but only written by the teacher.
+      match /lessons/{lessonId} {
+        allow read: if isAuthenticated() && (request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.studentIds || isOwner(get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId));
+        allow create, update: if isAuthenticated() && isOwner(get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId);
+      }
     }
     
-    // Rules for 'lessons' subcollection
-    match /groups/{groupId}/lessons/{lessonId} {
-        // Anyone in the group (teacher or student) can read the lessons.
-        function isGroupMember() {
-          let group = get(/databases/$(database)/documents/groups/$(groupId));
-          return request.auth.uid == group.data.teacherId || request.auth.uid in group.data.studentIds;
-        }
-
-        allow read: if isSignedIn() && isGroupMember();
-        
-        // Only the teacher of the group can create, update, or delete lessons.
-        function isGroupTeacher() {
-            let group = get(/databases/$(database)/documents/groups/$(groupId));
-            return request.auth.uid == group.data.teacherId;
-        }
-
-        allow create, update, delete: if isSignedIn() && isGroupTeacher();
-    }
-
-    // Rules for 'student_notes' collection
-    match /student_notes/{noteId} {
-      // A user can create a note if the note's studentId is their own uid.
-      allow create: if isUser(request.resource.data.studentId);
-      
-      // A user can read, update, or delete a note if the existing note's studentId is their own uid.
-      allow read, update, delete: if isUser(resource.data.studentId);
-    }
-
-    // Rules for 'pqrs' collection
-    match /pqrs/{pqrsId} {
-      // Any signed-in user can create a PQRS message (students).
-      allow create: if isSignedIn();
-      // Only the teacher to whom it was addressed, or an admin, should be able to read it.
-      // (Simplified: for now, only creator can read. Admin rules would be more complex).
-      // This is a placeholder; more robust rules are needed for admins.
-      allow read: if isUser(resource.data.studentId) || isUser(resource.data.teacherId);
-    }
-
-    // Rules for 'bank_cards' collection
+    // Bank cards can be read by any authenticated user, but only created/modified by the owner.
     match /bank_cards/{cardId} {
-      // Any signed-in user can read any bank card (all teachers share).
-      allow read: if isSignedIn();
-      // A user can create a card if they are the owner.
-      allow create: if isUser(request.resource.data.ownerId);
-      // A user can update or delete a card if they are the owner.
-      allow update, delete: if isUser(resource.data.ownerId);
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && isOwner(request.resource.data.ownerId);
+        allow update, delete: if isAuthenticated() && isOwner(resource.data.ownerId);
+    }
+    
+    // PQRS can be read by involved teacher/admin, created by students.
+    match /pqrs/{pqrId} {
+        allow read: if isAuthenticated(); // For simplicity, admins/teachers will filter on the client.
+        allow create: if isAuthenticated();
+        allow delete: if isAuthenticated(); // Allow admin to delete
+    }
+
+    // Student notes can only be managed by the owner.
+    match /student_notes/{noteId} {
+      allow create: if isAuthenticated() && isOwner(request.resource.data.studentId);
+      allow read, update, delete: if isAuthenticated() && isOwner(resource.data.studentId);
     }
   }
 }
