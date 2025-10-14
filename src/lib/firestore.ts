@@ -86,7 +86,17 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
 // Function to update a user profile (used in onboarding and by admin)
 export const updateUserProfile = async (userId: string, data: Partial<StudentProfile | User>): Promise<void> => {
     const userDocRef = doc(db, "users", userId);
-    await updateDoc(userDocRef, data);
+    try {
+        await updateDoc(userDocRef, data);
+    } catch (serverError) {
+        const error = new FirestorePermissionError({
+            path: userDocRef.path,
+            operation: 'update',
+            requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 }
 
 
@@ -599,5 +609,6 @@ export const updateGroupTeacherAndHistory = async (groupId: string, newTeacherId
 
     await batch.commit();
 };
+
 
 
