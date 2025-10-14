@@ -2,39 +2,46 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+
     function isSignedIn() {
-      return request.auth != null;
+      return request.auth.uid != null;
     }
 
     match /users/{userId} {
+      // Any authenticated user can read user profiles.
+      // The application code is responsible for filtering what is displayed.
       allow read: if isSignedIn();
+
+      // A user can only write to their own profile.
+      // Admin write access should be handled via a secure backend (e.g., Cloud Functions).
       allow write: if request.auth.uid == userId;
     }
 
     match /groups/{groupId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn(); // Simplified: logic is in backend. Admins/teachers can write.
-    }
-    
-    match /groups/{groupId}/lessons/{lessonId} {
-        allow read, write: if isSignedIn(); // Simplified: Teachers/admins need this.
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
     }
 
+    match /groups/{groupId}/lessons/{lessonId} {
+      allow read: if isSignedIn();
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+    
     match /student_notes/{noteId} {
       allow read: if isSignedIn();
-      allow write: if request.resource.data.studentId == request.auth.uid;
+      // Only the owner of the note can create, update, or delete it.
+      allow write: if request.auth.uid == request.resource.data.studentId;
     }
 
     match /pqrs/{pqrsId} {
       allow read: if isSignedIn();
-      allow create: if request.resource.data.studentId == request.auth.uid;
-      allow delete: if isSignedIn(); // Simplified for admin
+      allow create: if isSignedIn();
+      allow delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
-
+    
     match /bank_cards/{cardId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn(); // Teachers and admins can write
+        allow read: if isSignedIn();
+        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
     }
   }
 }
