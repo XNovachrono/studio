@@ -256,11 +256,14 @@ export const deletePQRSMessage = async (messageId: string): Promise<void> => {
 
 export const getUsersInRole = async (role: UserRole): Promise<User[]> => {
     const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('role', '==', role));
     try {
-        const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
+        // Fetch all users first
+        const querySnapshot = await getDocs(usersRef);
+        const allUsers = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
+        // Filter by role on the client side
+        return allUsers.filter(user => user.role === role);
     } catch (serverError) {
+        console.error("Firestore error in getUsersInRole: ", serverError);
         const error = new FirestorePermissionError({
             path: usersRef.path,
             operation: 'list'
@@ -625,6 +628,7 @@ export const updateGroupTeacherAndHistory = async (groupId: string, newTeacherId
 
     await batch.commit();
 };
+
 
 
 
