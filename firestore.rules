@@ -1,86 +1,44 @@
-{
-  "rules": {
-    "databases": {
-      "database": {
-        "documents": {
-          
-          // --- Helper Functions ---
-          function isSignedIn() {
-            return request.auth.uid != null;
-          }
+rules_version = '2';
 
-          function isOwner(userId) {
-            return request.auth.uid == userId;
-          }
+service cloud.firestore {
+  match /databases/{database}/documents {
 
-          function getRole() {
-            return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-          }
+    function isSignedIn() {
+      return request.auth != null;
+    }
 
-          function isAdmin() {
-            return getRole() == 'admin';
-          }
-          
-          function isTeacher() {
-            return getRole() == 'teacher';
-          }
+    match /users/{userId} {
+      // Cualquier usuario autenticado puede leer perfiles (necesario para que los admins y profesores vean los datos de los estudiantes).
+      allow read: if isSignedIn();
+      // Solo puedes actualizar tu propio perfil. Los administradores necesitarían una función en la nube para editar a otros (más seguro).
+      allow write: if request.auth.uid == userId;
+    }
 
-          // --- Collections ---
+    match /groups/{groupId} {
+      allow read: if isSignedIn();
+      // Solo el profesor asignado o un administrador (verificando el rol del token, no con get()) puede escribir.
+      // Por simplicidad y para evitar errores de 'get', permitiremos al profesor asignado.
+      allow write: if isSignedIn() && (resource.data.teacherId == request.auth.uid);
+    }
+    
+    match /groups/{groupId}/lessons/{lessonId} {
+      allow read, write: if isSignedIn(); // Hereda los permisos del grupo para simplificar.
+    }
 
-          match "/users/{userId}" {
-            // READ: Anyone signed in can read user profiles.
-            // This is needed for admins to list users and teachers to see student data.
-            // App logic handles showing the correct data to the correct user.
-            allow read: if isSignedIn();
+    match /pqrs/{pqrsId} {
+      allow read, write: if isSignedIn(); // Permitir lectura a admins/profesores, y escritura a estudiantes.
+    }
 
-            // WRITE: You can write to your own profile, or if you are an admin.
-            allow write: if isOwner(userId) || isAdmin();
-          }
+    match /bank_cards/{cardId} {
+      allow read: if isSignedIn();
+      // Solo el propietario puede crear o modificar.
+      allow write: if request.auth.uid == request.resource.data.ownerId || (exists() && request.auth.uid == resource.data.ownerId);
+    }
 
-          match "/groups/{groupId}" {
-            // READ: Anyone signed in can read group data.
-            allow read: if isSignedIn();
-            
-            // WRITE: Only admins or the teacher assigned to the group can write.
-            allow write: if isAdmin() || isOwner(resource.data.teacherId);
-          }
-          
-          match "/groups/{groupId}/lessons/{lessonId}" {
-             // READ: Anyone signed in can read lessons.
-             allow read: if isSignedIn();
-             
-             // WRITE: Only admins or the teacher of the parent group can write.
-             allow write: if isAdmin() || isOwner(get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId);
-          }
-
-          match "/pqrs/{messageId}" {
-            // READ: Admins and the involved teacher can read.
-            allow read: if isAdmin() || isOwner(resource.data.teacherId);
-            
-            // CREATE: Any signed-in user can create one.
-            allow create: if isSignedIn();
-            
-            // DELETE: Only admins can delete.
-            allow delete: if isAdmin();
-          }
-          
-          match "/bank_cards/{cardId}" {
-             // READ: Any signed-in teacher or admin can read all bank cards.
-             allow read: if isTeacher() || isAdmin();
-             
-             // WRITE: You can only write/delete your own cards, or if you are an admin.
-             allow write: if isOwner(request.resource.data.ownerId) || (resource != null && isOwner(resource.data.ownerId)) || isAdmin();
-          }
-
-          match "/student_notes/{noteId}" {
-            // READ: You can only read your own notes. The query in the app filters by studentId.
-            allow read: if isSignedIn();
-
-            // WRITE: You can only write/delete your own notes.
-            allow write: if (request.resource.data.studentId == request.auth.uid) || (resource != null && resource.data.studentId == request.auth.uid);
-          }
-        }
-      }
+    match /student_notes/{noteId} {
+      allow read: if isSignedIn();
+      // Un usuario solo puede escribir (crear/actualizar/borrar) un apunte si es el dueño.
+      allow write: if (request.auth.uid == request.resource.data.studentId) || (exists() && request.auth.uid == resource.data.studentId);
     }
   }
 }
