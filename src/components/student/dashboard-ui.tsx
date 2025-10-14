@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "../ui/button";
 import { Editor } from "../common/editor";
-import { format, parse, parseISO, isSameDay, getWeek, isFuture } from "date-fns";
+import { format, parse, parseISO, isSameDay, getWeek, isFuture, isBefore, subWeeks, startOfToday } from "date-fns";
 import { es } from "date-fns/locale";
 import { PqrsDialog } from "./pqrs-dialog";
 import { Avatar, AvatarFallback } from "../ui/avatar";
@@ -42,6 +42,18 @@ const CalendarDialog = ({ user, onOpenChange, isOpen }: { user: StudentProfile, 
     const { toast } = useToast();
     const [slots, setSlots] = useState(user.scheduledSlots || []);
     const maxClassesPerWeek = user.classesPerWeek || 1;
+
+    // Filter out old slots every time the component opens/updates
+    useEffect(() => {
+        if (isOpen) {
+            const oneWeekAgo = subWeeks(startOfToday(), 1);
+            const futureSlots = (user.scheduledSlots || []).filter(slot => 
+                !isBefore(parseISO(slot.date), oneWeekAgo)
+            );
+            setSlots(futureSlots);
+        }
+    }, [isOpen, user.scheduledSlots]);
+
 
     const selectedDates = useMemo(() => slots.map(s => parseISO(s.date)), [slots]);
 
@@ -86,6 +98,10 @@ const CalendarDialog = ({ user, onOpenChange, isOpen }: { user: StudentProfile, 
         }
     };
     
+    // Show only the next 3 upcoming slots
+    const upcomingSlots = slots.filter(s => isFuture(parseISO(s.date)) || isSameDay(parseISO(s.date), new Date())).slice(0, 3);
+
+
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl">
@@ -99,7 +115,7 @@ const CalendarDialog = ({ user, onOpenChange, isOpen }: { user: StudentProfile, 
                         selected={selectedDates}
                         onDayClick={handleDayClick}
                         className="rounded-md border self-start"
-                        disabled={(date) => !isFuture(date) && !isSameDay(date, new Date())}
+                        disabled={(date) => isBefore(date, startOfToday())}
                     />
                     <div className="space-y-4">
                         <Card>
@@ -113,7 +129,7 @@ const CalendarDialog = ({ user, onOpenChange, isOpen }: { user: StudentProfile, 
                         <h3 className="font-semibold text-lg">Horarios Seleccionados</h3>
                         <ScrollArea className="h-60">
                             <div className="space-y-3 pr-4">
-                                {slots.length > 0 ? slots.map(slot => (
+                                {upcomingSlots.length > 0 ? upcomingSlots.map(slot => (
                                      <div key={slot.date} className="flex items-center justify-between gap-4 p-2 rounded-md bg-secondary/50">
                                         <span className="font-medium">{format(parseISO(slot.date), "PPP", { locale: es })}</span>
                                         <Input 
