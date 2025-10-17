@@ -18,11 +18,24 @@ const fromDoc = <T extends { createdAt: any, updatedAt?: any }>(doc: any): T => 
     const result: any = {
         id: doc.id,
         ...data,
-        createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
     };
-    if (data.updatedAt) {
-        result.updatedAt = (data.updatedAt as Timestamp).toDate().toISOString();
+
+    if (data.createdAt) {
+        if (data.createdAt.toDate) { // It's a Timestamp, convert it
+            result.createdAt = (data.createdAt as Timestamp).toDate().toISOString();
+        } else { // It's already a string or something else
+            result.createdAt = data.createdAt;
+        }
     }
+    
+    if (data.updatedAt) {
+        if (data.updatedAt.toDate) { // It's a Timestamp, convert it
+            result.updatedAt = (data.updatedAt as Timestamp).toDate().toISOString();
+        } else { // It's already a string or something else
+            result.updatedAt = data.updatedAt;
+        }
+    }
+    
     return result as T;
 };
 
@@ -65,22 +78,31 @@ const pqrsFromDoc = (doc: any): PQRSMessage => {
 // Function to get a user profile
 export const getUserProfile = async (userId: string): Promise<User | null> => {
     const userDocRef = doc(db, "users", userId);
-    const userDocSnap = await getDoc(userDocRef);
+    try {
+        const userDocSnap = await getDoc(userDocRef);
 
-    if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
-        // Convert Timestamps for teacherInteractions
-        if (userData.teacherInteractions) {
-            userData.teacherInteractions = userData.teacherInteractions.map((interaction: any) => ({
-                ...interaction,
-                lastInteraction: interaction.lastInteraction instanceof Timestamp 
-                    ? interaction.lastInteraction.toDate().toISOString() 
-                    : interaction.lastInteraction,
-            }));
+        if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            // Convert Timestamps for teacherInteractions
+            if (userData.teacherInteractions) {
+                userData.teacherInteractions = userData.teacherInteractions.map((interaction: any) => ({
+                    ...interaction,
+                    lastInteraction: interaction.lastInteraction instanceof Timestamp 
+                        ? interaction.lastInteraction.toDate().toISOString() 
+                        : interaction.lastInteraction,
+                }));
+            }
+            return { id: userDocSnap.id, ...userData } as User;
         }
-        return { id: userDocSnap.id, ...userData } as User;
+        return null;
+    } catch (serverError) {
+         const error = new FirestorePermissionError({
+            path: userDocRef.path,
+            operation: 'get',
+        });
+        errorEmitter.emit('permission-error', error);
+        throw error; // Re-throw the rich error
     }
-    return null;
 }
 
 // Function to update a user profile (used in onboarding and by admin)
