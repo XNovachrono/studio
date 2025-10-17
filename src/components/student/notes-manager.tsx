@@ -252,6 +252,8 @@ export function StudentNotesManager({ isOpen, onOpenChange, student, lessons }: 
                                 content={editingNote?.content || defaultContent}
                                 onChange={content => setEditingNote(prev => ({ ...prev!, content }))}
                                 editable
+                                placeholder="Escribe tu apunte aquí..."
+                                withAiTools
                             />
                         </div>
                     </div>

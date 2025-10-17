@@ -526,7 +526,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     }, [group.id, onLessonCreated]);
 
     const handleSaveLesson = async () => {
-      if (!selectedLesson || activeModal === null || currentEditingContent === null) return;
+      if (!selectedLesson || activeModal === null) return;
       
       const lessonId = selectedLesson.id;
       const dataToUpdate: Partial<Lesson> = {};
@@ -535,7 +535,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
           dataToUpdate['comments'] = currentEditingContent as EditorContent;
           dataToUpdate['studentComments'] = currentEditingComments;
       } else if (activeModal !== 'attendance' && activeModal !== 'objective') {
-          dataToUpdate[activeModal] = currentEditingContent;
+          dataToUpdate[activeModal as 'classNote' | 'homework' | 'content'] = currentEditingContent;
       }
 
       if (Object.keys(dataToUpdate).length === 0) {
@@ -666,6 +666,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                         content={selectedLesson.content}
                         onChange={() => {}}
                         editable={false}
+                        placeholder={t.placeholders.objective}
                     />
                 );
             case 'classNote':
