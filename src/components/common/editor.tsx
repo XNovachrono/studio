@@ -836,35 +836,35 @@ export function Editor({
     }
   }
 
+  const handleCancelAI = () => {
+    setAiState('idle');
+    setPrompt('');
+    editor?.chain().focus().run();
+  };
+
   const handleAccept = () => {
-    editor?.chain().focus().setContent(aiGeneratedContent, true).run();
-    onChange(editor?.getJSON());
+    editor?.chain().focus().insertContent(aiGeneratedContent).run();
     setAiGeneratedContent('');
     setAiState('idle');
     setPrompt('');
   };
 
   const handleModify = () => {
-    editor?.chain().focus().setContent(aiGeneratedContent, true).run();
+    editor?.chain().focus().insertContent(aiGeneratedContent).run();
     setAiGeneratedContent('');
     setAiState('idle');
     setPrompt('');
   };
     
-  if (!editable && isContentEmpty(content)) {
-    // This logic was flawed. Tiptap's Placeholder extension handles this.
-    // We render the editor anyway and let the extension do its job.
-  }
-
   return (
-    <div className={cn("w-full relative min-h-[150px] rounded-lg border bg-background p-4 flex flex-col justify-center")}>
+    <div className={cn("w-full relative min-h-[150px] rounded-lg border bg-background p-4 flex flex-col")}>
         {withAiTools && allowSideNotes && (
              <Button onClick={() => handleAddSideNote({ type: "doc", content: [{ type: "paragraph" }]})} size="sm" variant="ghost" className="absolute top-2 right-2 z-10 text-muted-foreground hover:text-foreground h-7 px-2">
                 <Pencil className="mr-2 h-4 w-4" />
                 Añadir Apunte
             </Button>
         )}
-         <div className="w-full h-full relative flex flex-col">
+         <div className="w-full h-full relative flex flex-col flex-grow">
             {withAiTools && <Toolbar editor={editor} onAskAI={localOnAskAI} onExplain={localOnExplain} />}
             <div className={cn("flex-grow relative", aiState === 'done' && 'hidden')}>
                  <EditorContent editor={editor} className={"h-full"}/>
@@ -888,7 +888,7 @@ export function Editor({
                          {aiState === 'loading' ? (
                             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/>
                          ) : (
-                            <Button variant="ghost" size="icon" onClick={() => { setAiState('idle'); editor?.commands.clearContent(); } }><X/></Button>
+                            <Button variant="ghost" size="icon" onClick={handleCancelAI}><X/></Button>
                          )}
                     </motion.div>
                 )}
