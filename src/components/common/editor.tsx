@@ -695,10 +695,10 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
     });
 
     useEffect(() => {
-        if (editor) {
-            editor.setEditable(editable && aiState !== 'loading' && aiState !== 'streaming' && aiState !== 'done');
+        if (editor && editor.isEditable !== editable) {
+            editor.setEditable(editable);
         }
-    }, [editor, editable, aiState]);
+    }, [editor, editable]);
 
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
@@ -928,6 +928,12 @@ const NonEditableViewer = ({ content }: { content: any }) => {
         }
     });
 
+    useEffect(() => {
+        if(editor && content && JSON.stringify(editor.getJSON()) !== JSON.stringify(content)) {
+            editor.commands.setContent(content, false);
+        }
+    }, [content, editor]);
+
     return (
         <div className="max-h-[60vh] overflow-auto">
             <EditorContent editor={editor} />
@@ -1000,9 +1006,6 @@ export function Editor({
   const handleEditorChange = (newContent: any) => {
     onChange(newContent);
     if (isContentEmpty(newContent)) {
-      // Temporarily set isEditing to false if the editor is cleared
-      // but only if AI is not active. This prevents the placeholder from
-      // showing up while the AI is generating content.
       if (aiState === 'idle') {
         setIsEditing(false);
       }
@@ -1075,5 +1078,5 @@ export function Editor({
     </div>
   );
 }
-    
 
+    

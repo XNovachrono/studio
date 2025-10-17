@@ -1354,8 +1354,9 @@ export function TeacherDashboardUI() {
   }, []);
 
   const studentsById = useMemo(() => {
-    const allStudents = data?.groups.flatMap(g => g.studentsInfo || []) || [];
-    return new Map(allStudents.filter(s => s).map(s => [s.id, s as StudentProfile]));
+    if (!data?.groups) return new Map();
+    const allStudents = data.groups.flatMap(g => g.studentsInfo || []);
+    return new Map(allStudents.filter(Boolean).map(s => [s.id, s as StudentProfile]));
   }, [data?.groups]);
 
   const privateGroups = useMemo(() => data?.groups.filter(g => g.type === 'privado') || [], [data?.groups]);
@@ -1451,3 +1452,5 @@ export function TeacherDashboardUI() {
     </>
   );
 }
+
+    
