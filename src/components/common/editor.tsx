@@ -827,6 +827,32 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
     );
 }
 
+// Wrapper to use the full Editor inside FloatingNote
+const FloatingEditorWrapper = ({ content, onChange, placeholder }: any) => {
+    const [aiState, setAiState] = useState<'idle' | 'prompting' | 'loading' | 'streaming' | 'done'>('idle');
+    const [prompt, setPrompt] = useState('');
+    const [aiGeneratedContent, setAiGeneratedContent] = useState('');
+    
+    return (
+         <EditorInstance 
+            content={content}
+            onChange={onChange}
+            editable={true}
+            placeholder={placeholder}
+            aiState={aiState}
+            setAiState={setAiState}
+            prompt={prompt}
+            setPrompt={setPrompt}
+            aiGeneratedContent={aiGeneratedContent}
+            setAiGeneratedContent={setAiGeneratedContent}
+            withAiTools={true}
+            onAskAI={() => {}} // Floating notes don't trigger more notes
+            onExplain={() => {}}
+            isFloating={true}
+        />
+    )
+}
+
 const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }: any) => {
     const constraintsRef = useRef(null);
     const [size, setSize] = useState({ width: 350, height: 400 });
@@ -865,12 +891,10 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
                             dangerouslySetInnerHTML={{ __html: initialContent }}
                         />
                     ) : (
-                        <Editor
+                        <FloatingEditorWrapper
                             content={initialContent || { type: 'doc', content: [] }}
                             onChange={onUpdate}
-                            editable
                             placeholder="Nuevo apunte..."
-                            withAiTools
                         />
                     )}
                 </div>
@@ -889,6 +913,25 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
                 />
             </motion.div>
         </>
+    );
+};
+
+const NonEditableViewer = ({ content }: { content: any }) => {
+    const editor = useEditor({
+        extensions: [ StarterKit, Heading.configure({ levels: [1, 2, 3, 4] }).extend({ addAttributes() { return { ...this.parent?.(), id: { default: null, }, }; } }), Image, Video, Audio, Link, Underline, TextStyle, FontFamily, FontSize, Color, Highlight, Table.configure({ resizable: true }), TableRow, TableHeader, TableCell ],
+        content: content,
+        editable: false,
+        editorProps: {
+            attributes: {
+                class: "prose dark:prose-invert max-w-none focus:outline-none",
+            },
+        }
+    });
+
+    return (
+        <div className="max-h-[60vh] overflow-auto">
+            <EditorContent editor={editor} />
+        </div>
     );
 };
 
@@ -948,44 +991,22 @@ export function Editor({
     setAiGeneratedContent('');
   };
   
-    // When content is updated from outside and the editor is not being used, reflect the change.
-    useEffect(() => {
-        if (!isEditing && !isContentEmpty(content)) {
-            setIsEditing(true);
-        }
-    }, [content, isEditing]);
-
-  if (!editable) {
-     const nonEditableEditor = useEditor({
-        extensions: [ StarterKit, Heading.configure({ levels: [1, 2, 3, 4] }).extend({ addAttributes() { return { ...this.parent?.(), id: { default: null, }, }; } }), Image, Video, Audio, Link, Underline, TextStyle, FontFamily, FontSize, Color, Highlight, Table.configure({ resizable: true }), TableRow, TableHeader, TableCell ],
-        content: content,
-        editable: false,
-        editorProps: {
-            attributes: {
-                class: "prose dark:prose-invert max-w-none focus:outline-none",
-            },
-        }
-     });
-     return <div className="max-h-[60vh] overflow-auto">
-        <EditorContent editor={nonEditableEditor} />
-     </div>
-  }
+  useEffect(() => {
+    if (!isEditing && !isContentEmpty(content)) {
+        setIsEditing(true);
+    }
+  }, [content, isEditing]);
 
   const handleEditorChange = (newContent: any) => {
     onChange(newContent);
-    // When the main editor is completely empty, go back to placeholder view
     if (isContentEmpty(newContent)) {
       setIsEditing(false);
     }
   };
 
-  // If we are showing the placeholder, but the content is not empty (e.g. loaded from db), switch to editing
-  useEffect(() => {
-      if (!isEditing && !isContentEmpty(content)) {
-          setIsEditing(true);
-      }
-  }, [content, isEditing]);
-
+  if (!editable) {
+    return <NonEditableViewer content={content} />;
+  }
 
   return (
     <div className="flex gap-4">
@@ -1048,30 +1069,6 @@ export function Editor({
   );
 }
 
-// Wrapper to use the full Editor inside FloatingNote
-const FloatingEditorWrapper = ({ content, onChange, placeholder }: any) => {
-    const [aiState, setAiState] = useState<'idle' | 'prompting' | 'loading' | 'streaming' | 'done'>('idle');
-    const [prompt, setPrompt] = useState('');
-    const [aiGeneratedContent, setAiGeneratedContent] = useState('');
     
-    return (
-         <EditorInstance 
-            content={content}
-            onChange={onChange}
-            editable={true}
-            placeholder={placeholder}
-            aiState={aiState}
-            setAiState={setAiState}
-            prompt={prompt}
-            setPrompt={setPrompt}
-            aiGeneratedContent={aiGeneratedContent}
-            setAiGeneratedContent={setAiGeneratedContent}
-            withAiTools={true}
-            onAskAI={() => {}} // Floating notes don't trigger more notes
-            onExplain={() => {}}
-            isFloating={true}
-        />
-    )
-}
 
     
