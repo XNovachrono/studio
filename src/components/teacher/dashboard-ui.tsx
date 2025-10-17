@@ -491,17 +491,19 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     const t = translations.teacherDashboard.lessons;
     const t_toast = translations.teacherDashboard.toasts;
     const { toast } = useToast();
+    
     const [isSaving, setIsSaving] = useState<string | null>(null);
     const [isBankImporterOpen, setBankImporterOpen] = useState(false);
     const [isFileBankImporterOpen, setFileBankImporterOpen] = useState(false);
-    const [activeLessonIdForImport, setActiveLessonIdForImport] = useState<string | null>(null);
-    const [activeFieldForImport, setActiveFieldForImport] = useState<keyof Lesson | null>(null);
-    const [activeModal, setActiveModal] = useState<ModalType>(null);
-    const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
-
-
-    const [editedContent, setEditedContent] = useState<Record<string, Partial<Lesson>>>({});
     
+    const [activeModal, setActiveModal] = useState<ModalType>(null);
+    const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+
+    // State for the content being edited in the modal
+    const [currentEditingContent, setCurrentEditingContent] = useState<EditorContent | string | null>(null);
+    const [currentEditingComments, setCurrentEditingComments] = useState<Record<string, EditorContent>>({});
+
+
     const groupMembers = useMemo(() => group.studentsInfo || [], [group.studentsInfo]);
 
     const fetchLessons = async () => {
@@ -523,20 +525,30 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
         fetchLessons();
     }, [group.id, onLessonCreated]);
 
-    const handleSaveLesson = async (lessonId: string) => {
-      if (!editedContent[lessonId]) return;
+    const handleSaveLesson = async () => {
+      if (!selectedLesson || activeModal === null || currentEditingContent === null) return;
+      
+      const lessonId = selectedLesson.id;
+      const dataToUpdate: Partial<Lesson> = {};
+
+      if (activeModal === 'comments') {
+          dataToUpdate['comments'] = currentEditingContent as EditorContent;
+          dataToUpdate['studentComments'] = currentEditingComments;
+      } else if (activeModal !== 'attendance' && activeModal !== 'objective') {
+          dataToUpdate[activeModal] = currentEditingContent;
+      }
+
+      if (Object.keys(dataToUpdate).length === 0) {
+        setActiveModal(null);
+        return;
+      }
+
       setIsSaving(lessonId);
       try {
-        await updateLesson(group.id, lessonId, editedContent[lessonId]);
+        await updateLesson(group.id, lessonId, dataToUpdate);
         toast({ title: t_toast.lessonSavedTitle, description: t_toast.lessonSavedDescription });
-        
-        setLessons(prev => prev.map(l => l.id === lessonId ? {...l, ...editedContent[lessonId]} : l));
-        setEditedContent(prev => {
-            const newState = {...prev};
-            delete newState[lessonId];
-            return newState;
-        });
-
+        // Optimistically update local state
+        setLessons(prev => prev.map(l => l.id === lessonId ? {...l, ...dataToUpdate} : l));
       } catch(error) {
         console.error("Error saving lesson:", error);
         toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.saveLessonError });
@@ -546,41 +558,26 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
       }
     };
     
-    const handleOpenModal = (lessonId: string, modalType: ModalType) => {
-        setSelectedLessonId(lessonId);
+    const handleOpenModal = (lesson: Lesson, modalType: ModalType) => {
+        setSelectedLesson(lesson);
         setActiveModal(modalType);
+
+        if (modalType === 'comments') {
+            setCurrentEditingContent(lesson.comments);
+            setCurrentEditingComments(lesson.studentComments || {});
+        } else if (modalType && modalType !== 'attendance' && modalType !== 'objective') {
+            setCurrentEditingContent(lesson[modalType as keyof Lesson] as EditorContent);
+        } else {
+             setCurrentEditingContent(null);
+        }
     }
 
-    const handleContentChange = (lessonId: string, field: keyof Lesson, value: any) => {
-        setEditedContent(prev => ({
-            ...prev,
-            [lessonId]: {
-                ...prev[lessonId],
-                [field]: value
-            }
-        }));
-    };
-    
-    const handleStudentCommentChange = (lessonId: string, studentId: string, value: EditorContent) => {
-        const currentLesson = lessons.find(l => l.id === lessonId);
-        if (!currentLesson) return;
-        const currentComments = editedContent[lessonId]?.studentComments || currentLesson.studentComments || {};
-        const newComments = { ...currentComments, [studentId]: value };
-        handleContentChange(lessonId, 'studentComments', newComments);
-    };
-
     const handleAttendanceChange = (lessonId: string, studentId: string, status: AttendanceStatus ) => {
-        const currentLesson = lessons.find(l => l.id === lessonId);
-        if (!currentLesson) return;
+        const lesson = lessons.find(l => l.id === lessonId);
+        if (!lesson) return;
         
-        const currentAttendance = editedContent[lessonId]?.attendance || currentLesson.attendance || {};
-        const newAttendance = {
-            ...currentAttendance,
-            [studentId]: status,
-        };
-        handleContentChange(lessonId, 'attendance', newAttendance);
+        const newAttendance = { ...lesson.attendance, [studentId]: status };
         
-        // Also save immediately for quick attendance updates
         setIsSaving(lessonId);
          updateLesson(group.id, lessonId, { attendance: newAttendance }).then(() => {
             setLessons(prev => prev.map(l => l.id === lessonId ? {...l, attendance: newAttendance } : l));
@@ -592,31 +589,21 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
         });
     };
     
-    const handleOpenBankImporter = (lessonId: string, field: 'homework') => {
-        setActiveLessonIdForImport(lessonId);
-        setActiveFieldForImport(field);
+    const handleOpenBankImporter = () => {
         setBankImporterOpen(true);
     };
     
-    const handleOpenFileBankImporter = (lessonId: string) => {
-        setActiveLessonIdForImport(lessonId);
+    const handleOpenFileBankImporter = () => {
         setFileBankImporterOpen(true);
     };
 
     const handleImportFromBank = (content: EditorContent) => {
-        if (activeLessonIdForImport && activeFieldForImport) {
-            handleContentChange(activeLessonIdForImport, activeFieldForImport, content);
-        }
+        setCurrentEditingContent(content);
     };
     
     const handleImportFileFromBank = (file: BankCard) => {
-        if (!activeLessonIdForImport) return;
+        if (!selectedLesson || !currentEditingContent || typeof currentEditingContent === 'string') return;
 
-        const lesson = lessons.find(l => l.id === activeLessonIdForImport);
-        if (!lesson) return;
-
-        const currentEditorContent = editedContent[activeLessonIdForImport]?.homework || lesson.homework;
-        
         let fileNode;
         if (file.type === 'image') {
             fileNode = { type: 'image', attrs: { src: file.fileUrl, alt: file.name } };
@@ -628,10 +615,10 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
 
         if (fileNode) {
             const newContent: EditorContent = {
-                ...currentEditorContent,
-                content: [...(currentEditorContent.content || []), { type: 'paragraph' }, fileNode],
+                ...currentEditingContent,
+                content: [...(currentEditingContent.content || []), { type: 'paragraph' }, fileNode],
             };
-            handleContentChange(activeLessonIdForImport, 'homework', newContent);
+            setCurrentEditingContent(newContent);
         }
         setFileBankImporterOpen(false);
     };
@@ -654,11 +641,9 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
             </Alert>
         );
     }
-
-    const selectedLesson = lessons.find(l => l.id === selectedLessonId);
     
      const renderModalContent = () => {
-        if (!selectedLesson) return null;
+        if (!selectedLesson || !activeModal) return null;
         
         const isClassTimeValid = !!selectedLesson.scheduledTime;
         
@@ -668,37 +653,26 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
             if (typeof timeVal === 'string') {
                  classStartTime = parseISO(timeVal);
             } else {
-                // It might already be a Date object if it came from state, though Firestore returns strings/timestamps
                 classStartTime = timeVal as Date;
             }
         }
 
-        const attendanceForStudent = (studentId: string): AttendanceStatus => {
-            const editedAttendance = editedContent[selectedLessonId!]?.attendance;
-            if (editedAttendance && editedAttendance[studentId] !== undefined) {
-                return editedAttendance[studentId];
-            }
-            return selectedLesson.attendance?.[studentId] ?? 'ausente';
-        }
-
-        const contentForField = (field: keyof Lesson) => {
-            return editedContent[selectedLesson.id]?.[field] ?? selectedLesson[field];
-        }
+        const attendanceForStudent = (studentId: string): AttendanceStatus => selectedLesson.attendance?.[studentId] ?? 'ausente';
         
         switch(activeModal) {
             case 'objective':
                 return (
                     <Editor
-                        content={contentForField('content')}
-                        onChange={(newContent) => handleContentChange(selectedLesson.id, 'content', newContent)}
+                        content={selectedLesson.content}
+                        onChange={() => {}}
                         editable={false}
                     />
                 );
             case 'classNote':
                  return (
                      <Editor
-                        content={contentForField('classNote')}
-                        onChange={(newContent) => handleContentChange(selectedLesson.id, 'classNote', newContent)}
+                        content={currentEditingContent as EditorContent}
+                        onChange={setCurrentEditingContent}
                         editable
                         placeholder={t.placeholders.classNote}
                         initialHint={t.placeholders.classNote}
@@ -709,18 +683,18 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                  return (
                     <>
                         <div className="flex gap-2 mb-4">
-                            <Button size="sm" variant="outline" onClick={() => handleOpenBankImporter(selectedLesson.id, 'homework')}>
+                            <Button size="sm" variant="outline" onClick={handleOpenBankImporter}>
                                 <Import className="mr-2 h-4 w-4" />
                                 {t.importFromBank}
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleOpenFileBankImporter(selectedLesson.id)}>
+                            <Button size="sm" variant="outline" onClick={handleOpenFileBankImporter}>
                                 <FileUp className="mr-2 h-4 w-4"/>
                                 {t.importFile}
                             </Button>
                         </div>
                         <Editor
-                            content={contentForField('homework')}
-                            onChange={(newContent) => handleContentChange(selectedLesson.id, 'homework', newContent)}
+                            content={currentEditingContent as EditorContent}
+                            onChange={setCurrentEditingContent}
                             editable
                             placeholder={t.placeholders.homework}
                             initialHint={t.placeholders.homework}
@@ -792,14 +766,13 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                     </div>
                 );
              case 'comments':
-                const studentComments = editedContent[selectedLesson.id]?.studentComments || selectedLesson.studentComments || {};
                 return (
                     <div className="space-y-6">
                         <div>
                             <h4 className="font-semibold mb-2">{t.generalComment}</h4>
                             <Editor
-                                content={contentForField('comments')}
-                                onChange={(newContent) => handleContentChange(selectedLesson.id, 'comments', newContent)}
+                                content={currentEditingContent as EditorContent}
+                                onChange={setCurrentEditingContent}
                                 editable
                                 placeholder={t.placeholders.comments}
                                 withAiTools
@@ -814,8 +787,8 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                         <AccordionTrigger className="px-3 py-2 text-sm font-medium hover:no-underline">{student.name}</AccordionTrigger>
                                         <AccordionContent className="p-3 border-t">
                                             <Editor
-                                                content={studentComments[student.id] || { type: "doc", content: []}}
-                                                onChange={(newContent) => handleStudentCommentChange(selectedLesson.id, student.id, newContent)}
+                                                content={currentEditingComments[student.id] || { type: "doc", content: []}}
+                                                onChange={(newContent) => setCurrentEditingComments(prev => ({...prev, [student.id]: newContent}))}
                                                 editable
                                                 placeholder={`${t.placeholders.studentComment} ${student.name}...`}
                                                 withAiTools
@@ -840,7 +813,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
              {lessons.length > 0 ? (
                 <Accordion type="multiple" className="w-full space-y-4">
                  {lessons.map(lesson => {
-                     const recordingLink = editedContent[lesson.id]?.recording?.link ?? lesson.recording?.link ?? "";
+                     const recordingLink = lesson.recording?.link ?? "";
                      const showVideoPlayer = recordingLink.startsWith('http');
                      return (
                      <AccordionItem value={lesson.id} key={lesson.id} className="border rounded-lg bg-background">
@@ -850,27 +823,27 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                         <AccordionContent className="p-4 border-t">
                              <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <Card onClick={() => handleOpenModal(lesson.id, 'objective')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                    <Card onClick={() => handleOpenModal(lesson, 'objective')} className="cursor-pointer hover:bg-accent/50 transition-colors">
                                         <CardHeader>
                                             <CardTitle className="font-headline text-base flex items-center gap-2"><Target/> {t.objective}</CardTitle>
                                         </CardHeader>
                                     </Card>
-                                    <Card onClick={() => handleOpenModal(lesson.id, 'classNote')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                    <Card onClick={() => handleOpenModal(lesson, 'classNote')} className="cursor-pointer hover:bg-accent/50 transition-colors">
                                         <CardHeader>
                                             <CardTitle className="font-headline text-base flex items-center gap-2"><FileText/> {t.classNote}</CardTitle>
                                         </CardHeader>
                                     </Card>
-                                    <Card onClick={() => handleOpenModal(lesson.id, 'homework')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                    <Card onClick={() => handleOpenModal(lesson, 'homework')} className="cursor-pointer hover:bg-accent/50 transition-colors">
                                         <CardHeader>
                                             <CardTitle className="font-headline text-base flex items-center gap-2"><BookCheck/> {t.homework}</CardTitle>
                                         </CardHeader>
                                     </Card>
-                                     <Card onClick={() => handleOpenModal(lesson.id, 'attendance')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                     <Card onClick={() => handleOpenModal(lesson, 'attendance')} className="cursor-pointer hover:bg-accent/50 transition-colors">
                                         <CardHeader>
                                             <CardTitle className="font-headline text-base flex items-center gap-2"><Users2/> {t.attendance}</CardTitle>
                                         </CardHeader>
                                     </Card>
-                                     <Card onClick={() => handleOpenModal(lesson.id, 'comments')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                     <Card onClick={() => handleOpenModal(lesson, 'comments')} className="cursor-pointer hover:bg-accent/50 transition-colors">
                                         <CardHeader>
                                             <CardTitle className="font-headline text-base flex items-center gap-2"><MessageSquareQuote/> {t.comments}</CardTitle>
                                         </CardHeader>
@@ -883,12 +856,20 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                             <div className="flex items-center gap-2">
                                                  <Input 
                                                     placeholder={t.recordingPlaceholder}
-                                                    value={recordingLink}
-                                                    onChange={(e) => handleContentChange(lesson.id, 'recording', { link: e.target.value })}
+                                                    defaultValue={recordingLink}
+                                                    onBlur={(e) => {
+                                                        const data = { recording: { link: e.target.value } };
+                                                        setIsSaving(lesson.id);
+                                                        updateLesson(group.id, lesson.id, data).then(() => {
+                                                            toast({ title: "Enlace guardado" });
+                                                            setLessons(prev => prev.map(l => l.id === lesson.id ? { ...l, ...data } : l));
+                                                        }).catch(err => {
+                                                            console.error(err);
+                                                            toast({ variant: "destructive", title: "Error" });
+                                                        }).finally(() => setIsSaving(null));
+                                                    }}
+                                                    disabled={isSaving === lesson.id}
                                                 />
-                                                <Button onClick={() => handleSaveLesson(lesson.id)} disabled={isSaving === lesson.id} size="icon">
-                                                    {isSaving === lesson.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                                </Button>
                                             </div>
                                             {showVideoPlayer && <div className="mt-2"><VideoPlayer url={recordingLink} /></div>}
                                         </CardContent>
@@ -929,13 +910,15 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                     <div className="flex-grow overflow-auto py-4">
                         {renderModalContent()}
                     </div>
-                    <DialogFooter>
-                        <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
-                        <Button onClick={() => selectedLesson && handleSaveLesson(selectedLesson.id)} disabled={isSaving === selectedLessonId}>
-                            {isSaving === selectedLessonId && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Guardar y Cerrar
-                        </Button>
-                    </DialogFooter>
+                    {activeModal !== 'attendance' && activeModal !== 'objective' && (
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
+                            <Button onClick={handleSaveLesson} disabled={isSaving === selectedLesson?.id}>
+                                {isSaving === selectedLesson?.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Guardar y Cerrar
+                            </Button>
+                        </DialogFooter>
+                    )}
                 </DialogContent>
             </Dialog>
 
@@ -1355,8 +1338,8 @@ export function TeacherDashboardUI() {
 
   const studentsById = useMemo(() => {
     if (!data?.groups) return new Map();
-    const allStudents = data.groups.flatMap(g => g.studentsInfo || []);
-    return new Map(allStudents.filter(Boolean).map(s => [s.id, s as StudentProfile]));
+    const allStudents = data.groups.flatMap(g => g.studentsInfo || []).filter(Boolean);
+    return new Map(allStudents.map(s => [s.id, s as StudentProfile]));
   }, [data?.groups]);
 
   const privateGroups = useMemo(() => data?.groups.filter(g => g.type === 'privado') || [], [data?.groups]);
@@ -1452,5 +1435,3 @@ export function TeacherDashboardUI() {
     </>
   );
 }
-
-    
