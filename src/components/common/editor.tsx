@@ -617,7 +617,6 @@ interface EditorProps {
   onChange: (content: any) => void;
   editable?: boolean;
   placeholder?: string;
-  initialHint?: string;
   withAiTools?: boolean;
   allowSideNotes?: boolean;
 }
@@ -637,15 +636,13 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
     const [size, setSize] = useState({ width: 350, height: 400 });
     const [localContent, setLocalContent] = useState(initialContent);
 
-    // This effect ensures that the local state is updated if the initial content changes from the parent
-    // which happens when the AI result comes in.
     useEffect(() => {
         setLocalContent(initialContent);
     }, [initialContent]);
 
     const handleContentChange = (newContent: any) => {
         setLocalContent(newContent);
-        onUpdate(newContent); // Also notify the parent
+        onUpdate(newContent);
     };
 
     return (
@@ -662,7 +659,6 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
             >
-                {/* Header */}
                 <div className="flex items-center justify-between p-2 border-b cursor-grab bg-secondary/50">
                     <span className="text-sm font-medium">Apunte</span>
                     <Button onClick={onClose} variant="ghost" size="icon" className="h-6 w-6 cursor-pointer">
@@ -670,7 +666,6 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
                     </Button>
                 </div>
                 
-                {/* Content */}
                 <div className="flex-grow p-2 overflow-auto">
                     {localContent.type === 'loading' ? (
                         <div className="flex items-center justify-center h-full">
@@ -683,12 +678,11 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
                             editable={true}
                             placeholder="Nuevo apunte..."
                             withAiTools={true}
-                            allowSideNotes={false} // Disable side notes inside a side note
+                            allowSideNotes={false}
                         />
                     )}
                 </div>
 
-                {/* Resize Handle */}
                 <motion.div
                     className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize"
                     drag="x, y"
@@ -710,7 +704,6 @@ export function Editor({
   onChange,
   editable = true,
   placeholder,
-  initialHint,
   withAiTools = false,
   allowSideNotes = true,
 }: EditorProps) {
@@ -858,23 +851,17 @@ export function Editor({
   };
     
   if (!editable && isContentEmpty(content)) {
-      return (
-          <div className="flex items-center justify-center min-h-[150px] text-center text-muted-foreground">
-              <p>{initialHint || t.initialHint}</p>
-          </div>
-      )
+    return (
+        <div className="flex items-center justify-center min-h-[150px] text-center text-muted-foreground prose prose-sm dark:prose-invert max-w-none">
+            <p>{placeholder || t.initialHint}</p>
+        </div>
+    )
   }
-  
-  if (!editable) {
-     return <EditorContent editor={editor} className="prose prose-sm dark:prose-invert max-w-none focus:outline-none h-full" />;
-  }
-
 
   return (
     <div className={cn("w-full relative min-h-[150px] rounded-lg border bg-background p-4 flex flex-col justify-center")}>
-        <>
         {withAiTools && allowSideNotes && (
-            <Button onClick={() => handleAddSideNote({ type: "doc", content: [{ type: "paragraph" }]})} size="sm" className="absolute top-2 right-2 z-10">
+            <Button onClick={() => handleAddSideNote({ type: "doc", content: [{ type: "paragraph" }]})} size="sm" variant="ghost" className="absolute top-2 right-2 z-10 text-muted-foreground hover:text-foreground">
                 <Pencil className="mr-2 h-4 w-4" />
                 Añadir Apunte
             </Button>
@@ -909,7 +896,6 @@ export function Editor({
                 )}
             </AnimatePresence>
         </div>
-        </>
         
         <AnimatePresence>
             {sideNotePanels.map((panel, index) => (
@@ -925,5 +911,3 @@ export function Editor({
     </div>
   );
 }
-
-      

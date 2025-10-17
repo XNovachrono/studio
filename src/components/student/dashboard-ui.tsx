@@ -327,7 +327,7 @@ export function StudentDashboardUI() {
                                     </CardHeader>
                                     <AccordionContent>
                                         <CardContent>
-                                            <Editor content={data.group.mainObjective} onChange={() => {}} editable={false} initialHint="Tu docente aún no ha definido el objetivo del programa."/>
+                                            <Editor content={data.group.mainObjective} onChange={() => {}} editable={false} placeholder="Tu docente aún no ha definido el objetivo del programa."/>
                                         </CardContent>
                                     </AccordionContent>
                                 </Card>
@@ -341,7 +341,7 @@ export function StudentDashboardUI() {
                                     </CardHeader>
                                     <AccordionContent>
                                         <CardContent>
-                                            <Editor content={data.group.weeklyObjectives} onChange={() => {}} editable={false} initialHint="Tu docente aún no ha definido los contenidos semanales."/>
+                                            <Editor content={data.group.weeklyObjectives} onChange={() => {}} editable={false} placeholder="Tu docente aún no ha definido los contenidos semanales."/>
                                         </CardContent>
                                     </AccordionContent>
                                 </Card>
@@ -480,7 +480,7 @@ export function StudentDashboardUI() {
           </DialogHeader>
           <div className="py-4 max-h-[60vh] overflow-y-auto">
             {activeLesson && modalContent && (
-              <Editor content={activeLesson[modalContent as keyof Lesson]} onChange={() => {}} editable={false} initialHint="Tu docente aún no ha añadido contenido aquí."/>
+              <Editor content={activeLesson[modalContent as keyof Lesson]} onChange={() => {}} editable={false} placeholder="Tu docente aún no ha añadido contenido here."/>
             )}
              {activeLesson && modalContent === 'homework' && (
                   <div className="p-4 border rounded-lg bg-secondary/50 mt-6">

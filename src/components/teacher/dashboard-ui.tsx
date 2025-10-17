@@ -499,7 +499,6 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     const [activeModal, setActiveModal] = useState<ModalType>(null);
     const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
 
-    // State for the content being edited in the modal
     const [currentEditingContent, setCurrentEditingContent] = useState<EditorContent | null>(null);
     const [currentEditingComments, setCurrentEditingComments] = useState<Record<string, EditorContent>>({});
 
@@ -547,7 +546,6 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
       try {
         await updateLesson(group.id, lessonId, dataToUpdate);
         toast({ title: t_toast.lessonSavedTitle, description: t_toast.lessonSavedDescription });
-        // Optimistically update local state
         setLessons(prev => prev.map(l => l.id === lessonId ? {...l, ...dataToUpdate} : l));
       } catch(error) {
         console.error("Error saving lesson:", error);
@@ -676,8 +674,8 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                         onChange={setCurrentEditingContent}
                         editable
                         placeholder={t.placeholders.classNote}
-                        initialHint={t.placeholders.classNote}
                         withAiTools
+                        allowSideNotes
                     />
                 );
             case 'homework':
@@ -698,7 +696,6 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                             onChange={setCurrentEditingContent}
                             editable
                             placeholder={t.placeholders.homework}
-                            initialHint={t.placeholders.homework}
                             withAiTools
                         />
                     </>
@@ -1108,9 +1105,6 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
     const [studentToView, setStudentToView] = useState<StudentProfile | null>(null);
     const [refreshLessonKey, setRefreshLessonKey] = useState(0);
 
-    // This is a placeholder ref since we need to pass a function to GroupCommunication
-    // that can be updated from inside this component. The actual function will be
-    // defined inside GroupCommunication's useEffect.
     const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
     
     const groupMembers = useMemo(() => group?.studentsInfo || [], [group]);
