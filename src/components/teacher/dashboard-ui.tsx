@@ -31,7 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Editor } from "../common/editor";
+import { Editor } from "@/components/common/editor";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { BanksDashboardUI } from "./banks/dashboard-ui";
 import { Label } from "../ui/label";
@@ -285,6 +285,7 @@ const GroupProgram = ({ group, onGroupUpdate, studentsById, teacherId, onLessonC
                     onChange={setMainObjective}
                     editable
                     placeholder={t.mainPlaceholder}
+                    withAiTools
                 />
             </div>
 
@@ -309,6 +310,7 @@ const GroupProgram = ({ group, onGroupUpdate, studentsById, teacherId, onLessonC
                     onChange={setWeeklyObjectives}
                     editable
                     placeholder={t.weeklyPlaceholder}
+                    withAiTools
                 />
             </div>
             
@@ -701,6 +703,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                         editable
                         placeholder={t.placeholders.classNote}
                         initialHint={t.placeholders.classNote}
+                        withAiTools
                     />
                 );
             case 'homework':
@@ -722,6 +725,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                             editable
                             placeholder={t.placeholders.homework}
                             initialHint={t.placeholders.homework}
+                            withAiTools
                         />
                     </>
                 );
@@ -799,6 +803,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                 onChange={(newContent) => handleContentChange(selectedLesson.id, 'comments', newContent)}
                                 editable
                                 placeholder={t.placeholders.comments}
+                                withAiTools
                             />
                         </div>
                         <Separator />
@@ -814,6 +819,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                                 onChange={(newContent) => handleStudentCommentChange(selectedLesson.id, student.id, newContent)}
                                                 editable
                                                 placeholder={`${t.placeholders.studentComment} ${student.name}...`}
+                                                withAiTools
                                             />
                                         </AccordionContent>
                                     </AccordionItem>

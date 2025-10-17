@@ -46,8 +46,9 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/language-context";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { generateEditorContent } from "@/ai/flows/editor-flow";
+import { contextualQA } from "@/ai/flows/contextual-qa-flow";
 import { Input } from "../ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import type { EditorContent as EditorContentType } from "@/lib/types";
@@ -502,24 +503,50 @@ const InsertTablePopover = ({ editor }: { editor: TiptapEditor }) => {
     )
 }
 
-const Toolbar = ({ editor }: { editor: TiptapEditor | null }) => {
+const Toolbar = ({ editor, onAskAI, onExplain }: { editor: TiptapEditor | null, onAskAI: (query: string) => void, onExplain: () => void }) => {
     const { translations } = useLanguage();
     const t = translations.editor;
+    const [aiQuery, setAiQuery] = useState("");
+
     if (!editor) {
         return null;
+    }
+
+    const handleAskAI = () => {
+        if(aiQuery) {
+            onAskAI(aiQuery);
+            setAiQuery("");
+        }
     }
 
     return (
         <BubbleMenu
             editor={editor}
-            tippyOptions={{ duration: 100 }}
+            tippyOptions={{ duration: 100, onHidden: () => setAiQuery("") }}
             className="flex flex-wrap items-center gap-1 rounded-lg border bg-background p-1 shadow-lg"
         >
             {editor.isActive('table') ? <TableTools editor={editor} /> : (
                 <>
                     {/* AI & Collaboration Tools */}
-                    <Button variant="ghost" size="sm" className="h-8"><HelpCircle className="mr-2 h-4 w-4" />{t.bubbleMenu.explain}</Button>
-                    <Button variant="ghost" size="sm" className="h-8"><Sparkles className="mr-2 h-4 w-4" />{t.bubbleMenu.askAI}</Button>
+                    <Button variant="ghost" size="sm" className="h-8" onClick={onExplain}><HelpCircle className="mr-2 h-4 w-4" />{t.bubbleMenu.explain}</Button>
+                    
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8"><Sparkles className="mr-2 h-4 w-4" />{t.bubbleMenu.askAI}</Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-2">
+                           <div className="flex gap-2">
+                             <Input 
+                                placeholder={t.ai.placeholder}
+                                value={aiQuery}
+                                onChange={(e) => setAiQuery(e.target.value)}
+                                onKeyDown={(e) => { if(e.key === 'Enter') handleAskAI(); }}
+                             />
+                             <Button onClick={handleAskAI} size="icon" disabled={!aiQuery}><Sparkles className="h-4 w-4"/></Button>
+                           </div>
+                        </PopoverContent>
+                    </Popover>
+
                     <Button 
                         variant={editor.isActive("highlight") ? "secondary" : "ghost"}
                         size="sm" 
@@ -592,6 +619,9 @@ interface EditorProps {
   editable?: boolean;
   placeholder?: string;
   initialHint?: string;
+  withAiTools?: boolean;
+  onAddSideNote?: () => void;
+  sideNotes?: React.ReactNode;
 }
 
 const isContentEmpty = (content: EditorContentType | null | undefined): boolean => {
@@ -604,7 +634,7 @@ const isContentEmpty = (content: EditorContentType | null | undefined): boolean 
     return false;
 };
 
-const EditorInstance = ({ content, onChange, editable, placeholder, aiState, setAiState, prompt, setPrompt, aiGeneratedContent, setAiGeneratedContent }: any) => {
+const EditorInstance = ({ content, onChange, editable, placeholder, aiState, setAiState, prompt, setPrompt, aiGeneratedContent, setAiGeneratedContent, withAiTools, onAddSideNote, onAskAI, onExplain }: any) => {
     const { translations } = useLanguage();
     const t = translations.editor;
 
@@ -673,7 +703,6 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
         }
     }, [editor, editable, aiState]);
 
-
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
         setAiState('loading');
@@ -715,6 +744,25 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
         setAiState('idle');
         setPrompt('');
     };
+
+    const getSelectedText = () => {
+        if (!editor) return "";
+        const { from, to, empty } = editor.state.selection;
+        if (empty) return "";
+        return editor.state.doc.textBetween(from, to, " ");
+    }
+    
+    const handleAskAI = (query: string) => {
+        const selectedText = getSelectedText();
+        if(!selectedText) return;
+        onAskAI(selectedText, query);
+    }
+    
+    const handleExplain = () => {
+        const selectedText = getSelectedText();
+        if(!selectedText) return;
+        onExplain(selectedText);
+    }
     
     if (!editor) return null;
 
@@ -726,7 +774,7 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
             exit={{ opacity: 0 }}
             className="w-full relative"
         >
-            <Toolbar editor={editor} />
+            {withAiTools && <Toolbar editor={editor} onAskAI={handleAskAI} onExplain={handleExplain} />}
             
             <div className={cn(aiState === 'done' && 'hidden')}>
                  <EditorContent editor={editor} />
@@ -789,15 +837,40 @@ export function Editor({
   editable = true,
   placeholder,
   initialHint,
+  withAiTools = false,
+  onAddSideNote,
+  sideNotes
 }: EditorProps) {
   
   const [isEditing, setIsEditing] = useState(() => !isContentEmpty(content));
   const [aiState, setAiState] = useState<'idle' | 'prompting' | 'loading' | 'streaming' | 'done'>('idle');
   const [prompt, setPrompt] = useState('');
   const [aiGeneratedContent, setAiGeneratedContent] = useState('');
+  const [sideNotePanels, setSideNotePanels] = useState<any[]>([]);
 
-  const { translations } = useLanguage();
+  const { language, translations } = useLanguage();
   const t = translations.editor;
+
+  const handleAddSideNote = useCallback((initialContent?: any) => {
+    setSideNotePanels(prev => [...prev, { id: Date.now(), content: initialContent || "" }]);
+  }, []);
+
+  const handleCloseSideNote = (id: number) => {
+    setSideNotePanels(prev => prev.filter(panel => panel.id !== id));
+  };
+  
+  const handleAskAI = async (selectedText: string, userQuery: string) => {
+    handleAddSideNote({type: 'loading'});
+    const result = await contextualQA({ language, selectedText, userQuery });
+    setSideNotePanels(prev => prev.map(p => p.content.type === 'loading' ? { ...p, content: result } : p));
+  };
+  
+  const handleExplain = async (selectedText: string) => {
+     handleAddSideNote({type: 'loading'});
+     const result = await contextualQA({ language, selectedText });
+     setSideNotePanels(prev => prev.map(p => p.content.type === 'loading' ? { ...p, content: result } : p));
+  };
+
   
   const handleStartEditing = () => {
     setIsEditing(true);
@@ -830,36 +903,77 @@ export function Editor({
   }
 
   return (
-    <div className="w-full relative rounded-lg border bg-background p-4 min-h-[150px] flex flex-col justify-center items-center">
-      <AnimatePresence>
-        {!isEditing ? (
-            <motion.div
-                key="placeholder"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="text-center text-muted-foreground cursor-pointer"
-                onClick={handleStartEditing}
-            >
-                <p>{initialHint || t.initialHint}</p>
-            </motion.div>
-        ) : (
-             <EditorInstance 
-                content={content}
-                onChange={onChange}
-                editable={isEditing}
-                placeholder={placeholder}
-                aiState={aiState}
-                setAiState={setAiState}
-                prompt={prompt}
-                setPrompt={setPrompt}
-                aiGeneratedContent={aiGeneratedContent}
-                setAiGeneratedContent={setAiGeneratedContent}
-             />
-        )}
-      </AnimatePresence>
+    <div className="flex gap-4">
+        <div className="w-full relative rounded-lg border bg-background p-4 min-h-[150px] flex flex-col justify-center items-center">
+        <AnimatePresence>
+            {!isEditing ? (
+                <motion.div
+                    key="placeholder"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-center text-muted-foreground cursor-pointer"
+                    onClick={handleStartEditing}
+                >
+                    <p>{initialHint || t.initialHint}</p>
+                </motion.div>
+            ) : (
+                <>
+                {withAiTools && (
+                    <Button onClick={() => handleAddSideNote("")} size="sm" className="absolute top-2 right-2 z-10">
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Añadir Apunte
+                    </Button>
+                )}
+                <EditorInstance 
+                    content={content}
+                    onChange={onChange}
+                    editable={isEditing}
+                    placeholder={placeholder}
+                    aiState={aiState}
+                    setAiState={setAiState}
+                    prompt={prompt}
+                    setPrompt={setPrompt}
+                    aiGeneratedContent={aiGeneratedContent}
+                    setAiGeneratedContent={setAiGeneratedContent}
+                    withAiTools={withAiTools}
+                    onAskAI={handleAskAI}
+                    onExplain={handleExplain}
+                />
+                </>
+            )}
+        </AnimatePresence>
+        </div>
+        
+        {sideNotes}
+
+        <div className="w-1/3 space-y-4">
+            {sideNotePanels.map(panel => (
+                <div key={panel.id} className="relative bg-secondary/50 p-4 rounded-lg shadow">
+                     <Button onClick={() => handleCloseSideNote(panel.id)} variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6">
+                        <X className="h-4 w-4" />
+                    </Button>
+                    {panel.content.type === 'loading' ? (
+                        <div className="flex items-center justify-center p-4">
+                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        </div>
+                    ) : typeof panel.content === 'string' ? (
+                         <div
+                            className="prose prose-sm dark:prose-invert max-w-none focus:outline-none"
+                            dangerouslySetInnerHTML={{ __html: panel.content }}
+                         />
+                    ) : (
+                        <Editor
+                            content={panel.content || { type: 'doc', content: [] }}
+                            onChange={() => {}}
+                            editable
+                            placeholder="Nuevo apunte..."
+                        />
+                    )}
+                </div>
+            ))}
+        </div>
+
     </div>
   );
 }
-
-    
