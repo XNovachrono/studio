@@ -5,7 +5,6 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {gemini15Flash} from '@genkit-ai/googleai';
 import {z} from 'genkit';
 
 const EditorFlowInputSchema = z.object({
@@ -34,7 +33,6 @@ const editorFlow = ai.defineFlow(
   },
   async input => {
     const {text} = await ai.generate({
-      model: gemini15Flash,
       prompt: `You are an expert educator and content creator. A teacher has asked for your help writing a class note or assignment.
 Generate clear, concise, and engaging content based on their request.
 

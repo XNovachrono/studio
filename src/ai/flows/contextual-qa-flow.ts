@@ -5,7 +5,6 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {gemini15Flash} from '@genkit-ai/googleai';
 import {z} from 'genkit';
 
 const ContextualQASchema = z.object({
@@ -46,7 +45,6 @@ const contextualQAFlow = ai.defineFlow(
          Selected Text: "${selectedText}"`;
     
     const {text} = await ai.generate({
-      model: gemini15Flash,
       prompt: promptText,
     });
     return text;
