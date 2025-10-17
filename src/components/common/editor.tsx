@@ -675,7 +675,7 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
             TableCell,
         ],
         content: content,
-        editable: editable && aiState !== 'loading' && aiState !== 'streaming' && aiState !== 'done',
+        editable: editable,
         onUpdate: ({ editor }) => {
             onChange(editor.getJSON());
         },
@@ -692,7 +692,7 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
                 return false;
             }
         },
-    }, [editable]); // Only depend on editable
+    });
 
     useEffect(() => {
         if (editor) {
@@ -1000,7 +1000,14 @@ export function Editor({
   const handleEditorChange = (newContent: any) => {
     onChange(newContent);
     if (isContentEmpty(newContent)) {
-      setIsEditing(false);
+      // Temporarily set isEditing to false if the editor is cleared
+      // but only if AI is not active. This prevents the placeholder from
+      // showing up while the AI is generating content.
+      if (aiState === 'idle') {
+        setIsEditing(false);
+      }
+    } else {
+        setIsEditing(true);
     }
   };
 
@@ -1068,7 +1075,5 @@ export function Editor({
     </div>
   );
 }
-
     
 
-    
