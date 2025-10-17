@@ -1,9 +1,11 @@
+
 'use server';
 /**
  * @fileOverview A flow for generating content within the rich text editor.
  */
 
 import {ai} from '@/ai/genkit';
+import {gemini15Flash} from '@genkit-ai/googleai';
 import {z} from 'genkit';
 
 const EditorFlowInputSchema = z.object({
@@ -24,27 +26,6 @@ export async function generateEditorContent(
   return editorFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'editorPrompt',
-  input: {schema: EditorFlowInputSchema},
-  output: {schema: EditorFlowOutputSchema},
-  prompt: `You are an expert educator and content creator. A teacher has asked for your help writing a class note or assignment.
-Generate clear, concise, and engaging content based on their request.
-
-Teacher's Request: {{{prompt}}}
-
-IMPORTANT: You MUST format your response as an HTML string. Do not use plain text. You can use the following HTML tags to structure the content:
-- Headings: <h1>, <h2>, <h3>
-- Paragraphs: <p>
-- Lists: <ul>, <ol>, <li>
-- Tables: <table>, <thead>, <tbody>, <tr>, <th>, <td>
-- Text formatting: <b> (bold), <i> (italic), <u> (underline), <s> (strikethrough)
-- Inline styles for colors: <span style="color: #...;"> for text color and <span style="background-color: #...;"> for highlights.
-
-Your entire response should be a single HTML string that can be directly rendered inside a rich text editor. Do not wrap your response in markdown or any other format.
-`,
-});
-
 const editorFlow = ai.defineFlow(
   {
     name: 'editorFlow',
@@ -53,6 +34,7 @@ const editorFlow = ai.defineFlow(
   },
   async input => {
     const {text} = await ai.generate({
+      model: gemini15Flash,
       prompt: `You are an expert educator and content creator. A teacher has asked for your help writing a class note or assignment.
 Generate clear, concise, and engaging content based on their request.
 
