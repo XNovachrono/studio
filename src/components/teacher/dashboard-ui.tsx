@@ -500,7 +500,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
 
     // State for the content being edited in the modal
-    const [currentEditingContent, setCurrentEditingContent] = useState<EditorContent | string | null>(null);
+    const [currentEditingContent, setCurrentEditingContent] = useState<EditorContent | null>(null);
     const [currentEditingComments, setCurrentEditingComments] = useState<Record<string, EditorContent>>({});
 
 
@@ -671,8 +671,8 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
             case 'classNote':
                  return (
                      <Editor
-                        content={currentEditingContent as EditorContent}
-                        onChange={(newContent) => setCurrentEditingContent(newContent)}
+                        content={currentEditingContent}
+                        onChange={setCurrentEditingContent}
                         editable
                         placeholder={t.placeholders.classNote}
                         initialHint={t.placeholders.classNote}
@@ -693,8 +693,8 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                             </Button>
                         </div>
                         <Editor
-                            content={currentEditingContent as EditorContent}
-                            onChange={(newContent) => setCurrentEditingContent(newContent)}
+                            content={currentEditingContent}
+                            onChange={setCurrentEditingContent}
                             editable
                             placeholder={t.placeholders.homework}
                             initialHint={t.placeholders.homework}
@@ -766,23 +766,13 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                     </div>
                 );
              case 'comments':
-                const handleMainCommentChange = (newContent: EditorContent) => {
-                    setCurrentEditingContent(newContent);
-                };
-
-                const handleStudentCommentChange = (studentId: string, newContent: EditorContent) => {
-                    setCurrentEditingComments(prev => ({
-                        ...prev,
-                        [studentId]: newContent,
-                    }));
-                };
                 return (
                     <div className="space-y-6">
                         <div>
                             <h4 className="font-semibold mb-2">{t.generalComment}</h4>
                             <Editor
-                                content={currentEditingContent as EditorContent}
-                                onChange={handleMainCommentChange}
+                                content={currentEditingContent}
+                                onChange={setCurrentEditingContent}
                                 editable
                                 placeholder={t.placeholders.comments}
                                 withAiTools
@@ -798,7 +788,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                         <AccordionContent className="p-3 border-t">
                                             <Editor
                                                 content={currentEditingComments[student.id] || { type: "doc", content: []}}
-                                                onChange={(newContent) => handleStudentCommentChange(student.id, newContent)}
+                                                onChange={(newContent) => setCurrentEditingComments(prev => ({...prev, [student.id]: newContent}))}
                                                 editable
                                                 placeholder={`${t.placeholders.studentComment} ${student.name}...`}
                                                 withAiTools

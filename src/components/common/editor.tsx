@@ -631,238 +631,7 @@ const isContentEmpty = (content: EditorContentType | null | undefined): boolean 
     return false;
 };
 
-const EditorInstance = ({ content, onChange, editable, placeholder, aiState, setAiState, prompt, setPrompt, aiGeneratedContent, setAiGeneratedContent, withAiTools, onAskAI, onExplain, isFloating }: any) => {
-    const { translations } = useLanguage();
-    const t = translations.editor;
-
-    const editor = useEditor({
-        extensions: [
-            StarterKit.configure({ heading: false }),
-            Heading.configure({ levels: [1, 2, 3, 4] }).extend({
-                addAttributes() {
-                    return {
-                        ...this.parent?.(),
-                        id: {
-                            default: null,
-                        },
-                    };
-                },
-            }),
-            Placeholder.configure({
-                placeholder: ({ node }) => {
-                    if (node.type.name === 'heading') {
-                        return t.placeholders.heading;
-                    }
-                    if (editable && ((node.isFirstChild && node.isEmpty) || (isFloating && node.isEmpty))) {
-                        return placeholder || t.placeholders.default;
-                    }
-                    return "";
-                }
-            }),
-            Image,
-            Video,
-            Audio,
-            Link.configure({ openOnClick: false }),
-            Underline,
-            TextStyle,
-            FontFamily,
-            FontSize,
-            Color,
-            Highlight.configure({ multicolor: true }),
-            Table.configure({ resizable: true, handleWidth: 5, cellMinWidth: 25 }),
-            TableRow,
-            TableHeader,
-            TableCell,
-        ],
-        content: content,
-        editable: editable,
-        onUpdate: ({ editor }) => {
-            onChange(editor.getJSON());
-        },
-        editorProps: {
-            attributes: {
-                class: cn("prose prose-sm dark:prose-invert max-w-none focus:outline-none", isFloating && 'h-full'),
-            },
-            handleKeyDown: (view, event) => {
-                 if (withAiTools && aiState === 'idle' && event.key === ' ' && view.state.selection.$from.parent.content.size === 0) {
-                    event.preventDefault();
-                    setAiState('prompting');
-                    return true;
-                }
-                return false;
-            }
-        },
-    });
-
-    useEffect(() => {
-        if (editor && editor.isEditable !== editable) {
-            editor.setEditable(editable);
-        }
-    }, [editor, editable]);
-
-    useEffect(() => {
-        if (editor && content) {
-            const isSame = JSON.stringify(editor.getJSON()) === JSON.stringify(content);
-            if (!isSame) {
-                editor.commands.setContent(content, false);
-            }
-        }
-    }, [content, editor]);
-
-    const handleGenerate = async () => {
-        if (!prompt.trim()) return;
-        setAiState('loading');
-        setAiGeneratedContent(''); // Clear previous content
-        
-        try {
-            const result = await generateEditorContent({ prompt });
-            setAiGeneratedContent(result);
-            setAiState('done');
-        } catch(error) {
-            console.error("AI Generation failed:", error);
-            setAiGeneratedContent("<p>Sorry, I couldn't generate the content.</p>");
-            setAiState('done');
-        }
-    }
-
-    const handlePromptKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === 'Enter' && prompt.trim().length > 0) {
-            event.preventDefault();
-            handleGenerate();
-        }
-    }
-
-    const handleAccept = () => {
-        editor?.chain().focus().setContent(aiGeneratedContent, true).run();
-        onChange(editor?.getJSON());
-        setAiGeneratedContent('');
-        setAiState('idle');
-        setPrompt('');
-    };
-
-    const handleRegenerate = () => {
-        handleGenerate();
-    };
-
-    const handleModify = () => {
-        editor?.chain().focus().setContent(aiGeneratedContent, true).run();
-        setAiGeneratedContent('');
-        setAiState('idle');
-        setPrompt('');
-    };
-
-    const getSelectedText = () => {
-        if (!editor) return "";
-        const { from, to, empty } = editor.state.selection;
-        if (empty) return "";
-        return editor.state.doc.textBetween(from, to, " ");
-    }
-    
-    const handleAskAI = (query: string) => {
-        const selectedText = getSelectedText();
-        if(!selectedText) return;
-        onAskAI(selectedText, query);
-    }
-    
-    const handleExplain = () => {
-        const selectedText = getSelectedText();
-        if(!selectedText) return;
-        onExplain(selectedText);
-    }
-    
-    if (!editor) return null;
-
-
-    return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="w-full h-full relative flex flex-col"
-        >
-            {withAiTools && <Toolbar editor={editor} onAskAI={handleAskAI} onExplain={handleExplain} />}
-            
-            <div className={cn("flex-grow relative", aiState === 'done' && 'hidden')}>
-                 <EditorContent editor={editor} className={cn(isFloating && "h-full")}/>
-            </div>
-
-            {aiState === 'done' && (
-                 <div className="w-full">
-                    <div 
-                        className="prose prose-sm dark:prose-invert max-w-none p-2 border rounded-md min-h-[100px] bg-secondary/20"
-                        dangerouslySetInnerHTML={{ __html: aiGeneratedContent }}
-                    />
-                    <motion.div
-                        key="ai-toolbar"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        className="w-full mt-2"
-                    >
-                        <AIToolbar state={aiState} onAccept={handleAccept} onRegenerate={handleRegenerate} onModify={handleModify}/>
-                    </motion.div>
-                </div>
-            )}
-
-
-            <AnimatePresence>
-                {(aiState === 'prompting' || aiState === 'loading') && (
-                    <motion.div
-                        key="ai-prompt"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        className={cn("absolute bottom-0 left-0 right-0 bg-secondary p-2 rounded-lg shadow-lg flex items-center gap-2", isFloating ? "m-2" : "")}
-                    >
-                        <Sparkles className="text-primary h-5 w-5"/>
-                        <Input 
-                            placeholder={t.ai.placeholder}
-                            className="bg-transparent border-none focus-visible:ring-0"
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            onKeyDown={handlePromptKeyDown}
-                            disabled={aiState === 'loading'}
-                            autoFocus
-                        />
-                         {aiState === 'loading' ? (
-                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/>
-                         ) : (
-                            <Button variant="ghost" size="icon" onClick={() => { setAiState('idle'); editor?.commands.clearContent(); } }><X/></Button>
-                         )}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </motion.div>
-    );
-}
-
-// Wrapper to use the full Editor inside FloatingNote
-const FloatingEditorWrapper = ({ content, onChange, placeholder }: any) => {
-    const [aiState, setAiState] = useState<'idle' | 'prompting' | 'loading' | 'streaming' | 'done'>('idle');
-    const [prompt, setPrompt] = useState('');
-    const [aiGeneratedContent, setAiGeneratedContent] = useState('');
-    
-    return (
-         <EditorInstance 
-            content={content}
-            onChange={onChange}
-            editable={true}
-            placeholder={placeholder}
-            aiState={aiState}
-            setAiState={setAiState}
-            prompt={prompt}
-            setPrompt={setPrompt}
-            aiGeneratedContent={aiGeneratedContent}
-            setAiGeneratedContent={setAiGeneratedContent}
-            withAiTools={true}
-            onAskAI={() => {}} // Floating notes don't trigger more notes
-            onExplain={() => {}}
-            isFloating={true}
-        />
-    )
-}
-
-const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }: any) => {
+const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus, onAskAI, onExplain }: any) => {
     const constraintsRef = useRef(null);
     const [size, setSize] = useState({ width: 350, height: 400 });
 
@@ -900,10 +669,15 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
                             dangerouslySetInnerHTML={{ __html: initialContent }}
                         />
                     ) : (
-                        <FloatingEditorWrapper
-                            content={initialContent || { type: 'doc', content: [] }}
+                       <Editor
+                            content={initialContent}
                             onChange={onUpdate}
+                            editable={true}
                             placeholder="Nuevo apunte..."
+                            withAiTools={true}
+                            onAskAI={onAskAI}
+                            onExplain={onExplain}
+                            isFloating={true}
                         />
                     )}
                 </div>
@@ -932,7 +706,10 @@ export function Editor({
   placeholder,
   initialHint,
   withAiTools = false,
-}: EditorProps) {
+  isFloating = false, // new prop to distinguish editors
+  onAskAI, // Pass down from parent
+  onExplain, // Pass down from parent
+}: EditorProps & { isFloating?: boolean, onAskAI?: (text: string, query: string) => void, onExplain?: (text: string) => void }) {
   
   const [isEditing, setIsEditing] = useState(() => editable ? true : !isContentEmpty(content));
   const [aiState, setAiState] = useState<'idle' | 'prompting' | 'loading' | 'streaming' | 'done'>('idle');
@@ -944,11 +721,65 @@ export function Editor({
   const { language, translations } = useLanguage();
   const t = translations.editor;
 
+    const editor = useEditor({
+        extensions: [
+            StarterKit.configure({ heading: false }),
+            Heading.configure({ levels: [1, 2, 3, 4] }).extend({
+                addAttributes() {
+                    return { ...this.parent?.(), id: { default: null } };
+                },
+            }),
+            Placeholder.configure({
+                placeholder: ({ node }) => {
+                    if (!editable) return "";
+                    if (node.type.name === 'heading') return t.placeholders.heading;
+                    if ((node.isFirstChild && node.isEmpty) || (isFloating && node.isEmpty)) {
+                        return placeholder || t.placeholders.default;
+                    }
+                    return "";
+                }
+            }),
+            Image, Video, Audio, Link.configure({ openOnClick: false }), Underline,
+            TextStyle, FontFamily, FontSize, Color, Highlight.configure({ multicolor: true }),
+            Table.configure({ resizable: true }), TableRow, TableHeader, TableCell,
+        ],
+        content: content,
+        editable: editable,
+        onUpdate: ({ editor }) => {
+            onChange(editor.getJSON());
+        },
+        editorProps: {
+            attributes: {
+                class: cn("prose prose-sm dark:prose-invert max-w-none focus:outline-none", isFloating && 'h-full'),
+            },
+            handleKeyDown: (view, event) => {
+                 if (withAiTools && aiState === 'idle' && event.key === ' ' && view.state.selection.$from.parent.content.size === 0) {
+                    event.preventDefault();
+                    setAiState('prompting');
+                    return true;
+                }
+                return false;
+            }
+        },
+    });
+
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(editable && aiState !== 'loading' && aiState !== 'streaming' && aiState !== 'done');
+    }
+  }, [editor, editable, aiState]);
+  
+  useEffect(() => {
+    if (editor && content) {
+      const isSame = JSON.stringify(editor.getJSON()) === JSON.stringify(content);
+      if (!isSame) {
+        editor.commands.setContent(content, false);
+      }
+    }
+  }, [content, editor]);
+
   const handleAddSideNote = useCallback((initialContent?: any) => {
-    const newNote = { 
-        id: Date.now(), 
-        content: initialContent || "" ,
-    };
+    const newNote = { id: Date.now(), content: initialContent || "" };
     setSideNotePanels(prev => [...prev, newNote]);
     setActiveNoteId(newNote.id);
   }, []);
@@ -961,18 +792,69 @@ export function Editor({
     setSideNotePanels(prev => prev.map(note => note.id === id ? { ...note, content: newContent } : note));
   };
   
-  const handleAskAI = async (selectedText: string, userQuery: string) => {
-    handleAddSideNote({type: 'loading'});
-    const result = await contextualQA({ language, selectedText, userQuery });
-    setSideNotePanels(prev => prev.map(p => (p.content?.type === 'loading') ? { ...p, content: result } : p));
-  };
-  
-  const handleExplain = async (selectedText: string) => {
+  const handleAIGeneration = async (selectedText: string, userQuery?: string) => {
      handleAddSideNote({type: 'loading'});
-     const result = await contextualQA({ language, selectedText });
+     const result = await contextualQA({ language, selectedText, userQuery });
      setSideNotePanels(prev => prev.map(p => (p.content?.type === 'loading') ? { ...p, content: result } : p));
   };
+  
+  const getSelectedText = () => {
+    if (!editor) return "";
+    const { from, to, empty } = editor.state.selection;
+    if (empty) return "";
+    return editor.state.doc.textBetween(from, to, " ");
+  }
 
+  const localOnAskAI = (query: string) => {
+    const selectedText = getSelectedText();
+    if (!selectedText) return;
+    if (onAskAI) onAskAI(selectedText, query);
+    else handleAIGeneration(selectedText, query);
+  };
+  
+  const localOnExplain = () => {
+    const selectedText = getSelectedText();
+    if (!selectedText) return;
+    if (onExplain) onExplain(selectedText);
+    else handleAIGeneration(selectedText);
+  };
+
+  const handleGenerateFromPrompt = async () => {
+    if (!prompt.trim()) return;
+    setAiState('loading');
+    setAiGeneratedContent('');
+    try {
+        const result = await generateEditorContent({ prompt });
+        setAiGeneratedContent(result);
+        setAiState('done');
+    } catch(error) {
+        console.error("AI Generation failed:", error);
+        setAiGeneratedContent("<p>Sorry, I couldn't generate the content.</p>");
+        setAiState('done');
+    }
+  }
+
+  const handlePromptKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' && prompt.trim().length > 0) {
+        event.preventDefault();
+        handleGenerateFromPrompt();
+    }
+  }
+
+  const handleAccept = () => {
+    editor?.chain().focus().setContent(aiGeneratedContent, true).run();
+    onChange(editor?.getJSON());
+    setAiGeneratedContent('');
+    setAiState('idle');
+    setPrompt('');
+  };
+
+  const handleModify = () => {
+    editor?.chain().focus().setContent(aiGeneratedContent, true).run();
+    setAiGeneratedContent('');
+    setAiState('idle');
+    setPrompt('');
+  };
   
   const handleStartEditing = () => {
     setIsEditing(true);
@@ -980,12 +862,6 @@ export function Editor({
     setPrompt('');
     setAiGeneratedContent('');
   };
-  
-  useEffect(() => {
-    if (!isEditing && !isContentEmpty(content)) {
-        setIsEditing(true);
-    }
-  }, [content, isEditing]);
 
   const handleEditorChange = (newContent: any) => {
     onChange(newContent);
@@ -997,89 +873,72 @@ export function Editor({
         setIsEditing(true);
     }
   };
-  
-    const isFloating = false; // This is the main editor, not a floating one.
     
-    if (!editable) {
-        const editor = useEditor({
-            extensions: [ StarterKit, Heading.configure({ levels: [1, 2, 3, 4] }).extend({ addAttributes() { return { ...this.parent?.(), id: { default: null, }, }; } }), Image, Video, Audio, Link, Underline, TextStyle, FontFamily, FontSize, Color, Highlight, Table.configure({ resizable: true }), TableRow, TableHeader, TableCell ],
-            content: content,
-            editable: false,
-            editorProps: {
-                attributes: {
-                    class: "prose dark:prose-invert max-w-none focus:outline-none",
-                },
-            }
-        });
-
-        useEffect(() => {
-            if(editor && content && JSON.stringify(editor.getJSON()) !== JSON.stringify(content)) {
-                editor.commands.setContent(content, false);
-            }
-        }, [content, editor]);
-
-        return (
-            <div className="max-h-[60vh] overflow-auto">
-                <EditorContent editor={editor} />
-            </div>
-        );
+    if (!editable && !isFloating) {
+        return <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: editor?.getHTML() || ''}} />;
     }
 
 
   return (
-    <div className="flex gap-4">
-        <div className="w-full relative rounded-lg border bg-background p-4 min-h-[150px] flex flex-col justify-center items-center">
+    <div className={cn("w-full relative", isFloating ? 'h-full' : 'min-h-[150px] rounded-lg border bg-background p-4 flex flex-col justify-center items-center')}>
         <AnimatePresence>
             {!isEditing && !isFloating ? (
                 <motion.div
-                    key="placeholder"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="text-center text-muted-foreground cursor-pointer"
-                    onClick={handleStartEditing}
-                >
+                    key="placeholder" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="text-center text-muted-foreground cursor-pointer" onClick={handleStartEditing}>
                     <p>{initialHint || t.initialHint}</p>
                 </motion.div>
             ) : (
                 <>
-                {withAiTools && (
+                {withAiTools && !isFloating && (
                     <Button onClick={() => handleAddSideNote("")} size="sm" className="absolute top-2 right-2 z-10">
                         <Pencil className="mr-2 h-4 w-4" />
                         Añadir Apunte
                     </Button>
                 )}
-                <EditorInstance 
-                    content={content}
-                    onChange={handleEditorChange}
-                    editable={editable}
-                    placeholder={placeholder}
-                    aiState={aiState}
-                    setAiState={setAiState}
-                    prompt={prompt}
-                    setPrompt={setPrompt}
-                    aiGeneratedContent={aiGeneratedContent}
-                    setAiGeneratedContent={setAiGeneratedContent}
-                    withAiTools={withAiTools}
-                    onAskAI={handleAskAI}
-                    onExplain={handleExplain}
-                    isFloating={isFloating}
-                />
+                 <div className="w-full h-full relative flex flex-col">
+                    {withAiTools && <Toolbar editor={editor} onAskAI={localOnAskAI} onExplain={localOnExplain} />}
+                    <div className={cn("flex-grow relative", aiState === 'done' && 'hidden')}>
+                         <EditorContent editor={editor} className={cn(isFloating && "h-full")}/>
+                    </div>
+                    {aiState === 'done' && (
+                         <div className="w-full">
+                            <div className="prose prose-sm dark:prose-invert max-w-none p-2 border rounded-md min-h-[100px] bg-secondary/20"
+                                dangerouslySetInnerHTML={{ __html: aiGeneratedContent }} />
+                            <AIToolbar state={aiState} onAccept={handleAccept} onRegenerate={handleGenerateFromPrompt} onModify={handleModify}/>
+                        </div>
+                    )}
+                    <AnimatePresence>
+                        {(aiState === 'prompting' || aiState === 'loading') && (
+                            <motion.div
+                                key="ai-prompt" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                                className={cn("absolute bottom-0 left-0 right-0 bg-secondary p-2 rounded-lg shadow-lg flex items-center gap-2", isFloating ? "m-2" : "")}>
+                                <Sparkles className="text-primary h-5 w-5"/>
+                                <Input placeholder={t.ai.placeholder} className="bg-transparent border-none focus-visible:ring-0"
+                                    value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={handlePromptKeyDown}
+                                    disabled={aiState === 'loading'} autoFocus />
+                                 {aiState === 'loading' ? (
+                                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/>
+                                 ) : (
+                                    <Button variant="ghost" size="icon" onClick={() => { setAiState('idle'); editor?.commands.clearContent(); } }><X/></Button>
+                                 )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
                 </>
             )}
         </AnimatePresence>
-        </div>
         
         <AnimatePresence>
-            {sideNotePanels.map((panel, index) => (
+            {!isFloating && sideNotePanels.map((panel, index) => (
                 <FloatingNote
-                    key={panel.id}
-                    id={panel.id}
-                    initialContent={panel.content}
+                    key={panel.id} id={panel.id} initialContent={panel.content}
                     onUpdate={(newContent: any) => handleUpdateNoteContent(panel.id, newContent)}
                     onClose={() => handleCloseSideNote(panel.id)}
                     zIndex={activeNoteId === panel.id ? 1000 : 100 + index}
                     onFocus={() => setActiveNoteId(panel.id)}
+                    onAskAI={handleAIGeneration} onExplain={(text: string) => handleAIGeneration(text)}
                 />
             ))}
         </AnimatePresence>
