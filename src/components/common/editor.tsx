@@ -700,6 +700,15 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
         }
     }, [editor, editable]);
 
+    useEffect(() => {
+        if (editor && content) {
+            const isSame = JSON.stringify(editor.getJSON()) === JSON.stringify(content);
+            if (!isSame) {
+                editor.commands.setContent(content, false);
+            }
+        }
+    }, [content, editor]);
+
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
         setAiState('loading');
@@ -916,31 +925,6 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
     );
 };
 
-const NonEditableViewer = ({ content }: { content: any }) => {
-    const editor = useEditor({
-        extensions: [ StarterKit, Heading.configure({ levels: [1, 2, 3, 4] }).extend({ addAttributes() { return { ...this.parent?.(), id: { default: null, }, }; } }), Image, Video, Audio, Link, Underline, TextStyle, FontFamily, FontSize, Color, Highlight, Table.configure({ resizable: true }), TableRow, TableHeader, TableCell ],
-        content: content,
-        editable: false,
-        editorProps: {
-            attributes: {
-                class: "prose dark:prose-invert max-w-none focus:outline-none",
-            },
-        }
-    });
-
-    useEffect(() => {
-        if(editor && content && JSON.stringify(editor.getJSON()) !== JSON.stringify(content)) {
-            editor.commands.setContent(content, false);
-        }
-    }, [content, editor]);
-
-    return (
-        <div className="max-h-[60vh] overflow-auto">
-            <EditorContent editor={editor} />
-        </div>
-    );
-};
-
 export function Editor({
   content,
   onChange,
@@ -950,7 +934,7 @@ export function Editor({
   withAiTools = false,
 }: EditorProps) {
   
-  const [isEditing, setIsEditing] = useState(() => !isContentEmpty(content));
+  const [isEditing, setIsEditing] = useState(() => editable ? true : !isContentEmpty(content));
   const [aiState, setAiState] = useState<'idle' | 'prompting' | 'loading' | 'streaming' | 'done'>('idle');
   const [prompt, setPrompt] = useState('');
   const [aiGeneratedContent, setAiGeneratedContent] = useState('');
@@ -1006,23 +990,47 @@ export function Editor({
   const handleEditorChange = (newContent: any) => {
     onChange(newContent);
     if (isContentEmpty(newContent)) {
-      if (aiState === 'idle') {
+      if (aiState === 'idle' && !isFloating) {
         setIsEditing(false);
       }
     } else {
         setIsEditing(true);
     }
   };
+  
+    const isFloating = false; // This is the main editor, not a floating one.
+    
+    if (!editable) {
+        const editor = useEditor({
+            extensions: [ StarterKit, Heading.configure({ levels: [1, 2, 3, 4] }).extend({ addAttributes() { return { ...this.parent?.(), id: { default: null, }, }; } }), Image, Video, Audio, Link, Underline, TextStyle, FontFamily, FontSize, Color, Highlight, Table.configure({ resizable: true }), TableRow, TableHeader, TableCell ],
+            content: content,
+            editable: false,
+            editorProps: {
+                attributes: {
+                    class: "prose dark:prose-invert max-w-none focus:outline-none",
+                },
+            }
+        });
 
-  if (!editable) {
-    return <NonEditableViewer content={content} />;
-  }
+        useEffect(() => {
+            if(editor && content && JSON.stringify(editor.getJSON()) !== JSON.stringify(content)) {
+                editor.commands.setContent(content, false);
+            }
+        }, [content, editor]);
+
+        return (
+            <div className="max-h-[60vh] overflow-auto">
+                <EditorContent editor={editor} />
+            </div>
+        );
+    }
+
 
   return (
     <div className="flex gap-4">
         <div className="w-full relative rounded-lg border bg-background p-4 min-h-[150px] flex flex-col justify-center items-center">
         <AnimatePresence>
-            {!isEditing ? (
+            {!isEditing && !isFloating ? (
                 <motion.div
                     key="placeholder"
                     initial={{ opacity: 0 }}
@@ -1044,7 +1052,7 @@ export function Editor({
                 <EditorInstance 
                     content={content}
                     onChange={handleEditorChange}
-                    editable={isEditing}
+                    editable={editable}
                     placeholder={placeholder}
                     aiState={aiState}
                     setAiState={setAiState}
@@ -1055,7 +1063,7 @@ export function Editor({
                     withAiTools={withAiTools}
                     onAskAI={handleAskAI}
                     onExplain={handleExplain}
-                    isFloating={false}
+                    isFloating={isFloating}
                 />
                 </>
             )}
