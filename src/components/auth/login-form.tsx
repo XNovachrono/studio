@@ -21,8 +21,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import { useLanguage } from "@/context/language-context";
+import { getUserProfile } from "@/lib/firestore";
 
 const loginSchemaEs = z.object({
   email: z.string().email("Por favor, introduce un correo electrónico válido."),
@@ -61,22 +62,36 @@ export function LoginForm() {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const firebaseUser = userCredential.user;
 
-      // Store only basic info, dashboards will fetch detailed profiles
-      localStorage.setItem("uncoverly-user", JSON.stringify({ 
-        id: firebaseUser.uid, 
-        email: firebaseUser.email,
-        // We don't know the name or role yet, but we can pre-fill what we have
-        name: firebaseUser.displayName || firebaseUser.email, 
-      }));
+      // Fetch the full user profile immediately after login
+      const userProfile = await getUserProfile(firebaseUser.uid);
+
+      if (!userProfile) {
+        throw new Error(t.errorUserNotFound);
+      }
+
+      // Store the complete profile in localStorage
+      localStorage.setItem("uncoverly-user", JSON.stringify(userProfile));
       
       toast({
         title: t.successTitle,
-        description: t.successDescription.replace('{name}', firebaseUser.displayName || 'a Uncoverly'),
+        description: t.successDescription.replace('{name}', userProfile.name || 'a Uncoverly'),
       });
 
-      // Redirect to a generic student dashboard. The dashboard itself will handle role-based redirection.
-      // This makes the login feel faster as we don't wait for the profile fetch here.
-      router.push("/student/dashboard");
+      // Redirect based on the user's role
+      switch (userProfile.role) {
+        case 'admin':
+          router.push("/admin/dashboard");
+          break;
+        case 'teacher':
+          router.push("/teacher/dashboard");
+          break;
+        case 'student':
+          router.push("/student/dashboard");
+          break;
+        default:
+          router.push("/login");
+          break;
+      }
       
     } catch (error: any) {
       console.error("Firebase Auth Error:", error);
@@ -91,7 +106,7 @@ export function LoginForm() {
           description = t.errorInvalidEmail;
           break;
         default:
-          description = error.message;
+          description = error.message || description;
       }
       toast({
         variant: "destructive",
