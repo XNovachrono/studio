@@ -6,7 +6,7 @@ import { useEditor, EditorContent, Editor as TiptapEditor, BubbleMenu } from "@t
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Image from "@tiptap/extension-image";
-import Link from "@tiptap/extension-link";
+import Link from "@tiptap_extension-link";
 import Underline from "@tiptap/extension-underline";
 import TextStyle from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
@@ -50,7 +50,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { generateEditorContent } from "@/ai/flows/editor-flow";
 import { contextualQA } from "@/ai/flows/contextual-qa-flow";
 import { Input } from "../ui/input";
-import { AnimatePresence, motion, useDragControls } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import type { EditorContent as EditorContentType } from "@/lib/types";
 import { Separator } from "../ui/separator";
 import { Label } from "../ui/label";
@@ -624,7 +624,6 @@ interface EditorProps {
 
 const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }: any) => {
     const constraintsRef = useRef(null);
-    const dragControls = useDragControls();
     const [size, setSize] = useState({ width: 350, height: 400 });
     const [localContent, setLocalContent] = useState(initialContent);
 
@@ -641,10 +640,9 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
         <>
             <div ref={constraintsRef} className="fixed inset-0 pointer-events-none" />
             <motion.div
-                dragListener={false}
-                dragControls={dragControls}
-                dragConstraints={constraintsRef}
+                drag
                 dragMomentum={false}
+                dragConstraints={constraintsRef}
                 onMouseDown={onFocus}
                 className="fixed top-1/4 left-1/4 bg-card border rounded-lg shadow-2xl flex flex-col overflow-hidden"
                 style={{ zIndex, width: size.width, height: size.height }}
@@ -653,7 +651,6 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
                 exit={{ opacity: 0, scale: 0.9 }}
             >
                 <div 
-                    onPointerDown={(e) => dragControls.start(e)}
                     className="flex items-center justify-between p-2 border-b cursor-grab bg-secondary/50"
                 >
                     <span className="text-sm font-medium">Apunte</span>
@@ -662,7 +659,7 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
                     </Button>
                 </div>
                 
-                <div className="flex-grow p-2 overflow-auto">
+                <div className="flex-grow p-2 overflow-auto" onMouseDown={(e) => e.stopPropagation()}>
                     {localContent.type === 'loading' ? (
                         <div className="flex items-center justify-center h-full">
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -673,7 +670,7 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
                             onChange={handleContentChange}
                             editable={true}
                             placeholder="Nuevo apunte..."
-                            withAiTools={true}
+                            withAiTools={false}
                             allowSideNotes={false}
                         />
                     )}
@@ -681,7 +678,7 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
 
                 <motion.div
                     className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize"
-                    drag="x, y"
+                    drag="x,y"
                     dragMomentum={false}
                     onDrag={(_, info) => {
                         setSize(prevSize => ({
