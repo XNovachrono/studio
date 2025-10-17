@@ -619,6 +619,7 @@ interface EditorProps {
   placeholder?: string;
   initialHint?: string;
   withAiTools?: boolean;
+  allowSideNotes?: boolean;
 }
 
 const isContentEmpty = (content: EditorContentType | null | undefined): boolean => {
@@ -682,6 +683,7 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
                             editable={true}
                             placeholder="Nuevo apunte..."
                             withAiTools={true}
+                            allowSideNotes={false} // Disable side notes inside a side note
                         />
                     )}
                 </div>
@@ -710,9 +712,9 @@ export function Editor({
   placeholder,
   initialHint,
   withAiTools = false,
-}: EditorProps & { isFloating?: boolean }) {
+  allowSideNotes = true,
+}: EditorProps) {
   
-  const [isEditing, setIsEditing] = useState(() => editable ? true : !isContentEmpty(content));
   const [aiState, setAiState] = useState<'idle' | 'prompting' | 'loading' | 'streaming' | 'done'>('idle');
   const [prompt, setPrompt] = useState('');
   const [aiGeneratedContent, setAiGeneratedContent] = useState('');
@@ -734,10 +736,7 @@ export function Editor({
                 placeholder: ({ node }) => {
                     if (!editable) return "";
                     if (node.type.name === 'heading') return t.placeholders.heading;
-                    if (node.isFirstChild && node.isEmpty) {
-                        return placeholder || t.placeholders.default;
-                    }
-                    return "";
+                    return placeholder || t.placeholders.default;
                 }
             }),
             Image, Video, Audio, Link.configure({ openOnClick: false }), Underline,
@@ -766,7 +765,10 @@ export function Editor({
 
   useEffect(() => {
     if (editor) {
-      editor.setEditable(editable && aiState !== 'loading' && aiState !== 'streaming' && aiState !== 'done');
+      const isActuallyEditable = editable && aiState !== 'loading' && aiState !== 'streaming' && aiState !== 'done';
+      if (editor.isEditable !== isActuallyEditable) {
+        editor.setEditable(isActuallyEditable);
+      }
     }
   }, [editor, editable, aiState]);
   
@@ -854,76 +856,60 @@ export function Editor({
     setAiState('idle');
     setPrompt('');
   };
-  
-  const handleStartEditing = () => {
-    setIsEditing(true);
-    setAiState('idle');
-    setPrompt('');
-    setAiGeneratedContent('');
-  };
     
-    if (!editable) {
-         if (isContentEmpty(content)) {
-            return (
-                <div className="flex items-center justify-center min-h-[150px] text-center text-muted-foreground cursor-pointer" onClick={handleStartEditing}>
-                    <p>{initialHint || t.initialHint}</p>
-                </div>
-            )
-        }
-        return <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: editor?.getHTML() || ''}} />;
-    }
+  if (!editable && isContentEmpty(content)) {
+      return (
+          <div className="flex items-center justify-center min-h-[150px] text-center text-muted-foreground">
+              <p>{initialHint || t.initialHint}</p>
+          </div>
+      )
+  }
+  
+  if (!editable) {
+     return <EditorContent editor={editor} className="prose prose-sm dark:prose-invert max-w-none focus:outline-none h-full" />;
+  }
 
 
   return (
     <div className={cn("w-full relative min-h-[150px] rounded-lg border bg-background p-4 flex flex-col justify-center")}>
-        <AnimatePresence>
-            {!isEditing ? (
-                <motion.div
-                    key="placeholder" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="text-center text-muted-foreground cursor-pointer" onClick={handleStartEditing}>
-                    <p>{initialHint || t.initialHint}</p>
-                </motion.div>
-            ) : (
-                <>
-                {withAiTools && (
-                    <Button onClick={() => handleAddSideNote({ type: "doc", content: [{ type: "paragraph" }]})} size="sm" className="absolute top-2 right-2 z-10">
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Añadir Apunte
-                    </Button>
-                )}
-                 <div className="w-full h-full relative flex flex-col">
-                    {withAiTools && <Toolbar editor={editor} onAskAI={localOnAskAI} onExplain={localOnExplain} />}
-                    <div className={cn("flex-grow relative", aiState === 'done' && 'hidden')}>
-                         <EditorContent editor={editor} className={"h-full"}/>
-                    </div>
-                    {aiState === 'done' && (
-                         <div className="w-full">
-                            <div className="prose prose-sm dark:prose-invert max-w-none p-2 border rounded-md min-h-[100px] bg-secondary/20"
-                                dangerouslySetInnerHTML={{ __html: aiGeneratedContent }} />
-                            <AIToolbar state={aiState} onAccept={handleAccept} onRegenerate={handleGenerateFromPrompt} onModify={handleModify}/>
-                        </div>
-                    )}
-                    <AnimatePresence>
-                        {(aiState === 'prompting' || aiState === 'loading') && (
-                            <motion.div
-                                key="ai-prompt" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                                className={cn("absolute bottom-0 left-0 right-0 bg-secondary p-2 rounded-lg shadow-lg flex items-center gap-2")}>
-                                <Sparkles className="text-primary h-5 w-5"/>
-                                <Input placeholder={t.ai.placeholder} className="bg-transparent border-none focus-visible:ring-0"
-                                    value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={handlePromptKeyDown}
-                                    disabled={aiState === 'loading'} autoFocus />
-                                 {aiState === 'loading' ? (
-                                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/>
-                                 ) : (
-                                    <Button variant="ghost" size="icon" onClick={() => { setAiState('idle'); editor?.commands.clearContent(); } }><X/></Button>
-                                 )}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+        <>
+        {withAiTools && allowSideNotes && (
+            <Button onClick={() => handleAddSideNote({ type: "doc", content: [{ type: "paragraph" }]})} size="sm" className="absolute top-2 right-2 z-10">
+                <Pencil className="mr-2 h-4 w-4" />
+                Añadir Apunte
+            </Button>
+        )}
+         <div className="w-full h-full relative flex flex-col">
+            {withAiTools && <Toolbar editor={editor} onAskAI={localOnAskAI} onExplain={localOnExplain} />}
+            <div className={cn("flex-grow relative", aiState === 'done' && 'hidden')}>
+                 <EditorContent editor={editor} className={"h-full"}/>
+            </div>
+            {aiState === 'done' && (
+                 <div className="w-full">
+                    <div className="prose prose-sm dark:prose-invert max-w-none p-2 border rounded-md min-h-[100px] bg-secondary/20"
+                        dangerouslySetInnerHTML={{ __html: aiGeneratedContent }} />
+                    <AIToolbar state={aiState} onAccept={handleAccept} onRegenerate={handleGenerateFromPrompt} onModify={handleModify}/>
                 </div>
-                </>
             )}
-        </AnimatePresence>
+            <AnimatePresence>
+                {(aiState === 'prompting' || aiState === 'loading') && (
+                    <motion.div
+                        key="ai-prompt" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                        className={cn("absolute bottom-0 left-0 right-0 bg-secondary p-2 rounded-lg shadow-lg flex items-center gap-2")}>
+                        <Sparkles className="text-primary h-5 w-5"/>
+                        <Input placeholder={t.ai.placeholder} className="bg-transparent border-none focus-visible:ring-0"
+                            value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={handlePromptKeyDown}
+                            disabled={aiState === 'loading'} autoFocus />
+                         {aiState === 'loading' ? (
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/>
+                         ) : (
+                            <Button variant="ghost" size="icon" onClick={() => { setAiState('idle'); editor?.commands.clearContent(); } }><X/></Button>
+                         )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+        </>
         
         <AnimatePresence>
             {sideNotePanels.map((panel, index) => (
