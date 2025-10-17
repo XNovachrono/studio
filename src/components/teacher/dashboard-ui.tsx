@@ -1340,36 +1340,23 @@ export function TeacherDashboardUI() {
   }, []);
 
   const studentsById = useMemo(() => {
-      if (!data) return new Map();
-      const allStudentsFromGroups = data.groups.flatMap(g => g.studentsInfo.map(s => ({
-          ...s,
-          // We need to fetch the full profile if we need more details like `scheduledSlots`
-      })));
-      
-      const allStudentsFromHistory = data.groupHistory.flatMap(g => g.studentsInfo);
-      
-      const combined = [...allStudentsFromGroups, ...allStudentsFromHistory];
-      const studentMap = new Map<string, StudentProfile>();
+    const studentMap = new Map<string, StudentProfile>();
+    if (!data) return studentMap;
+    
+    const allGroups = [...data.groups, ...data.groupHistory];
 
-      // A more robust way would be to fetch student profiles if not found or incomplete
-      // For now, we rely on the embedded `studentsInfo`
-      data.groups.concat(data.groupHistory).forEach(group => {
-          group.studentsInfo?.forEach(studentInfo => {
-              if(!studentMap.has(studentInfo.id)) {
-                  // This is a partial profile. In a real scenario you might fetch the full one.
-                  studentMap.set(studentInfo.id, studentInfo as StudentProfile);
-              }
-          })
-      })
+    allGroups.forEach(group => {
+        // Ensure studentsInfo exists and is an array before mapping
+        (group.studentsInfo || []).forEach(studentInfo => {
+            if (!studentMap.has(studentInfo.id)) {
+                // This is a partial profile. In a real scenario you might fetch the full one.
+                studentMap.set(studentInfo.id, studentInfo as StudentProfile);
+            }
+        });
+    });
 
-      // This is a temporary solution to get full student profiles.
-      // Ideally, you'd fetch them on demand when a group dialog is opened.
-      const allStudentProfiles = data.groups.flatMap(g => g.studentsInfo.map(si => studentsById.get(si.id))).filter(Boolean) as StudentProfile[];
-       allStudentProfiles.forEach(p => studentMap.set(p.id, p))
-
-
-      return studentMap;
-  }, [data]);
+    return studentMap;
+}, [data]);
 
   const privateGroups = useMemo(() => data?.groups.filter(g => g.type === 'privado') || [], [data?.groups]);
   const smallGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo pequeño') || [], [data?.groups]);
