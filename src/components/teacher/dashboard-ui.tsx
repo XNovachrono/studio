@@ -498,8 +498,11 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     
     const [activeModal, setActiveModal] = useState<ModalType>(null);
     const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
-
+    
+    // Unified state for modal editor content
     const [currentEditingContent, setCurrentEditingContent] = useState<EditorContent | null>(null);
+
+    // State for student-specific comments in the comment modal
     const [currentEditingComments, setCurrentEditingComments] = useState<Record<string, EditorContent>>({});
 
 
@@ -525,7 +528,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     }, [group.id, onLessonCreated]);
 
     const handleSaveLesson = async () => {
-      if (!selectedLesson || activeModal === null) return;
+      if (!selectedLesson || activeModal === null || !currentEditingContent) return;
       
       const lessonId = selectedLesson.id;
       const dataToUpdate: Partial<Lesson> = {};
@@ -553,6 +556,8 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
       } finally {
         setIsSaving(null);
         setActiveModal(null);
+        setCurrentEditingContent(null);
+        setCurrentEditingComments({});
       }
     };
     
@@ -563,11 +568,20 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
         if (modalType === 'comments') {
             setCurrentEditingContent(lesson.comments);
             setCurrentEditingComments(lesson.studentComments || {});
-        } else if (modalType && modalType !== 'attendance' && modalType !== 'objective') {
+        } else if (modalType === 'objective') {
+            setCurrentEditingContent(lesson.content);
+        } else if (modalType && modalType !== 'attendance') {
             setCurrentEditingContent(lesson[modalType as keyof Lesson] as EditorContent);
         } else {
              setCurrentEditingContent(null);
         }
+    }
+    
+    const handleCloseModal = () => {
+      setActiveModal(null);
+      setSelectedLesson(null);
+      setCurrentEditingContent(null);
+      setCurrentEditingComments({});
     }
 
     const handleAttendanceChange = (lessonId: string, studentId: string, status: AttendanceStatus ) => {
@@ -657,48 +671,81 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
 
         const attendanceForStudent = (studentId: string): AttendanceStatus => selectedLesson.attendance?.[studentId] ?? 'ausente';
         
+        const editorPlaceholders = {
+            objective: t.placeholders.objective,
+            classNote: t.placeholders.classNote,
+            homework: t.placeholders.homework,
+            comments: t.placeholders.comments,
+        };
+
+        const currentPlaceholder = editorPlaceholders[activeModal as keyof typeof editorPlaceholders] || "";
+        
         switch(activeModal) {
             case 'objective':
-                return (
-                    <Editor
-                        content={selectedLesson.content}
-                        onChange={() => {}}
-                        editable={false}
-                        placeholder={t.placeholders.objective}
-                    />
-                );
             case 'classNote':
-                 return (
-                     <Editor
-                        content={currentEditingContent}
-                        onChange={setCurrentEditingContent}
-                        editable
-                        placeholder={t.placeholders.classNote}
-                        withAiTools
-                        allowSideNotes
-                    />
-                );
             case 'homework':
+            case 'comments':
+                const isCommentsModal = activeModal === 'comments';
+                const showImportButtons = activeModal === 'homework';
+                const allowSideNotes = activeModal === 'classNote';
                  return (
-                    <>
-                        <div className="flex gap-2 mb-4">
-                            <Button size="sm" variant="outline" onClick={handleOpenBankImporter}>
-                                <Import className="mr-2 h-4 w-4" />
-                                {t.importFromBank}
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={handleOpenFileBankImporter}>
-                                <FileUp className="mr-2 h-4 w-4"/>
-                                {t.importFile}
-                            </Button>
-                        </div>
-                        <Editor
-                            content={currentEditingContent}
-                            onChange={setCurrentEditingContent}
-                            editable
-                            placeholder={t.placeholders.homework}
-                            withAiTools
-                        />
-                    </>
+                    <div className="space-y-4">
+                        {showImportButtons && (
+                             <div className="flex gap-2">
+                                <Button size="sm" variant="outline" onClick={handleOpenBankImporter}>
+                                    <Import className="mr-2 h-4 w-4" />
+                                    {t.importFromBank}
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={handleOpenFileBankImporter}>
+                                    <FileUp className="mr-2 h-4 w-4"/>
+                                    {t.importFile}
+                                </Button>
+                            </div>
+                        )}
+                        {isCommentsModal ? (
+                            <>
+                                <div>
+                                    <h4 className="font-semibold mb-2">{t.generalComment}</h4>
+                                    <Editor
+                                        content={currentEditingContent}
+                                        onChange={setCurrentEditingContent}
+                                        editable
+                                        placeholder={currentPlaceholder}
+                                        withAiTools
+                                    />
+                                </div>
+                                <Separator />
+                                <div>
+                                     <h4 className="font-semibold mb-4">{t.studentComments}</h4>
+                                     <Accordion type="multiple" className="w-full space-y-2">
+                                        {groupMembers.map(student => (
+                                            <AccordionItem value={student.id} key={student.id} className="border rounded-md">
+                                                <AccordionTrigger className="px-3 py-2 text-sm font-medium hover:no-underline">{student.name}</AccordionTrigger>
+                                                <AccordionContent className="p-3 border-t">
+                                                    <Editor
+                                                        content={currentEditingComments[student.id] || { type: "doc", content: []}}
+                                                        onChange={(newContent) => setCurrentEditingComments(prev => ({...prev, [student.id]: newContent}))}
+                                                        editable
+                                                        placeholder={`${t.placeholders.studentComment} ${student.name}...`}
+                                                        withAiTools
+                                                    />
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        ))}
+                                     </Accordion>
+                                </div>
+                            </>
+                        ) : (
+                             <Editor
+                                content={currentEditingContent}
+                                onChange={setCurrentEditingContent}
+                                editable
+                                placeholder={currentPlaceholder}
+                                withAiTools
+                                allowSideNotes={allowSideNotes}
+                            />
+                        )}
+                    </div>
                 );
             case 'attendance':
                 return (
@@ -761,41 +808,6 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                                 </div>
                             );
                         })}
-                    </div>
-                );
-             case 'comments':
-                return (
-                    <div className="space-y-6">
-                        <div>
-                            <h4 className="font-semibold mb-2">{t.generalComment}</h4>
-                            <Editor
-                                content={currentEditingContent}
-                                onChange={setCurrentEditingContent}
-                                editable
-                                placeholder={t.placeholders.comments}
-                                withAiTools
-                            />
-                        </div>
-                        <Separator />
-                        <div>
-                             <h4 className="font-semibold mb-4">{t.studentComments}</h4>
-                             <Accordion type="multiple" className="w-full space-y-2">
-                                {groupMembers.map(student => (
-                                    <AccordionItem value={student.id} key={student.id} className="border rounded-md">
-                                        <AccordionTrigger className="px-3 py-2 text-sm font-medium hover:no-underline">{student.name}</AccordionTrigger>
-                                        <AccordionContent className="p-3 border-t">
-                                            <Editor
-                                                content={currentEditingComments[student.id] || { type: "doc", content: []}}
-                                                onChange={(newContent) => setCurrentEditingComments(prev => ({...prev, [student.id]: newContent}))}
-                                                editable
-                                                placeholder={`${t.placeholders.studentComment} ${student.name}...`}
-                                                withAiTools
-                                            />
-                                        </AccordionContent>
-                                    </AccordionItem>
-                                ))}
-                             </Accordion>
-                        </div>
                     </div>
                 );
             default:
@@ -894,7 +906,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                 <p className="p-4 text-center text-muted-foreground">{t.noLessons}</p>
             )}
 
-            <Dialog open={!!activeModal} onOpenChange={(open) => !open && setActiveModal(null)}>
+            <Dialog open={!!activeModal} onOpenChange={handleCloseModal}>
                 <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle className="font-headline text-2xl">
@@ -908,7 +920,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
                     <div className="flex-grow overflow-auto py-4">
                         {renderModalContent()}
                     </div>
-                    {activeModal !== 'attendance' && activeModal !== 'objective' && (
+                    {activeModal !== 'attendance' && (
                         <DialogFooter>
                             <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
                             <Button onClick={handleSaveLesson} disabled={isSaving === selectedLesson?.id}>

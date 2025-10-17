@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEditor, EditorContent, Editor as TiptapEditor, BubbleMenu } from "@tiptap/react";
@@ -851,17 +852,14 @@ export function Editor({
   };
     
   if (!editable && isContentEmpty(content)) {
-    return (
-        <div className="flex items-center justify-center min-h-[150px] text-center text-muted-foreground prose prose-sm dark:prose-invert max-w-none">
-            <p>{placeholder || t.initialHint}</p>
-        </div>
-    )
+    // This logic was flawed. Tiptap's Placeholder extension handles this.
+    // We render the editor anyway and let the extension do its job.
   }
 
   return (
     <div className={cn("w-full relative min-h-[150px] rounded-lg border bg-background p-4 flex flex-col justify-center")}>
         {withAiTools && allowSideNotes && (
-            <Button onClick={() => handleAddSideNote({ type: "doc", content: [{ type: "paragraph" }]})} size="sm" variant="ghost" className="absolute top-2 right-2 z-10 text-muted-foreground hover:text-foreground">
+             <Button onClick={() => handleAddSideNote({ type: "doc", content: [{ type: "paragraph" }]})} size="sm" variant="ghost" className="absolute top-2 right-2 z-10 text-muted-foreground hover:text-foreground h-7 px-2">
                 <Pencil className="mr-2 h-4 w-4" />
                 Añadir Apunte
             </Button>
