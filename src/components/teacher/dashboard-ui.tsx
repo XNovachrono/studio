@@ -505,7 +505,6 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     // State for student-specific comments in the comment modal
     const [currentEditingComments, setCurrentEditingComments] = useState<Record<string, EditorContent>>({});
 
-
     const groupMembers = useMemo(() => group.studentsInfo || [], [group.studentsInfo]);
 
     const fetchLessons = async () => {
@@ -537,7 +536,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
           dataToUpdate['comments'] = currentEditingContent as EditorContent;
           dataToUpdate['studentComments'] = currentEditingComments;
       } else {
-          dataToUpdate[activeModal as 'classNote' | 'homework' | 'content'] = currentEditingContent as EditorContent;
+          dataToUpdate[activeModal as 'content' | 'classNote' | 'homework'] = currentEditingContent as EditorContent;
       }
 
       if (Object.keys(dataToUpdate).length === 0) {

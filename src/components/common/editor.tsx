@@ -623,72 +623,65 @@ interface EditorProps {
 }
 
 const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }: any) => {
-    const constraintsRef = useRef(null);
-    const [size, setSize] = useState({ width: 350, height: 400 });
     const [localContent, setLocalContent] = useState(initialContent);
 
+    // This effect ensures that if the initial content from the parent changes (e.g., AI result comes in),
+    // the local state of this note is updated.
     useEffect(() => {
         setLocalContent(initialContent);
     }, [initialContent]);
 
     const handleContentChange = (newContent: any) => {
+        // Update both local state for immediate feedback and call parent's onUpdate
         setLocalContent(newContent);
         onUpdate(newContent);
     };
 
     return (
-        <>
-            <div ref={constraintsRef} className="fixed inset-0 pointer-events-none" />
-            <motion.div
-                drag
-                dragMomentum={false}
-                dragConstraints={constraintsRef}
-                onMouseDown={onFocus}
-                className="fixed top-1/4 left-1/4 bg-card border rounded-lg shadow-2xl flex flex-col overflow-hidden"
-                style={{ zIndex, width: size.width, height: size.height }}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
+        <motion.div
+            drag
+            dragMomentum={false}
+            dragListener={false} // We'll handle drag manually on the header
+            onMouseDown={onFocus}
+            className="fixed top-1/4 left-1/4 bg-card border rounded-lg shadow-2xl flex flex-col overflow-hidden"
+            style={{ zIndex, width: 350, height: 400 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+        >
+            <motion.div 
+                className="flex items-center justify-between p-2 border-b cursor-grab bg-secondary/50"
+                onPointerDown={(e) => {
+                    // This allows dragging only from the header
+                    const target = e.target as HTMLElement;
+                    if(target.closest('button')) return; // Don't drag if clicking the close button
+                    const dragControls = (e.currentTarget.parentElement as any).dragControls;
+                    dragControls?.start(e);
+                }}
             >
-                <div 
-                    className="flex items-center justify-between p-2 border-b cursor-grab bg-secondary/50"
-                >
-                    <span className="text-sm font-medium">Apunte</span>
-                    <Button onClick={onClose} variant="ghost" size="icon" className="h-6 w-6 cursor-pointer">
-                        <X className="h-4 w-4" />
-                    </Button>
-                </div>
-                
-                <div className="flex-grow p-2 overflow-auto" onMouseDown={(e) => e.stopPropagation()}>
-                    {localContent.type === 'loading' ? (
-                        <div className="flex items-center justify-center h-full">
-                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                        </div>
-                    ) : (
-                       <Editor
-                            content={localContent}
-                            onChange={handleContentChange}
-                            editable={true}
-                            placeholder="Nuevo apunte..."
-                            withAiTools={false}
-                            allowSideNotes={false}
-                        />
-                    )}
-                </div>
-
-                <motion.div
-                    className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize"
-                    drag="x,y"
-                    dragMomentum={false}
-                    onDrag={(_, info) => {
-                        setSize(prevSize => ({
-                            width: Math.max(200, prevSize.width + info.delta.x),
-                            height: Math.max(150, prevSize.height + info.delta.y)
-                        }));
-                    }}
-                />
+                <span className="text-sm font-medium">Apunte</span>
+                <Button onClick={onClose} variant="ghost" size="icon" className="h-6 w-6 cursor-pointer">
+                    <X className="h-4 w-4" />
+                </Button>
             </motion.div>
-        </>
+            
+            <div className="flex-grow p-2 overflow-auto" onMouseDown={(e) => e.stopPropagation()}>
+                {localContent.type === 'loading' ? (
+                    <div className="flex items-center justify-center h-full">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                ) : (
+                   <Editor
+                        content={localContent}
+                        onChange={handleContentChange}
+                        editable={true}
+                        placeholder="Nuevo apunte..."
+                        withAiTools={true} // AI tools can be available in notes too
+                        allowSideNotes={false} // Prevent notes within notes
+                    />
+                )}
+            </div>
+        </motion.div>
     );
 };
 
@@ -703,7 +696,6 @@ export function Editor({
   
   const [aiState, setAiState] = useState<'idle' | 'prompting' | 'loading' | 'streaming' | 'done'>('idle');
   const [prompt, setPrompt] = useState('');
-  const [aiGeneratedContent, setAiGeneratedContent] = useState('');
   const [sideNotePanels, setSideNotePanels] = useState<any[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<number | null>(null);
 
@@ -807,7 +799,6 @@ export function Editor({
   const handleGenerateFromPrompt = async () => {
     if (!prompt.trim() || !editor) return;
     setAiState('loading');
-    setAiGeneratedContent('');
     try {
         const result = await generateEditorContent({ prompt });
         editor.chain().focus().insertContent(result).run();
@@ -826,26 +817,17 @@ export function Editor({
         event.preventDefault();
         handleGenerateFromPrompt();
     }
+     if (event.key === 'Escape') {
+        event.preventDefault();
+        handleCancelAI();
+    }
   }
 
   const handleCancelAI = () => {
     setAiState('idle');
     setPrompt('');
+    // No longer clearing content, just focusing the editor
     editor?.chain().focus().run();
-  };
-
-  const handleAccept = () => {
-    editor?.chain().focus().insertContent(aiGeneratedContent).run();
-    setAiGeneratedContent('');
-    setAiState('idle');
-    setPrompt('');
-  };
-
-  const handleModify = () => {
-    editor?.chain().focus().insertContent(aiGeneratedContent).run();
-    setAiGeneratedContent('');
-    setAiState('idle');
-    setPrompt('');
   };
     
   return (
@@ -858,7 +840,7 @@ export function Editor({
         )}
          <div className="w-full h-full relative flex flex-col flex-grow">
             {withAiTools && <Toolbar editor={editor} onAskAI={localOnAskAI} onExplain={localOnExplain} />}
-            <div className={cn("flex-grow relative")}>
+            <div className={cn("flex-grow relative h-full")}>
                  <EditorContent editor={editor} className={"h-full"}/>
             </div>
             
