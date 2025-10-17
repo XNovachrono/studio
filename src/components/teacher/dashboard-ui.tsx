@@ -505,7 +505,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     // State for student-specific comments in the comment modal
     const [currentEditingComments, setCurrentEditingComments] = useState<Record<string, EditorContent>>({});
 
-    const groupMembers = useMemo(() => group.studentsInfo || [], [group.studentsInfo]);
+    const groupMembers = useMemo(() => group.studentsInfo || [], [group]);
 
     const fetchLessons = async () => {
         setIsLoading(true);
@@ -1339,23 +1339,17 @@ export function TeacherDashboardUI() {
   }, []);
 
   const studentsById = useMemo(() => {
-    const studentMap = new Map<string, StudentProfile>();
-    if (!data) return studentMap;
-    
-    const allGroups = [...data.groups, ...data.groupHistory];
+      if (!data) return new Map<string, StudentProfile>();
 
-    allGroups.forEach(group => {
-        // Ensure studentsInfo exists and is an array before mapping
-        (group.studentsInfo || []).forEach(studentInfo => {
-            if (!studentMap.has(studentInfo.id)) {
-                // This is a partial profile. In a real scenario you might fetch the full one.
-                studentMap.set(studentInfo.id, studentInfo as StudentProfile);
-            }
-        });
-    });
-
-    return studentMap;
-}, [data]);
+      const allStudentsFromGroups = (data.groups || []).flatMap(g => g.studentsInfo || []);
+      const allStudentsFromHistory = (data.groupHistory || []).flatMap(g => g.studentsInfo || []);
+      const allStudents = [...allStudentsFromGroups, ...allStudentsFromHistory];
+      
+      return allStudents.reduce((map, student) => {
+          map.set(student.id, student as StudentProfile);
+          return map;
+      }, new Map<string, StudentProfile>());
+  }, [data]);
 
   const privateGroups = useMemo(() => data?.groups.filter(g => g.type === 'privado') || [], [data?.groups]);
   const smallGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo pequeño') || [], [data?.groups]);

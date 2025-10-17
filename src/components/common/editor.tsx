@@ -651,12 +651,11 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
         >
             <motion.div 
                 className="flex items-center justify-between p-2 border-b cursor-grab bg-secondary/50"
-                onPointerDown={(e) => {
-                    // This allows dragging only from the header
-                    const target = e.target as HTMLElement;
-                    if(target.closest('button')) return; // Don't drag if clicking the close button
+                 onPointerDown={(e) => {
                     const dragControls = (e.currentTarget.parentElement as any).dragControls;
-                    dragControls?.start(e);
+                    if (dragControls) {
+                      dragControls.start(e, { snapToCursor: false });
+                    }
                 }}
             >
                 <span className="text-sm font-medium">Apunte</span>
@@ -711,12 +710,7 @@ export function Editor({
                 },
             }),
             Placeholder.configure({
-                placeholder: ({ node }) => {
-                    if (node.type.name === 'heading') {
-                        return t.placeholders.heading;
-                    }
-                    return placeholder || t.placeholders.default;
-                },
+                placeholder: placeholder || t.placeholders.default,
             }),
             Image, Video, Audio, Link.configure({ openOnClick: false }), Underline,
             TextStyle, FontFamily, FontSize, Color, Highlight.configure({ multicolor: true }),
@@ -826,7 +820,6 @@ export function Editor({
   const handleCancelAI = () => {
     setAiState('idle');
     setPrompt('');
-    // No longer clearing content, just focusing the editor
     editor?.chain().focus().run();
   };
     
