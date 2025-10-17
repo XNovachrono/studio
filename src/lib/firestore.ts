@@ -184,17 +184,14 @@ export const createStudentNote = async (data: Omit<StudentNote, 'id' | 'createdA
         updatedAt: Timestamp.now(),
     };
     
-    try {
-        await addDoc(notesRef, noteData);
-    } catch (serverError) {
+    addDoc(notesRef, noteData).catch(serverError => {
         const error = new FirestorePermissionError({
             path: notesRef.path,
             operation: 'create',
             requestResourceData: noteData,
         });
         errorEmitter.emit('permission-error', error);
-        throw error;
-    }
+    });
 }
 
 export const getStudentNotes = async (studentId: string): Promise<StudentNote[]> => {
