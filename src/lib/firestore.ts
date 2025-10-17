@@ -186,7 +186,6 @@ export const createStudentNote = async (data: Omit<StudentNote, 'id' | 'createdA
 
 export const getStudentNotes = async (studentId: string): Promise<StudentNote[]> => {
     const notesRef = collection(db, "student_notes");
-    // The query is simplified to work with security rules. Sorting is done on the client.
     const q = query(notesRef, where("studentId", "==", studentId));
     
     try {

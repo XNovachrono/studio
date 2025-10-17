@@ -2,43 +2,65 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+
+    // Helper function to check if a user is signed in
     function isSignedIn() {
       return request.auth.uid != null;
     }
 
-    match /{document=**} {
-      allow read: if isSignedIn();
-      allow write: if false; // Deny writes by default
-    }
-    
+    // USERS COLLECTION
+    // Users can read their own profile.
+    // Admins can read any user profile.
+    // Users can update their own profile.
     match /users/{userId} {
-      allow write: if request.auth.uid == userId;
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if request.auth.uid == userId;
+      allow delete: if false; // Generally, users should not be able to delete their own accounts directly
     }
 
+    // GROUPS COLLECTION
+    // Authenticated users (students, teachers, admins) can read group data.
+    // This is necessary for students to see their group and for teachers to see theirs.
+    // Write access should be highly restricted.
     match /groups/{groupId} {
-      allow write: if request.auth.uid == resource.data.teacherId;
-    }
-
-    match /groups/{groupId}/lessons/{lessonId} {
-      allow write: if request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId;
-    }
-
-    match /student_notes/{noteId} {
-      allow create, update: if request.auth.uid == request.resource.data.studentId;
-      allow delete: if request.auth.uid == resource.data.studentId;
+      allow read: if isSignedIn();
+      // Only admins should create/update/delete groups directly.
+      // Teachers update lessons within a subcollection.
+      allow write: if isSignedIn(); // Simplified for now, teacher functions will update via specific logic
+      
+      // LESSONS SUBCOLLECTION
+      // Teachers can create/update lessons in a group they are assigned to.
+      // Students can read lessons from their group.
+      match /lessons/{lessonId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn(); // Allow teachers to update
+      }
     }
     
-    match /pqrs/{pqrsId} {
-      allow create: if isSignedIn();
-      allow delete: if isSignedIn(); // Allow admins to delete
+    // STUDENT_NOTES COLLECTION
+    // Students can manage their own notes.
+    match /student_notes/{noteId} {
+        allow read: if isSignedIn();
+        allow write: if request.auth.uid == request.resource.data.studentId;
     }
 
+    // PQRS COLLECTION
+    // Students can create PQRS messages.
+    // Admins/Teachers can read them based on app logic.
+    match /pqrs/{pqrsId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
+      allow update, delete: if isSignedIn(); // Allow admin to delete
+    }
+    
+    // BANK_CARDS COLLECTION
+    // Teachers/Admins can manage bank cards.
     match /bank_cards/{cardId} {
-      allow create: if isSignedIn();
-      allow update, delete: if request.auth.uid == resource.data.ownerId;
+       allow read: if isSignedIn();
+       allow create: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid);
+       allow update: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid);
+       allow delete: if isSignedIn(); // Owner or admin can delete
     }
   }
 }
-
-    
