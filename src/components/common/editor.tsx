@@ -622,16 +622,6 @@ interface EditorProps {
   allowSideNotes?: boolean;
 }
 
-const isContentEmpty = (content: EditorContentType | null | undefined): boolean => {
-    if (!content || !content.content) return true;
-    if (content.content.length === 0) return true;
-    if (content.content.length === 1 && content.content[0].type === 'paragraph') {
-        const paragraph = content.content[0];
-        return !paragraph.content || paragraph.content.length === 0;
-    }
-    return false;
-};
-
 const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }: any) => {
     const constraintsRef = useRef(null);
     const [size, setSize] = useState({ width: 350, height: 400 });
@@ -728,10 +718,11 @@ export function Editor({
             }),
             Placeholder.configure({
                 placeholder: ({ node }) => {
-                    if (!editable) return "";
-                    if (node.type.name === 'heading') return t.placeholders.heading;
+                    if (node.type.name === 'heading') {
+                        return t.placeholders.heading;
+                    }
                     return placeholder || t.placeholders.default;
-                }
+                },
             }),
             Image, Video, Audio, Link.configure({ openOnClick: false }), Underline,
             TextStyle, FontFamily, FontSize, Color, Highlight.configure({ multicolor: true }),
@@ -759,12 +750,11 @@ export function Editor({
 
   useEffect(() => {
     if (editor) {
-      const isActuallyEditable = editable && aiState !== 'loading' && aiState !== 'streaming' && aiState !== 'done';
-      if (editor.isEditable !== isActuallyEditable) {
-        editor.setEditable(isActuallyEditable);
+      if (editor.isEditable !== editable) {
+        editor.setEditable(editable);
       }
     }
-  }, [editor, editable, aiState]);
+  }, [editor, editable]);
   
   useEffect(() => {
     if (editor && content) {

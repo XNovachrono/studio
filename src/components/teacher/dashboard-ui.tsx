@@ -528,7 +528,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     }, [group.id, onLessonCreated]);
 
     const handleSaveLesson = async () => {
-      if (!selectedLesson || activeModal === null || !currentEditingContent) return;
+      if (!selectedLesson || activeModal === null || activeModal === 'attendance') return;
       
       const lessonId = selectedLesson.id;
       const dataToUpdate: Partial<Lesson> = {};
@@ -536,12 +536,12 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
       if (activeModal === 'comments') {
           dataToUpdate['comments'] = currentEditingContent as EditorContent;
           dataToUpdate['studentComments'] = currentEditingComments;
-      } else if (activeModal !== 'attendance' && activeModal !== 'objective') {
-          dataToUpdate[activeModal as 'classNote' | 'homework' | 'content'] = currentEditingContent;
+      } else {
+          dataToUpdate[activeModal as 'classNote' | 'homework' | 'content'] = currentEditingContent as EditorContent;
       }
 
       if (Object.keys(dataToUpdate).length === 0) {
-        setActiveModal(null);
+        handleCloseModal();
         return;
       }
 
@@ -550,14 +550,12 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
         await updateLesson(group.id, lessonId, dataToUpdate);
         toast({ title: t_toast.lessonSavedTitle, description: t_toast.lessonSavedDescription });
         setLessons(prev => prev.map(l => l.id === lessonId ? {...l, ...dataToUpdate} : l));
+        handleCloseModal();
       } catch(error) {
         console.error("Error saving lesson:", error);
         toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.saveLessonError });
       } finally {
         setIsSaving(null);
-        setActiveModal(null);
-        setCurrentEditingContent(null);
-        setCurrentEditingComments({});
       }
     };
     
@@ -568,10 +566,8 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
         if (modalType === 'comments') {
             setCurrentEditingContent(lesson.comments);
             setCurrentEditingComments(lesson.studentComments || {});
-        } else if (modalType === 'objective') {
-            setCurrentEditingContent(lesson.content);
         } else if (modalType && modalType !== 'attendance') {
-            setCurrentEditingContent(lesson[modalType as keyof Lesson] as EditorContent);
+            setCurrentEditingContent(lesson[modalType as 'content' | 'classNote' | 'homework'] as EditorContent);
         } else {
              setCurrentEditingContent(null);
         }
@@ -671,14 +667,14 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
 
         const attendanceForStudent = (studentId: string): AttendanceStatus => selectedLesson.attendance?.[studentId] ?? 'ausente';
         
-        const editorPlaceholders = {
+        const editorPlaceholders: Record<string, string> = {
             objective: t.placeholders.objective,
             classNote: t.placeholders.classNote,
             homework: t.placeholders.homework,
             comments: t.placeholders.comments,
         };
 
-        const currentPlaceholder = editorPlaceholders[activeModal as keyof typeof editorPlaceholders] || "";
+        const currentPlaceholder = editorPlaceholders[activeModal] || "";
         
         switch(activeModal) {
             case 'objective':
