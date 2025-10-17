@@ -37,11 +37,21 @@ export interface StudentProfile extends User {
   }>;
 }
 
+// Simplified student info for embedding in groups
+export interface StudentGroupInfo {
+    id: string;
+    name: string;
+    level: string;
+    plan: StudentPlan;
+}
+
+
 export interface Group {
-  id: string;
+  id:string;
   name: string;
   type: StudentPlan;
-  studentIds: string[];
+  studentIds: string[]; // Keep this for reference and mutations
+  studentsInfo: StudentGroupInfo[]; // Embed necessary student info
   teacherId: string;
   teacherName: string; 
   mainObjective: EditorContent;

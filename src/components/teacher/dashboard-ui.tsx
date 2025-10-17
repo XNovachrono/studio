@@ -49,7 +49,6 @@ import { Separator } from "../ui/separator";
 interface TeacherDashboardData {
   teacher: User;
   groups: Group[];
-  allStudents: StudentProfile[];
   groupHistory: Group[];
 }
 
@@ -503,7 +502,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
 
     const [editedContent, setEditedContent] = useState<Record<string, Partial<Lesson>>>({});
     
-    const groupMembers = useMemo(() => group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[], [group.studentIds, studentsById]);
+    const groupMembers = useMemo(() => group.studentsInfo || [], [group.studentsInfo]);
 
     const fetchLessons = async () => {
         setIsLoading(true);
@@ -1130,9 +1129,12 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
     // defined inside GroupCommunication's useEffect.
     const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
     
-    const groupMembers = useMemo(() => group?.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[] || [], [group, studentsById]);
+    const groupMembers = useMemo(() => group?.studentsInfo || [], [group]);
     const isPrivateGroup = useMemo(() => group?.type === 'privado', [group]);
-    const privateStudent = useMemo(() => isPrivateGroup && groupMembers.length > 0 ? groupMembers[0] : null, [isPrivateGroup, groupMembers]);
+    const privateStudent = useMemo(() => {
+        if (!isPrivateGroup || groupMembers.length === 0) return null;
+        return studentsById.get(groupMembers[0].id) || null;
+    }, [isPrivateGroup, groupMembers, studentsById]);
 
     const filteredSlots = useMemo(() => {
         if (!privateStudent?.scheduledSlots) return [];
@@ -1180,7 +1182,7 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
                                         {groupMembers.map(student => (
                                             <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
                                                 <span className="text-sm">{student.name}</span>
-                                                <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
+                                                <Button variant="ghost" size="sm" onClick={() => setStudentToView(studentsById.get(student.id) || null)}>
                                                     <Eye className="mr-2 h-4 w-4" />
                                                     {t.viewData}
                                                 </Button>
@@ -1240,7 +1242,7 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
 };
 
 
-const GroupSection = ({ title, groups, studentsById, onView }: { title: string; groups: Group[]; studentsById: Map<string, StudentProfile>; onView: (group: Group) => void; }) => {
+const GroupSection = ({ title, groups, onView }: { title: string; groups: Group[]; onView: (group: Group) => void; }) => {
   const { translations } = useLanguage();
   const t = translations.teacherDashboard.groups;
   
@@ -1263,8 +1265,8 @@ const GroupSection = ({ title, groups, studentsById, onView }: { title: string; 
                 <CardContent className="flex-grow">
                   <h4 className="font-semibold text-sm mb-2">{t.members}:</h4>
                   <ul className="space-y-1 text-sm text-muted-foreground">
-                    {group.studentIds.slice(0, 5).map(id => (
-                      <li key={id}>{studentsById.get(id)?.name || t.unknown}</li>
+                    {(group.studentsInfo || []).slice(0, 5).map(student => (
+                      <li key={student.id}>{student.name || t.unknown}</li>
                     ))}
                     {group.studentIds.length > 5 && <li>...</li>}
                   </ul>
@@ -1313,22 +1315,18 @@ export function TeacherDashboardUI() {
   const fetchDashboardData = async (teacherId: string) => {
       try {
         const teacherData = await getTeacherDataForDashboard(teacherId);
-         // Role-based redirection
         if (teacherData.teacher.role !== 'teacher') {
-            router.push(teacherData.teacher.role === 'admin' ? '/admin/dashboard' : '/student/dashboard');
+            const destination = teacherData.teacher.role === 'admin' ? '/admin/dashboard' : '/student/dashboard';
+            router.push(destination);
             return;
         }
         setData(teacherData);
-        // If a group is being viewed, update its data
         if (groupToView) {
-            const updatedGroup = teacherData.groups.find(g => g.id === groupToView.id);
+            const updatedGroup = teacherData.groups.find(g => g.id === groupToView.id) || teacherData.groupHistory.find(g => g.id === groupToView.id);
             if (updatedGroup) {
                 setGroupToView(updatedGroup);
             } else {
-                // The group might have been archived or is no longer active
-                const updatedHistoryGroup = teacherData.groupHistory.find(g => g.id === groupToView.id);
-                if(updatedHistoryGroup) setGroupToView(updatedHistoryGroup);
-                else setGroupToView(null); // Or close it if it's gone completely
+                setGroupToView(null);
             }
         }
       } catch (error) {
@@ -1347,12 +1345,16 @@ export function TeacherDashboardUI() {
     }
     
     const parsedUser = JSON.parse(storedUser);
-    fetchDashboardData(parsedUser.id);
+    if(parsedUser.id && parsedUser.role === 'teacher') {
+        fetchDashboardData(parsedUser.id);
+    } else {
+        router.push("/login");
+    }
      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const studentsById = useMemo(() => new Map(data?.allStudents.map(s => [s.id, s])), [data?.allStudents]);
-  
+  const studentsById = useMemo(() => new Map(data?.groups.flatMap(g => g.studentsInfo).map(s => [s.id, s as StudentProfile])), [data?.groups]);
+
   const privateGroups = useMemo(() => data?.groups.filter(g => g.type === 'privado') || [], [data?.groups]);
   const smallGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo pequeño') || [], [data?.groups]);
   const largeGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo grande') || [], [data?.groups]);
@@ -1379,9 +1381,9 @@ export function TeacherDashboardUI() {
                   <TabsTrigger value="history"><History className="mr-2 h-4 w-4"/>{t.groups.history}</TabsTrigger>
               </TabsList>
               <TabsContent value="active" className="mt-6 space-y-8">
-                  <GroupSection title={t.groups.private} groups={privateGroups} studentsById={studentsById} onView={setGroupToView}/>
-                  <GroupSection title={t.groups.small} groups={smallGroups} studentsById={studentsById} onView={setGroupToView}/>
-                  <GroupSection title={t.groups.large} groups={largeGroups} studentsById={studentsById} onView={setGroupToView}/>
+                  <GroupSection title={t.groups.private} groups={privateGroups} onView={setGroupToView}/>
+                  <GroupSection title={t.groups.small} groups={smallGroups} onView={setGroupToView}/>
+                  <GroupSection title={t.groups.large} groups={largeGroups} onView={setGroupToView}/>
                   {data?.groups.length === 0 && (
                       <p className="text-center text-muted-foreground pt-8">{t.groups.noGroups}</p>
                   )}
@@ -1446,9 +1448,3 @@ export function TeacherDashboardUI() {
     </>
   );
 }
-
-
-
-    
-
-    

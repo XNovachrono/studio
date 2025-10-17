@@ -311,7 +311,7 @@ const AdminGroupDetailsDialog = ({ group, studentsById, allTeachers, isOpen, onO
     
     if (!group) return null;
 
-    const groupMembers = group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[];
+    const groupMembers = group.studentsInfo || [];
     const scheduledClasses = group.content.scheduledClasses || [];
     const reminders = group.content.reminders || [];
 
@@ -365,7 +365,7 @@ const AdminGroupDetailsDialog = ({ group, studentsById, allTeachers, isOpen, onO
                                 {groupMembers.map(student => (
                                     <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
                                         <span className="text-sm">{student.name}</span>
-                                        <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
+                                        <Button variant="ghost" size="sm" onClick={() => setStudentToView(studentsById.get(student.id) || null)}>
                                             <Eye className="mr-2 h-4 w-4" />
                                             {t_groups.viewData}
                                         </Button>
@@ -427,11 +427,11 @@ const AdminGroupDetailsDialog = ({ group, studentsById, allTeachers, isOpen, onO
                             <CardHeader><CardTitle>Gestionar Miembros</CardTitle></CardHeader>
                             <CardContent>
                                  <ul className="space-y-2">
-                                    {groupMembers.map(student => (
-                                        <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
-                                            <span className="text-sm">{student.name}</span>
+                                    {groupMembers.map(studentInfo => (
+                                        <li key={studentInfo.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
+                                            <span className="text-sm">{studentInfo.name}</span>
                                             <div className="flex gap-2">
-                                                 <Button variant="outline" size="sm" onClick={() => setEditingStudent(student)}>
+                                                 <Button variant="outline" size="sm" onClick={() => setEditingStudent(studentsById.get(studentInfo.id) || null)}>
                                                     <Edit className="mr-2 h-4 w-4" /> Editar
                                                 </Button>
                                                 <AlertDialog>
@@ -447,7 +447,7 @@ const AdminGroupDetailsDialog = ({ group, studentsById, allTeachers, isOpen, onO
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
                                                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleRemoveStudent(student.id)}>Eliminar</AlertDialogAction>
+                                                        <AlertDialogAction onClick={() => handleRemoveStudent(studentInfo.id)}>Eliminar</AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
                                                 </AlertDialog>
@@ -762,7 +762,7 @@ export function AdminDashboardUI() {
     const storedUser = localStorage.getItem("uncoverly-user");
     if (storedUser) {
       const parsedUser = JSON.parse(storedUser);
-      if (parsedUser.id) {
+      if (parsedUser.id && parsedUser.role === 'admin') {
         fetchDashboardData(parsedUser.id);
       } else {
          router.push("/login");
@@ -847,8 +847,7 @@ export function AdminDashboardUI() {
     const plan = selectedStudentsData[0].plan!;
 
     try {
-        const studentsToGroup = selectedStudentsData.map(s => ({ id: s.id, name: s.name }));
-        await createGroupWithTeacher(selectedTeacher, studentsToGroup, plan);
+        await createGroupWithTeacher(selectedTeacher, selectedStudentsData, plan);
         toast({
             title: t_toast.groupCreatedTitle,
             description: t_toast.groupCreatedDescription,
