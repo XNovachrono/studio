@@ -50,7 +50,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { generateEditorContent } from "@/ai/flows/editor-flow";
 import { contextualQA } from "@/ai/flows/contextual-qa-flow";
 import { Input } from "../ui/input";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useDragControls } from "framer-motion";
 import type { EditorContent as EditorContentType } from "@/lib/types";
 import { Separator } from "../ui/separator";
 import { Label } from "../ui/label";
@@ -624,6 +624,7 @@ interface EditorProps {
 
 const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }: any) => {
     const constraintsRef = useRef(null);
+    const dragControls = useDragControls();
     const [size, setSize] = useState({ width: 350, height: 400 });
     const [localContent, setLocalContent] = useState(initialContent);
 
@@ -640,7 +641,8 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
         <>
             <div ref={constraintsRef} className="fixed inset-0 pointer-events-none" />
             <motion.div
-                drag
+                dragListener={false}
+                dragControls={dragControls}
                 dragConstraints={constraintsRef}
                 dragMomentum={false}
                 onMouseDown={onFocus}
@@ -650,7 +652,10 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
             >
-                <div className="flex items-center justify-between p-2 border-b cursor-grab bg-secondary/50">
+                <div 
+                    onPointerDown={(e) => dragControls.start(e)}
+                    className="flex items-center justify-between p-2 border-b cursor-grab bg-secondary/50"
+                >
                     <span className="text-sm font-medium">Apunte</span>
                     <Button onClick={onClose} variant="ghost" size="icon" className="h-6 w-6 cursor-pointer">
                         <X className="h-4 w-4" />
@@ -750,9 +755,7 @@ export function Editor({
 
   useEffect(() => {
     if (editor) {
-      if (editor.isEditable !== editable) {
-        editor.setEditable(editable);
-      }
+      editor.setEditable(editable);
     }
   }, [editor, editable]);
   
