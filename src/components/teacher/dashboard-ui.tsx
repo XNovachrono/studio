@@ -20,7 +20,7 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, StudentProfile, Group, Lesson, EditorContent, BankCard, AttendanceStatus } from "@/lib/types";
+import type { User, StudentProfile, Group, Lesson, EditorContent, BankCard, AttendanceStatus, StudentGroupInfo } from "@/lib/types";
 import { getTeacherDataForDashboard, getLessonsForGroup, createLessonForGroup, updateLesson, getBankCards, addContentToGroup, getBankFiles, updateGroupObjectives } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
@@ -1115,7 +1115,7 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
 
     const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
     
-    const groupMembers = useMemo(() => group?.studentsInfo || [], [group]);
+    const groupMembers: StudentGroupInfo[] = useMemo(() => group?.studentsInfo || [], [group]);
     const isPrivateGroup = useMemo(() => group?.type === 'privado', [group]);
     const privateStudent = useMemo(() => {
         if (!isPrivateGroup || groupMembers.length === 0) return null;
@@ -1340,10 +1340,36 @@ export function TeacherDashboardUI() {
   }, []);
 
   const studentsById = useMemo(() => {
-    if (!data?.groups) return new Map();
-    const allStudents = data.groups.flatMap(g => g.studentsInfo || []).filter(Boolean);
-    return new Map(allStudents.map(s => [s.id, s as StudentProfile]));
-  }, [data?.groups]);
+      if (!data) return new Map();
+      const allStudentsFromGroups = data.groups.flatMap(g => g.studentsInfo.map(s => ({
+          ...s,
+          // We need to fetch the full profile if we need more details like `scheduledSlots`
+      })));
+      
+      const allStudentsFromHistory = data.groupHistory.flatMap(g => g.studentsInfo);
+      
+      const combined = [...allStudentsFromGroups, ...allStudentsFromHistory];
+      const studentMap = new Map<string, StudentProfile>();
+
+      // A more robust way would be to fetch student profiles if not found or incomplete
+      // For now, we rely on the embedded `studentsInfo`
+      data.groups.concat(data.groupHistory).forEach(group => {
+          group.studentsInfo?.forEach(studentInfo => {
+              if(!studentMap.has(studentInfo.id)) {
+                  // This is a partial profile. In a real scenario you might fetch the full one.
+                  studentMap.set(studentInfo.id, studentInfo as StudentProfile);
+              }
+          })
+      })
+
+      // This is a temporary solution to get full student profiles.
+      // Ideally, you'd fetch them on demand when a group dialog is opened.
+      const allStudentProfiles = data.groups.flatMap(g => g.studentsInfo.map(si => studentsById.get(si.id))).filter(Boolean) as StudentProfile[];
+       allStudentProfiles.forEach(p => studentMap.set(p.id, p))
+
+
+      return studentMap;
+  }, [data]);
 
   const privateGroups = useMemo(() => data?.groups.filter(g => g.type === 'privado') || [], [data?.groups]);
   const smallGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo pequeño') || [], [data?.groups]);

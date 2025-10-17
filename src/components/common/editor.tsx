@@ -805,17 +805,19 @@ export function Editor({
   };
 
   const handleGenerateFromPrompt = async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim() || !editor) return;
     setAiState('loading');
     setAiGeneratedContent('');
     try {
         const result = await generateEditorContent({ prompt });
-        setAiGeneratedContent(result);
-        setAiState('done');
+        editor.chain().focus().insertContent(result).run();
+        setAiState('idle');
     } catch(error) {
         console.error("AI Generation failed:", error);
-        setAiGeneratedContent("<p>Sorry, I couldn't generate the content.</p>");
-        setAiState('done');
+        editor.chain().focus().insertContent("<p>Sorry, I couldn't generate the content.</p>").run();
+        setAiState('idle');
+    } finally {
+        setPrompt('');
     }
   }
 
@@ -856,16 +858,10 @@ export function Editor({
         )}
          <div className="w-full h-full relative flex flex-col flex-grow">
             {withAiTools && <Toolbar editor={editor} onAskAI={localOnAskAI} onExplain={localOnExplain} />}
-            <div className={cn("flex-grow relative", aiState === 'done' && 'hidden')}>
+            <div className={cn("flex-grow relative")}>
                  <EditorContent editor={editor} className={"h-full"}/>
             </div>
-            {aiState === 'done' && (
-                 <div className="w-full">
-                    <div className="prose prose-sm dark:prose-invert max-w-none p-2 border rounded-md min-h-[100px] bg-secondary/20"
-                        dangerouslySetInnerHTML={{ __html: aiGeneratedContent }} />
-                    <AIToolbar state={aiState} onAccept={handleAccept} onRegenerate={handleGenerateFromPrompt} onModify={handleModify}/>
-                </div>
-            )}
+            
             <AnimatePresence>
                 {(aiState === 'prompting' || aiState === 'loading') && (
                     <motion.div
@@ -899,3 +895,5 @@ export function Editor({
     </div>
   );
 }
+
+    
