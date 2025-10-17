@@ -46,7 +46,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/language-context";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { generateEditorContent } from "@/ai/flows/editor-flow";
 import { contextualQA } from "@/ai/flows/contextual-qa-flow";
 import { Input } from "../ui/input";
@@ -620,8 +620,6 @@ interface EditorProps {
   placeholder?: string;
   initialHint?: string;
   withAiTools?: boolean;
-  onAddSideNote?: () => void;
-  sideNotes?: React.ReactNode;
 }
 
 const isContentEmpty = (content: EditorContentType | null | undefined): boolean => {
@@ -634,7 +632,7 @@ const isContentEmpty = (content: EditorContentType | null | undefined): boolean 
     return false;
 };
 
-const EditorInstance = ({ content, onChange, editable, placeholder, aiState, setAiState, prompt, setPrompt, aiGeneratedContent, setAiGeneratedContent, withAiTools, onAddSideNote, onAskAI, onExplain }: any) => {
+const EditorInstance = ({ content, onChange, editable, placeholder, aiState, setAiState, prompt, setPrompt, aiGeneratedContent, setAiGeneratedContent, withAiTools, onAskAI, onExplain }: any) => {
     const { translations } = useLanguage();
     const t = translations.editor;
 
@@ -830,6 +828,69 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
     );
 }
 
+const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }: any) => {
+    const constraintsRef = useRef(null);
+    const [size, setSize] = useState({ width: 350, height: 400 });
+
+    return (
+        <>
+            <div ref={constraintsRef} className="fixed inset-0 pointer-events-none" />
+            <motion.div
+                drag
+                dragConstraints={constraintsRef}
+                dragMomentum={false}
+                onMouseDown={onFocus}
+                className="fixed top-1/4 left-1/4 bg-card border rounded-lg shadow-2xl flex flex-col overflow-hidden"
+                style={{ zIndex, width: size.width, height: size.height }}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between p-2 border-b cursor-grab bg-secondary/50">
+                    <span className="text-sm font-medium">Apunte</span>
+                    <Button onClick={onClose} variant="ghost" size="icon" className="h-6 w-6 cursor-pointer">
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
+                
+                {/* Content */}
+                <div className="flex-grow p-2 overflow-auto">
+                    {initialContent.type === 'loading' ? (
+                        <div className="flex items-center justify-center h-full">
+                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        </div>
+                    ) : typeof initialContent === 'string' ? (
+                        <div
+                            className="prose prose-sm dark:prose-invert max-w-none focus:outline-none"
+                            dangerouslySetInnerHTML={{ __html: initialContent }}
+                        />
+                    ) : (
+                        <Editor
+                            content={initialContent || { type: 'doc', content: [] }}
+                            onChange={onUpdate}
+                            editable
+                            placeholder="Nuevo apunte..."
+                        />
+                    )}
+                </div>
+
+                {/* Resize Handle */}
+                <motion.div
+                    className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize"
+                    drag="x, y"
+                    dragMomentum={false}
+                    onDrag={(_, info) => {
+                        setSize(prevSize => ({
+                            width: Math.max(200, prevSize.width + info.delta.x),
+                            height: Math.max(150, prevSize.height + info.delta.y)
+                        }));
+                    }}
+                />
+            </motion.div>
+        </>
+    );
+};
 
 export function Editor({
   content,
@@ -838,8 +899,6 @@ export function Editor({
   placeholder,
   initialHint,
   withAiTools = false,
-  onAddSideNote,
-  sideNotes
 }: EditorProps) {
   
   const [isEditing, setIsEditing] = useState(() => !isContentEmpty(content));
@@ -847,28 +906,38 @@ export function Editor({
   const [prompt, setPrompt] = useState('');
   const [aiGeneratedContent, setAiGeneratedContent] = useState('');
   const [sideNotePanels, setSideNotePanels] = useState<any[]>([]);
+  const [activeNoteId, setActiveNoteId] = useState<number | null>(null);
 
   const { language, translations } = useLanguage();
   const t = translations.editor;
 
   const handleAddSideNote = useCallback((initialContent?: any) => {
-    setSideNotePanels(prev => [...prev, { id: Date.now(), content: initialContent || "" }]);
+    const newNote = { 
+        id: Date.now(), 
+        content: initialContent || "" ,
+    };
+    setSideNotePanels(prev => [...prev, newNote]);
+    setActiveNoteId(newNote.id);
   }, []);
 
   const handleCloseSideNote = (id: number) => {
     setSideNotePanels(prev => prev.filter(panel => panel.id !== id));
   };
+
+  const handleUpdateNoteContent = (id: number, newContent: any) => {
+    setSideNotePanels(prev => prev.map(note => note.id === id ? { ...note, content: newContent } : note));
+  };
   
   const handleAskAI = async (selectedText: string, userQuery: string) => {
     handleAddSideNote({type: 'loading'});
     const result = await contextualQA({ language, selectedText, userQuery });
-    setSideNotePanels(prev => prev.map(p => p.content.type === 'loading' ? { ...p, content: result } : p));
+    setSideNotePanels(prev => prev.map(p => (p.content?.type === 'loading') ? { ...p, content: result } : p));
   };
   
   const handleExplain = async (selectedText: string) => {
      handleAddSideNote({type: 'loading'});
      const result = await contextualQA({ language, selectedText });
-     setSideNotePanels(prev => prev.map(p => p.content.type === 'loading' ? { ...p, content: result } : p));
+     setSideNotePanels(prev => prev.map(p => (p.content?.type === 'loading') ? { ...p, content: result } : p));
   };
 
   
@@ -945,35 +1014,19 @@ export function Editor({
         </AnimatePresence>
         </div>
         
-        {sideNotes}
-
-        <div className="w-1/3 space-y-4">
-            {sideNotePanels.map(panel => (
-                <div key={panel.id} className="relative bg-secondary/50 p-4 rounded-lg shadow">
-                     <Button onClick={() => handleCloseSideNote(panel.id)} variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6">
-                        <X className="h-4 w-4" />
-                    </Button>
-                    {panel.content.type === 'loading' ? (
-                        <div className="flex items-center justify-center p-4">
-                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                        </div>
-                    ) : typeof panel.content === 'string' ? (
-                         <div
-                            className="prose prose-sm dark:prose-invert max-w-none focus:outline-none"
-                            dangerouslySetInnerHTML={{ __html: panel.content }}
-                         />
-                    ) : (
-                        <Editor
-                            content={panel.content || { type: 'doc', content: [] }}
-                            onChange={() => {}}
-                            editable
-                            placeholder="Nuevo apunte..."
-                        />
-                    )}
-                </div>
+        <AnimatePresence>
+            {sideNotePanels.map((panel, index) => (
+                <FloatingNote
+                    key={panel.id}
+                    id={panel.id}
+                    initialContent={panel.content}
+                    onUpdate={(newContent: any) => handleUpdateNoteContent(panel.id, newContent)}
+                    onClose={() => handleCloseSideNote(panel.id)}
+                    zIndex={activeNoteId === panel.id ? 1000 : 100 + index}
+                    onFocus={() => setActiveNoteId(panel.id)}
+                />
             ))}
-        </div>
-
+        </AnimatePresence>
     </div>
   );
 }
