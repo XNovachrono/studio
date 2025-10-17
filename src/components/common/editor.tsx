@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useEditor, EditorContent, Editor as TiptapEditor, BubbleMenu } from "@tiptap/react";
@@ -632,7 +631,7 @@ const isContentEmpty = (content: EditorContentType | null | undefined): boolean 
     return false;
 };
 
-const EditorInstance = ({ content, onChange, editable, placeholder, aiState, setAiState, prompt, setPrompt, aiGeneratedContent, setAiGeneratedContent, withAiTools, onAskAI, onExplain }: any) => {
+const EditorInstance = ({ content, onChange, editable, placeholder, aiState, setAiState, prompt, setPrompt, aiGeneratedContent, setAiGeneratedContent, withAiTools, onAskAI, onExplain, isFloating }: any) => {
     const { translations } = useLanguage();
     const t = translations.editor;
 
@@ -654,7 +653,7 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
                     if (node.type.name === 'heading') {
                         return t.placeholders.heading;
                     }
-                    if (editable && node.isFirstChild && node.isEmpty) {
+                    if (editable && ((node.isFirstChild && node.isEmpty) || (isFloating && node.isEmpty))) {
                         return placeholder || t.placeholders.default;
                     }
                     return "";
@@ -682,10 +681,10 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
         },
         editorProps: {
             attributes: {
-                class: "prose dark:prose-invert max-w-none focus:outline-none",
+                class: cn("prose prose-sm dark:prose-invert max-w-none focus:outline-none", isFloating && 'h-full'),
             },
             handleKeyDown: (view, event) => {
-                if (aiState === 'idle' && view.state.doc.textContent.length === 0 && event.key === ' ') {
+                 if (withAiTools && aiState === 'idle' && event.key === ' ' && view.state.selection.$from.parent.content.size === 0) {
                     event.preventDefault();
                     setAiState('prompting');
                     return true;
@@ -770,18 +769,18 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="w-full relative"
+            className="w-full h-full relative flex flex-col"
         >
             {withAiTools && <Toolbar editor={editor} onAskAI={handleAskAI} onExplain={handleExplain} />}
             
-            <div className={cn(aiState === 'done' && 'hidden')}>
-                 <EditorContent editor={editor} />
+            <div className={cn("flex-grow relative", aiState === 'done' && 'hidden')}>
+                 <EditorContent editor={editor} className={cn(isFloating && "h-full")}/>
             </div>
 
             {aiState === 'done' && (
                  <div className="w-full">
                     <div 
-                        className="prose dark:prose-invert max-w-none p-2 border rounded-md min-h-[100px] bg-secondary/20"
+                        className="prose prose-sm dark:prose-invert max-w-none p-2 border rounded-md min-h-[100px] bg-secondary/20"
                         dangerouslySetInnerHTML={{ __html: aiGeneratedContent }}
                     />
                     <motion.div
@@ -804,7 +803,7 @@ const EditorInstance = ({ content, onChange, editable, placeholder, aiState, set
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute bottom-0 left-0 right-0 bg-secondary p-2 rounded-lg shadow-lg flex items-center gap-2"
+                        className={cn("absolute bottom-0 left-0 right-0 bg-secondary p-2 rounded-lg shadow-lg flex items-center gap-2", isFloating ? "m-2" : "")}
                     >
                         <Sparkles className="text-primary h-5 w-5"/>
                         <Input 
@@ -871,6 +870,7 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
                             onChange={onUpdate}
                             editable
                             placeholder="Nuevo apunte..."
+                            withAiTools
                         />
                     )}
                 </div>
@@ -971,6 +971,22 @@ export function Editor({
      </div>
   }
 
+  const handleEditorChange = (newContent: any) => {
+    onChange(newContent);
+    // When the main editor is completely empty, go back to placeholder view
+    if (isContentEmpty(newContent)) {
+      setIsEditing(false);
+    }
+  };
+
+  // If we are showing the placeholder, but the content is not empty (e.g. loaded from db), switch to editing
+  useEffect(() => {
+      if (!isEditing && !isContentEmpty(content)) {
+          setIsEditing(true);
+      }
+  }, [content, isEditing]);
+
+
   return (
     <div className="flex gap-4">
         <div className="w-full relative rounded-lg border bg-background p-4 min-h-[150px] flex flex-col justify-center items-center">
@@ -996,7 +1012,7 @@ export function Editor({
                 )}
                 <EditorInstance 
                     content={content}
-                    onChange={onChange}
+                    onChange={handleEditorChange}
                     editable={isEditing}
                     placeholder={placeholder}
                     aiState={aiState}
@@ -1008,6 +1024,7 @@ export function Editor({
                     withAiTools={withAiTools}
                     onAskAI={handleAskAI}
                     onExplain={handleExplain}
+                    isFloating={false}
                 />
                 </>
             )}
@@ -1030,3 +1047,31 @@ export function Editor({
     </div>
   );
 }
+
+// Wrapper to use the full Editor inside FloatingNote
+const FloatingEditorWrapper = ({ content, onChange, placeholder }: any) => {
+    const [aiState, setAiState] = useState<'idle' | 'prompting' | 'loading' | 'streaming' | 'done'>('idle');
+    const [prompt, setPrompt] = useState('');
+    const [aiGeneratedContent, setAiGeneratedContent] = useState('');
+    
+    return (
+         <EditorInstance 
+            content={content}
+            onChange={onChange}
+            editable={true}
+            placeholder={placeholder}
+            aiState={aiState}
+            setAiState={setAiState}
+            prompt={prompt}
+            setPrompt={setPrompt}
+            aiGeneratedContent={aiGeneratedContent}
+            setAiGeneratedContent={setAiGeneratedContent}
+            withAiTools={true}
+            onAskAI={() => {}} // Floating notes don't trigger more notes
+            onExplain={() => {}}
+            isFloating={true}
+        />
+    )
+}
+
+    
