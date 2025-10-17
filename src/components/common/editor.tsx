@@ -631,9 +631,21 @@ const isContentEmpty = (content: EditorContentType | null | undefined): boolean 
     return false;
 };
 
-const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus, onAskAI, onExplain }: any) => {
+const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }: any) => {
     const constraintsRef = useRef(null);
     const [size, setSize] = useState({ width: 350, height: 400 });
+    const [localContent, setLocalContent] = useState(initialContent);
+
+    // This effect ensures that the local state is updated if the initial content changes from the parent
+    // which happens when the AI result comes in.
+    useEffect(() => {
+        setLocalContent(initialContent);
+    }, [initialContent]);
+
+    const handleContentChange = (newContent: any) => {
+        setLocalContent(newContent);
+        onUpdate(newContent); // Also notify the parent
+    };
 
     return (
         <>
@@ -659,25 +671,17 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus, 
                 
                 {/* Content */}
                 <div className="flex-grow p-2 overflow-auto">
-                    {initialContent.type === 'loading' ? (
+                    {localContent.type === 'loading' ? (
                         <div className="flex items-center justify-center h-full">
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
                         </div>
-                    ) : typeof initialContent === 'string' ? (
-                        <div
-                            className="prose prose-sm dark:prose-invert max-w-none focus:outline-none"
-                            dangerouslySetInnerHTML={{ __html: initialContent }}
-                        />
                     ) : (
                        <Editor
-                            content={initialContent}
-                            onChange={onUpdate}
+                            content={localContent}
+                            onChange={handleContentChange}
                             editable={true}
                             placeholder="Nuevo apunte..."
                             withAiTools={true}
-                            onAskAI={onAskAI}
-                            onExplain={onExplain}
-                            isFloating={true}
                         />
                     )}
                 </div>
@@ -706,10 +710,7 @@ export function Editor({
   placeholder,
   initialHint,
   withAiTools = false,
-  isFloating = false, // new prop to distinguish editors
-  onAskAI, // Pass down from parent
-  onExplain, // Pass down from parent
-}: EditorProps & { isFloating?: boolean, onAskAI?: (text: string, query: string) => void, onExplain?: (text: string) => void }) {
+}: EditorProps & { isFloating?: boolean }) {
   
   const [isEditing, setIsEditing] = useState(() => editable ? true : !isContentEmpty(content));
   const [aiState, setAiState] = useState<'idle' | 'prompting' | 'loading' | 'streaming' | 'done'>('idle');
@@ -733,7 +734,7 @@ export function Editor({
                 placeholder: ({ node }) => {
                     if (!editable) return "";
                     if (node.type.name === 'heading') return t.placeholders.heading;
-                    if ((node.isFirstChild && node.isEmpty) || (isFloating && node.isEmpty)) {
+                    if (node.isFirstChild && node.isEmpty) {
                         return placeholder || t.placeholders.default;
                     }
                     return "";
@@ -750,7 +751,7 @@ export function Editor({
         },
         editorProps: {
             attributes: {
-                class: cn("prose prose-sm dark:prose-invert max-w-none focus:outline-none", isFloating && 'h-full'),
+                class: cn("prose prose-sm dark:prose-invert max-w-none focus:outline-none h-full"),
             },
             handleKeyDown: (view, event) => {
                  if (withAiTools && aiState === 'idle' && event.key === ' ' && view.state.selection.$from.parent.content.size === 0) {
@@ -808,15 +809,13 @@ export function Editor({
   const localOnAskAI = (query: string) => {
     const selectedText = getSelectedText();
     if (!selectedText) return;
-    if (onAskAI) onAskAI(selectedText, query);
-    else handleAIGeneration(selectedText, query);
+    handleAIGeneration(selectedText, query);
   };
   
   const localOnExplain = () => {
     const selectedText = getSelectedText();
     if (!selectedText) return;
-    if (onExplain) onExplain(selectedText);
-    else handleAIGeneration(selectedText);
+    handleAIGeneration(selectedText);
   };
 
   const handleGenerateFromPrompt = async () => {
@@ -862,27 +861,23 @@ export function Editor({
     setPrompt('');
     setAiGeneratedContent('');
   };
-
-  const handleEditorChange = (newContent: any) => {
-    onChange(newContent);
-    if (isContentEmpty(newContent)) {
-      if (aiState === 'idle' && !isFloating) {
-        setIsEditing(false);
-      }
-    } else {
-        setIsEditing(true);
-    }
-  };
     
-    if (!editable && !isFloating) {
+    if (!editable) {
+         if (isContentEmpty(content)) {
+            return (
+                <div className="flex items-center justify-center min-h-[150px] text-center text-muted-foreground cursor-pointer" onClick={handleStartEditing}>
+                    <p>{initialHint || t.initialHint}</p>
+                </div>
+            )
+        }
         return <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: editor?.getHTML() || ''}} />;
     }
 
 
   return (
-    <div className={cn("w-full relative", isFloating ? 'h-full' : 'min-h-[150px] rounded-lg border bg-background p-4 flex flex-col justify-center items-center')}>
+    <div className={cn("w-full relative min-h-[150px] rounded-lg border bg-background p-4 flex flex-col justify-center")}>
         <AnimatePresence>
-            {!isEditing && !isFloating ? (
+            {!isEditing ? (
                 <motion.div
                     key="placeholder" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                     className="text-center text-muted-foreground cursor-pointer" onClick={handleStartEditing}>
@@ -890,8 +885,8 @@ export function Editor({
                 </motion.div>
             ) : (
                 <>
-                {withAiTools && !isFloating && (
-                    <Button onClick={() => handleAddSideNote("")} size="sm" className="absolute top-2 right-2 z-10">
+                {withAiTools && (
+                    <Button onClick={() => handleAddSideNote({ type: "doc", content: [{ type: "paragraph" }]})} size="sm" className="absolute top-2 right-2 z-10">
                         <Pencil className="mr-2 h-4 w-4" />
                         Añadir Apunte
                     </Button>
@@ -899,7 +894,7 @@ export function Editor({
                  <div className="w-full h-full relative flex flex-col">
                     {withAiTools && <Toolbar editor={editor} onAskAI={localOnAskAI} onExplain={localOnExplain} />}
                     <div className={cn("flex-grow relative", aiState === 'done' && 'hidden')}>
-                         <EditorContent editor={editor} className={cn(isFloating && "h-full")}/>
+                         <EditorContent editor={editor} className={"h-full"}/>
                     </div>
                     {aiState === 'done' && (
                          <div className="w-full">
@@ -912,7 +907,7 @@ export function Editor({
                         {(aiState === 'prompting' || aiState === 'loading') && (
                             <motion.div
                                 key="ai-prompt" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                                className={cn("absolute bottom-0 left-0 right-0 bg-secondary p-2 rounded-lg shadow-lg flex items-center gap-2", isFloating ? "m-2" : "")}>
+                                className={cn("absolute bottom-0 left-0 right-0 bg-secondary p-2 rounded-lg shadow-lg flex items-center gap-2")}>
                                 <Sparkles className="text-primary h-5 w-5"/>
                                 <Input placeholder={t.ai.placeholder} className="bg-transparent border-none focus-visible:ring-0"
                                     value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={handlePromptKeyDown}
@@ -931,14 +926,13 @@ export function Editor({
         </AnimatePresence>
         
         <AnimatePresence>
-            {!isFloating && sideNotePanels.map((panel, index) => (
+            {sideNotePanels.map((panel, index) => (
                 <FloatingNote
                     key={panel.id} id={panel.id} initialContent={panel.content}
                     onUpdate={(newContent: any) => handleUpdateNoteContent(panel.id, newContent)}
                     onClose={() => handleCloseSideNote(panel.id)}
                     zIndex={activeNoteId === panel.id ? 1000 : 100 + index}
                     onFocus={() => setActiveNoteId(panel.id)}
-                    onAskAI={handleAIGeneration} onExplain={(text: string) => handleAIGeneration(text)}
                 />
             ))}
         </AnimatePresence>
@@ -946,4 +940,4 @@ export function Editor({
   );
 }
 
-    
+      
