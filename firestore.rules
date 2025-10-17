@@ -1,66 +1,45 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if a user is signed in
-    function isSignedIn() {
-      return request.auth.uid != null;
+    // Regla Global: Permite leer a cualquier usuario autenticado.
+    // La seguridad de escritura se maneja en reglas más específicas.
+    match /{document=**} {
+      allow read: if request.auth.uid != null;
     }
 
-    // USERS COLLECTION
-    // Users can read their own profile.
-    // Admins can read any user profile.
-    // Users can update their own profile.
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if request.auth.uid == userId;
-      allow delete: if false; // Generally, users should not be able to delete their own accounts directly
+      allow write: if request.auth.uid == userId;
     }
-
-    // GROUPS COLLECTION
-    // Authenticated users (students, teachers, admins) can read group data.
-    // This is necessary for students to see their group and for teachers to see theirs.
-    // Write access should be highly restricted.
+    
     match /groups/{groupId} {
-      allow read: if isSignedIn();
-      // Only admins should create/update/delete groups directly.
-      // Teachers update lessons within a subcollection.
-      allow write: if isSignedIn(); // Simplified for now, teacher functions will update via specific logic
-      
-      // LESSONS SUBCOLLECTION
-      // Teachers can create/update lessons in a group they are assigned to.
-      // Students can read lessons from their group.
-      match /lessons/{lessonId} {
-        allow read: if isSignedIn();
-        allow write: if isSignedIn(); // Allow teachers to update
-      }
-    }
-    
-    // STUDENT_NOTES COLLECTION
-    // Students can manage their own notes.
-    match /student_notes/{noteId} {
-        allow read: if isSignedIn();
-        allow write: if request.auth.uid == request.resource.data.studentId;
+      // El docente del grupo o un admin puede actualizar el grupo.
+      allow write: if request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId
+                      || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // PQRS COLLECTION
-    // Students can create PQRS messages.
-    // Admins/Teachers can read them based on app logic.
-    match /pqrs/{pqrsId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
-      allow update, delete: if isSignedIn(); // Allow admin to delete
+    match /groups/{groupId}/lessons/{lessonId} {
+        // Solo el docente del grupo puede escribir en las lecciones.
+        allow write: if request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId;
     }
-    
-    // BANK_CARDS COLLECTION
-    // Teachers/Admins can manage bank cards.
+
+    match /pqrs/{pqrsId} {
+      // Solo los estudiantes pueden crear mensajes PQRS.
+      allow create: if request.auth.uid == request.resource.data.studentId;
+      // Solo los administradores pueden borrar mensajes PQRS.
+      allow delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     match /bank_cards/{cardId} {
-       allow read: if isSignedIn();
-       allow create: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid);
-       allow update: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid);
-       allow delete: if isSignedIn(); // Owner or admin can delete
+      // Cualquiera autenticado puede crear una tarjeta de banco.
+      allow create: if request.auth.uid != null;
+      // Solo el dueño o un admin pueden actualizar o borrar.
+      allow update, delete: if request.auth.uid == resource.data.ownerId
+                           || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /student_notes/{noteId} {
+        // Un estudiante puede crear, actualizar y borrar sus propios apuntes.
+        allow create, update, delete: if request.auth.uid == request.resource.data.studentId;
     }
   }
 }

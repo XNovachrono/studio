@@ -65,31 +65,22 @@ const pqrsFromDoc = (doc: any): PQRSMessage => {
 // Function to get a user profile
 export const getUserProfile = async (userId: string): Promise<User | null> => {
     const userDocRef = doc(db, "users", userId);
-    try {
-        const userDocSnap = await getDoc(userDocRef);
+    const userDocSnap = await getDoc(userDocRef);
 
-        if (userDocSnap.exists()) {
-            const userData = userDocSnap.data();
-            // Convert Timestamps for teacherInteractions
-            if (userData.teacherInteractions) {
-                userData.teacherInteractions = userData.teacherInteractions.map((interaction: any) => ({
-                    ...interaction,
-                    lastInteraction: interaction.lastInteraction instanceof Timestamp 
-                        ? interaction.lastInteraction.toDate().toISOString() 
-                        : interaction.lastInteraction,
-                }));
-            }
-            return { id: userDocSnap.id, ...userData } as User;
+    if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        // Convert Timestamps for teacherInteractions
+        if (userData.teacherInteractions) {
+            userData.teacherInteractions = userData.teacherInteractions.map((interaction: any) => ({
+                ...interaction,
+                lastInteraction: interaction.lastInteraction instanceof Timestamp 
+                    ? interaction.lastInteraction.toDate().toISOString() 
+                    : interaction.lastInteraction,
+            }));
         }
-        return null;
-    } catch (serverError) {
-         const error = new FirestorePermissionError({
-            path: userDocRef.path,
-            operation: 'get',
-        });
-        errorEmitter.emit('permission-error', error);
-        throw error;
+        return { id: userDocSnap.id, ...userData } as User;
     }
+    return null;
 }
 
 // Function to update a user profile (used in onboarding and by admin)
@@ -188,19 +179,10 @@ export const getStudentNotes = async (studentId: string): Promise<StudentNote[]>
     const notesRef = collection(db, "student_notes");
     const q = query(notesRef, where("studentId", "==", studentId));
     
-    try {
-        const querySnapshot = await getDocs(q);
-        const notes = querySnapshot.docs.map(doc => fromDoc<StudentNote>(doc));
-        // Sort by updatedAt date in descending order on the client
-        return notes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-    } catch (serverError) {
-         const error = new FirestorePermissionError({
-            path: notesRef.path,
-            operation: 'list',
-        });
-        errorEmitter.emit('permission-error', error);
-        throw error;
-    }
+    const querySnapshot = await getDocs(q);
+    const notes = querySnapshot.docs.map(doc => fromDoc<StudentNote>(doc));
+    // Sort by updatedAt date in descending order on the client
+    return notes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 }
 
 export const updateStudentNote = async (noteId: string, data: Partial<StudentNote>) => {
@@ -258,19 +240,9 @@ export const deletePQRSMessage = async (messageId: string): Promise<void> => {
 
 export const getUsersInRole = async (role: UserRole): Promise<User[]> => {
     const usersRef = collection(db, 'users');
-    try {
-        const q = query(usersRef, where("role", "==", role));
-        const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
-    } catch (serverError) {
-        console.error("Firestore error in getUsersInRole: ", serverError);
-        const error = new FirestorePermissionError({
-            path: usersRef.path,
-            operation: 'list'
-        });
-        errorEmitter.emit('permission-error', error);
-        throw error;
-    }
+    const q = query(usersRef, where("role", "==", role));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
 };
 
 export const getAllGroups = async (): Promise<Group[]> => {
