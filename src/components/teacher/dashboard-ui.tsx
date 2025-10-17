@@ -1353,7 +1353,10 @@ export function TeacherDashboardUI() {
      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const studentsById = useMemo(() => new Map(data?.groups.flatMap(g => g.studentsInfo).map(s => [s.id, s as StudentProfile])), [data?.groups]);
+  const studentsById = useMemo(() => {
+    const allStudents = data?.groups.flatMap(g => g.studentsInfo || []) || [];
+    return new Map(allStudents.filter(s => s).map(s => [s.id, s as StudentProfile]));
+  }, [data?.groups]);
 
   const privateGroups = useMemo(() => data?.groups.filter(g => g.type === 'privado') || [], [data?.groups]);
   const smallGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo pequeño') || [], [data?.groups]);
