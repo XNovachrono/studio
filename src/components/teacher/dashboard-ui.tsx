@@ -1127,13 +1127,12 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
     const [refreshLessonKey, setRefreshLessonKey] = useState(0);
     const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
     
-    const groupMembers = useMemo(() => group?.studentsInfo || [], [group]);
     const isPrivateGroup = useMemo(() => group?.type === 'privado', [group]);
     
     const privateStudent = useMemo(() => {
-        if (!isPrivateGroup || groupMembers.length === 0) return null;
-        return groupMembers[0];
-    }, [isPrivateGroup, groupMembers]);
+        if (!isPrivateGroup || !group?.studentsInfo || group.studentsInfo.length === 0) return null;
+        return group.studentsInfo[0];
+    }, [isPrivateGroup, group]);
 
     const filteredSlots = useMemo(() => {
         const slots = (privateStudent as any)?.scheduledSlots;
@@ -1180,7 +1179,7 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
                             <CardContent>
                                 <ScrollArea className="h-full">
                                     <ul className="space-y-2 pr-4">
-                                        {groupMembers.map(student => (
+                                        {(group.studentsInfo || []).map(student => (
                                             <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
                                                 <span className="text-sm">{student.name}</span>
                                                 <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
@@ -1447,4 +1446,5 @@ export function TeacherDashboardUI() {
 }
 
 
+    
     
