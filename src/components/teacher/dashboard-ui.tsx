@@ -2,6 +2,7 @@
 
 "use client";
 
+import * as React from "react";
 import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -56,7 +57,7 @@ interface TeacherDashboardData {
 interface TeacherDashboardUIProps {
 }
 
-const LaserPointer = React.forwardRef<HTMLDivElement>((props, ref) => {
+const LaserPointer = React.forwardRef<HTMLDivElement, { isVisible: boolean }>(({ isVisible }, ref) => {
     return (
         <div
             ref={ref}
@@ -68,7 +69,8 @@ const LaserPointer = React.forwardRef<HTMLDivElement>((props, ref) => {
                 border: '1px solid rgba(255, 100, 100, 0.8)',
                 boxShadow: '0 0 10px 5px rgba(255, 0, 0, 0.5), 0 0 20px 10px rgba(255, 0, 0, 0.3)',
                 transform: 'translate(-50%, -50%)',
-                opacity: 0, // Initially hidden
+                opacity: isVisible ? 1 : 0,
+                transition: 'opacity 0.2s ease-in-out',
                 willChange: 'transform',
             }}
         />
@@ -552,8 +554,7 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
 
     const [isLaserMode, setIsLaserMode] = useState(false);
     const laserPointerRef = useRef<HTMLDivElement>(null);
-    const animationFrameRef = useRef<number>();
-
+    const dialogContentRef = useRef<HTMLDivElement>(null);
 
     const groupMembers = useMemo(() => {
       return group.studentsInfo || [];
@@ -579,29 +580,21 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
     }, [group.id, onLessonCreated]);
     
     useEffect(() => {
-        const updatePointer = (e: MouseEvent) => {
-            if (laserPointerRef.current) {
+        const dialogElement = dialogContentRef.current;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (isLaserMode && laserPointerRef.current) {
                 laserPointerRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
             }
         };
 
-        const handleMouseMove = (e: MouseEvent) => {
-             if (isLaserMode) {
-                 animationFrameRef.current = requestAnimationFrame(() => updatePointer(e));
-             }
-        };
-
-        if (isLaserMode) {
-            document.addEventListener('mousemove', handleMouseMove);
-            if(laserPointerRef.current) laserPointerRef.current.style.opacity = '1';
-        } else {
-             if(laserPointerRef.current) laserPointerRef.current.style.opacity = '0';
+        if (isLaserMode && dialogElement) {
+            dialogElement.addEventListener('mousemove', handleMouseMove);
         }
 
         return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
+            if (dialogElement) {
+                dialogElement.removeEventListener('mousemove', handleMouseMove);
             }
         };
     }, [isLaserMode]);
@@ -922,7 +915,7 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
 
     return (
         <div className="space-y-4">
-             <LaserPointer ref={laserPointerRef} />
+             <LaserPointer ref={laserPointerRef} isVisible={isLaserMode} />
              <BankCardImporter ownerId={teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} bankType="homework"/>
              <FileBankImporter isOpen={isFileBankImporterOpen} onOpenChange={setFileBankImporterOpen} onSelectFile={handleImportFileFromBank} />
              {lessons.length > 0 ? (
@@ -1013,6 +1006,7 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
 
             <Dialog open={!!activeModal} onOpenChange={handleCloseModal}>
                 <DialogContent 
+                    ref={dialogContentRef}
                     className="max-w-4xl h-[80vh] flex flex-col"
                     style={{ cursor: isLaserMode ? 'none' : 'auto' }}
                 >
@@ -1543,6 +1537,7 @@ export function TeacherDashboardUI() {
     
 
     
+
 
 
 
