@@ -61,7 +61,7 @@ const LaserPointer = React.forwardRef<HTMLDivElement, { isVisible: boolean }>(({
     return (
         <div
             ref={ref}
-            className="pointer-events-none fixed z-[9999] rounded-full"
+            className="pointer-events-none fixed rounded-full"
             style={{
                 width: '20px',
                 height: '20px',
@@ -72,6 +72,7 @@ const LaserPointer = React.forwardRef<HTMLDivElement, { isVisible: boolean }>(({
                 opacity: isVisible ? 1 : 0,
                 transition: 'opacity 0.2s ease-in-out',
                 willChange: 'transform',
+                zIndex: 9999, // Ensure it's on top
             }}
         />
     );
@@ -552,9 +553,8 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
     const [currentEditingContent, setCurrentEditingContent] = useState<EditorContent | null>(null);
     const [currentEditingComments, setCurrentEditingComments] = useState<Record<string, EditorContent>>({});
 
-    const [isLaserMode, setIsLaserMode] = useState(false);
-    const laserPointerRef = useRef<HTMLDivElement>(null);
-    const dialogContentRef = useRef<HTMLDivElement>(null);
+    const { isLaserMode, setIsLaserMode, dialogContentRef } = useLaserPointer();
+
 
     const groupMembers = useMemo(() => {
       return group.studentsInfo || [];
@@ -579,26 +579,6 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
         fetchLessons();
     }, [group.id, onLessonCreated]);
     
-    useEffect(() => {
-        const dialogElement = dialogContentRef.current;
-
-        const handleMouseMove = (e: MouseEvent) => {
-            if (isLaserMode && laserPointerRef.current) {
-                laserPointerRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
-            }
-        };
-
-        if (isLaserMode && dialogElement) {
-            dialogElement.addEventListener('mousemove', handleMouseMove);
-        }
-
-        return () => {
-            if (dialogElement) {
-                dialogElement.removeEventListener('mousemove', handleMouseMove);
-            }
-        };
-    }, [isLaserMode]);
-
 
     const handleSaveLesson = async () => {
       if (!selectedLesson || activeModal === null || activeModal === 'attendance') return;
@@ -915,7 +895,6 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
 
     return (
         <div className="space-y-4">
-             <LaserPointer ref={laserPointerRef} isVisible={isLaserMode} />
              <BankCardImporter ownerId={teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} bankType="homework"/>
              <FileBankImporter isOpen={isFileBankImporterOpen} onOpenChange={setFileBankImporterOpen} onSelectFile={handleImportFileFromBank} />
              {lessons.length > 0 ? (
@@ -1230,6 +1209,34 @@ const GroupCommunication = ({ group, onClassScheduled, teacherName, onScheduleFr
     );
 };
 
+const useLaserPointer = () => {
+    const [isLaserMode, setIsLaserMode] = useState(false);
+    const dialogContentRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const dialogElement = dialogContentRef.current;
+        const handleMouseMove = (e: MouseEvent) => {
+            // Find the laser pointer element in the document
+            const laserPointer = document.getElementById('laser-pointer');
+            if (isLaserMode && laserPointer) {
+                laserPointer.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+            }
+        };
+
+        if (isLaserMode && dialogElement) {
+            dialogElement.addEventListener('mousemove', handleMouseMove);
+        }
+
+        return () => {
+            if (dialogElement) {
+                dialogElement.removeEventListener('mousemove', handleMouseMove);
+            }
+        };
+    }, [isLaserMode]);
+
+    return { isLaserMode, setIsLaserMode, dialogContentRef };
+};
+
 
 const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teacherId, teacherName }: { group: Group | null; isOpen: boolean; onOpenChange: (open: boolean) => void; onGroupUpdate: () => void; teacherId: string; teacherName: string; }) => {
     const { translations } = useLanguage();
@@ -1396,6 +1403,24 @@ export function TeacherDashboardUI() {
   const [groupToView, setGroupToView] = useState<Group | null>(null);
   const [isBanksModalOpen, setIsBanksModalOpen] = useState(false);
   
+  const { isLaserMode } = useLaserPointer();
+  const laserPointerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+        if (isLaserMode && laserPointerRef.current) {
+            laserPointerRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+        }
+    };
+    if (isLaserMode) {
+        window.addEventListener('mousemove', handleMouseMove);
+    }
+    return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [isLaserMode]);
+
+
   const fetchDashboardData = async (teacherId: string) => {
       try {
         const teacherData = await getTeacherDataForDashboard(teacherId);
@@ -1454,6 +1479,7 @@ export function TeacherDashboardUI() {
 
   return (
     <>
+      <LaserPointer ref={laserPointerRef} isVisible={isLaserMode} />
       <div className="flex h-screen flex-col">
         <DashboardHeader user={user} title={t.title} />
         <main className="flex-1 overflow-auto p-4 md:p-8 space-y-8">
@@ -1531,16 +1557,3 @@ export function TeacherDashboardUI() {
     </>
   );
 }
-
-
-    
-    
-
-    
-
-
-
-
-
-
-
