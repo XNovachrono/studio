@@ -56,26 +56,25 @@ interface TeacherDashboardData {
 interface TeacherDashboardUIProps {
 }
 
-const LaserPointer = ({ x, y }: { x: number; y: number }) => {
-    if (x === null || y === null) return null;
-
+const LaserPointer = React.forwardRef<HTMLDivElement>((props, ref) => {
     return (
         <div
+            ref={ref}
             className="pointer-events-none fixed z-[9999] rounded-full"
             style={{
-                left: `${x}px`,
-                top: `${y}px`,
                 width: '20px',
                 height: '20px',
                 backgroundColor: 'rgba(255, 0, 0, 0.7)',
                 border: '1px solid rgba(255, 100, 100, 0.8)',
                 boxShadow: '0 0 10px 5px rgba(255, 0, 0, 0.5), 0 0 20px 10px rgba(255, 0, 0, 0.3)',
                 transform: 'translate(-50%, -50%)',
-                transition: 'transform 0.05s ease-out',
+                opacity: 0, // Initially hidden
+                willChange: 'transform',
             }}
         />
     );
-};
+});
+LaserPointer.displayName = 'LaserPointer';
 
 
 const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: StudentGroupInfo | null; isOpen: boolean; onOpenChange: (open: boolean) => void }) => {
@@ -552,8 +551,8 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
     const [currentEditingComments, setCurrentEditingComments] = useState<Record<string, EditorContent>>({});
 
     const [isLaserMode, setIsLaserMode] = useState(false);
-    const [laserPosition, setLaserPosition] = useState<{ x: number; y: number }>({ x: -100, y: -100 });
-    const editorContainerRef = useRef<HTMLDivElement>(null);
+    const laserPointerRef = useRef<HTMLDivElement>(null);
+    const animationFrameRef = useRef<number>();
 
 
     const groupMembers = useMemo(() => {
@@ -578,6 +577,35 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
     useEffect(() => {
         fetchLessons();
     }, [group.id, onLessonCreated]);
+    
+    useEffect(() => {
+        const updatePointer = (e: MouseEvent) => {
+            if (laserPointerRef.current) {
+                laserPointerRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+            }
+        };
+
+        const handleMouseMove = (e: MouseEvent) => {
+             if (isLaserMode) {
+                 animationFrameRef.current = requestAnimationFrame(() => updatePointer(e));
+             }
+        };
+
+        if (isLaserMode) {
+            document.addEventListener('mousemove', handleMouseMove);
+            if(laserPointerRef.current) laserPointerRef.current.style.opacity = '1';
+        } else {
+             if(laserPointerRef.current) laserPointerRef.current.style.opacity = '0';
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current);
+            }
+        };
+    }, [isLaserMode]);
+
 
     const handleSaveLesson = async () => {
       if (!selectedLesson || activeModal === null || activeModal === 'attendance') return;
@@ -683,15 +711,6 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
         }
         setFileBankImporterOpen(false);
     };
-    
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (isLaserMode) {
-            const rect = editorContainerRef.current?.getBoundingClientRect();
-            if (rect) {
-                setLaserPosition({ x: e.clientX, y: e.clientY });
-            }
-        }
-    };
 
 
     if (isLoading) {
@@ -752,22 +771,14 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
                 );
             case 'classNote':
                 return (
-                    <div 
-                        ref={editorContainerRef}
-                        className="relative h-full"
-                        onMouseMove={handleMouseMove}
-                        style={{ cursor: isLaserMode ? 'none' : 'auto' }}
-                    >
-                         <Editor
-                            content={currentEditingContent}
-                            onChange={setCurrentEditingContent}
-                            editable
-                            placeholder={t.placeholders.classNote}
-                            withAiTools
-                            allowSideNotes
-                        />
-                         {isLaserMode && <LaserPointer x={laserPosition.x} y={laserPosition.y} />}
-                     </div>
+                     <Editor
+                        content={currentEditingContent}
+                        onChange={setCurrentEditingContent}
+                        editable
+                        placeholder={t.placeholders.classNote}
+                        withAiTools
+                        allowSideNotes
+                    />
                 )
             case 'homework':
                  return (
@@ -911,6 +922,7 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
 
     return (
         <div className="space-y-4">
+             <LaserPointer ref={laserPointerRef} />
              <BankCardImporter ownerId={teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} bankType="homework"/>
              <FileBankImporter isOpen={isFileBankImporterOpen} onOpenChange={setFileBankImporterOpen} onSelectFile={handleImportFileFromBank} />
              {lessons.length > 0 ? (
@@ -1000,7 +1012,10 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
             )}
 
             <Dialog open={!!activeModal} onOpenChange={handleCloseModal}>
-                <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+                <DialogContent 
+                    className="max-w-4xl h-[80vh] flex flex-col"
+                    style={{ cursor: isLaserMode ? 'none' : 'auto' }}
+                >
                     <DialogHeader>
                         <div className="flex justify-between items-center">
                             <DialogTitle className="font-headline text-2xl">
@@ -1528,6 +1543,7 @@ export function TeacherDashboardUI() {
     
 
     
+
 
 
 
