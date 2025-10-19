@@ -1139,9 +1139,8 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
     }
     
     // Derived state, safe to compute on every render
-    const groupMembers: StudentGroupInfo[] = group.studentsInfo || [];
     const isPrivateGroup = group?.type === 'privado';
-    const privateStudent = isPrivateGroup && groupMembers.length > 0 ? groupMembers[0] : null;
+    const privateStudent = isPrivateGroup && group.studentsInfo && group.studentsInfo.length > 0 ? group.studentsInfo[0] : null;
 
     const filteredSlots = (privateStudent as any)?.scheduledSlots
         ?.map((slot: any) => ({ ...slot, dateObj: parseISO(slot.date) }))
@@ -1176,9 +1175,9 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
                          <Card>
                             <CardHeader><CardTitle>Miembros del Grupo</CardTitle></CardHeader>
                             <CardContent>
-                                <ScrollArea className="h-full">
+                                <ScrollArea className="h-60">
                                     <ul className="space-y-2 pr-4">
-                                        {groupMembers.map(student => (
+                                        {(group.studentsInfo || []).map(student => (
                                             <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
                                                 <span className="text-sm">{student.name}</span>
                                                 <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
