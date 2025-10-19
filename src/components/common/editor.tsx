@@ -50,7 +50,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { generateEditorContent } from "@/ai/flows/editor-flow";
 import { contextualQA } from "@/ai/flows/contextual-qa-flow";
 import { Input } from "../ui/input";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useDragControls } from "framer-motion";
 import type { EditorContent as EditorContentType } from "@/lib/types";
 import { Separator } from "../ui/separator";
 import { Label } from "../ui/label";
@@ -625,6 +625,7 @@ interface EditorProps {
 
 const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }: any) => {
     const [localContent, setLocalContent] = useState(initialContent);
+    const dragControls = useDragControls();
 
     // This effect ensures that if the initial content from the parent changes (e.g., AI result comes in),
     // the local state of this note is updated.
@@ -638,34 +639,53 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
         onUpdate(newContent);
     };
 
+    const handlePointerDown = (e: React.PointerEvent) => {
+        // Stop propagation if the event is coming from inside the editor content
+        if ((e.target as HTMLElement).closest('.ProseMirror')) {
+            return;
+        }
+
+        // Right-click drag
+        if (e.button === 2) {
+            dragControls.start(e, { snapToCursor: false });
+        }
+        
+        onFocus();
+    }
+
+    const handleDoubleClick = (e: React.MouseEvent) => {
+         if ((e.target as HTMLElement).closest('.ProseMirror')) {
+            return;
+        }
+        // Double-click and hold drag
+        dragControls.start(e, { snapToCursor: false });
+    }
+
     return (
         <motion.div
             drag
+            dragControls={dragControls}
+            dragListener={false} 
             dragMomentum={false}
-            dragListener={false} // We'll handle drag manually on the header
-            onMouseDown={onFocus}
-            className="fixed top-1/4 left-1/4 bg-card border rounded-lg shadow-2xl flex flex-col overflow-hidden"
+            onPointerDown={handlePointerDown}
+            onDoubleClick={handleDoubleClick}
+            className="fixed top-1/4 left-1/4 bg-card border rounded-lg shadow-2xl flex flex-col overflow-hidden cursor-grab active:cursor-grabbing"
             style={{ zIndex, width: 350, height: 400 }}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
+            onContextMenu={(e) => e.preventDefault()} // Prevent context menu on right click
         >
-            <motion.div 
-                className="flex items-center justify-between p-2 border-b cursor-grab bg-secondary/50"
-                 onPointerDown={(e) => {
-                    const dragControls = (e.currentTarget.parentElement as any).dragControls;
-                    if (dragControls) {
-                      dragControls.start(e, { snapToCursor: false });
-                    }
-                }}
+            <div 
+                className="flex items-center justify-between p-2 border-b bg-secondary/50"
             >
                 <span className="text-sm font-medium">Apunte</span>
                 <Button onClick={onClose} variant="ghost" size="icon" className="h-6 w-6 cursor-pointer">
                     <X className="h-4 w-4" />
                 </Button>
-            </motion.div>
+            </div>
             
-            <div className="flex-grow p-2 overflow-auto" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="flex-grow p-2 overflow-auto cursor-auto">
                 {localContent.type === 'loading' ? (
                     <div className="flex items-center justify-center h-full">
                         <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -830,7 +850,7 @@ export function Editor({
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button onClick={() => handleAddSideNote({ type: "doc", content: [{ type: "paragraph" }]})} size="icon" variant="ghost" className="absolute top-2 right-2 z-10 text-muted-foreground hover:text-foreground h-7 w-7">
+                         <Button onClick={() => handleAddSideNote({ type: "doc", content: [{ type: "paragraph" }]})} size="icon" variant="ghost" className="absolute top-2 right-2 z-10 text-muted-foreground hover:text-foreground h-7 w-7">
                             <Pencil className="h-4 w-4" />
                         </Button>
                     </TooltipTrigger>
