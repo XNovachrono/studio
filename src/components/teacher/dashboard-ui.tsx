@@ -1123,32 +1123,31 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
     const t_meetings = translations.teacherDashboard.meetings;
     const [studentToView, setStudentToView] = useState<StudentGroupInfo | null>(null);
     const [refreshLessonKey, setRefreshLessonKey] = useState(0);
-
     const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
     
-    if (!group) return null;
-
-    const groupMembers: StudentGroupInfo[] = useMemo(() => group.studentsInfo || [], [group]);
+    // Move all hooks to the top level
+    const groupMembers: StudentGroupInfo[] = useMemo(() => group?.studentsInfo || [], [group]);
     const isPrivateGroup = useMemo(() => group?.type === 'privado', [group]);
+    
     const privateStudent = useMemo(() => {
         if (!isPrivateGroup || groupMembers.length === 0) return null;
         return groupMembers[0];
     }, [isPrivateGroup, groupMembers]);
-    
-    // This is a hack to get full student profile for the dialog.
-    // In a better structure, we might fetch this on demand.
-    const fullStudentProfiles = new Map((group.studentsInfo || []).map(s => [s.id, s as StudentProfile]));
 
     const filteredSlots = useMemo(() => {
         const slots = (privateStudent as any)?.scheduledSlots;
-        if (!slots) return [];
+        if (!slots || !Array.isArray(slots)) return [];
         const oneWeekAgo = subWeeks(startOfToday(), 1);
-        return (slots || [])
+        return (slots)
             .map((slot: any) => ({ ...slot, dateObj: parseISO(slot.date) }))
-            .filter((slot: any) => !isBefore(slot.dateObj, oneWeekAgo))
+            .filter((slot: any) => slot.dateObj && !isBefore(slot.dateObj, oneWeekAgo))
             .slice(0, 3);
     }, [privateStudent]);
 
+    // Early return after all hooks are called
+    if (!group) {
+        return null;
+    }
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
