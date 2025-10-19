@@ -1167,48 +1167,21 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
                             refreshLessonKey={refreshLessonKey}
                         />
                     </TabsContent>
-                    <TabsContent value="members" className="flex-grow overflow-auto p-4 space-y-4">
-                         <Card>
-                            <CardHeader><CardTitle>Miembros del Grupo</CardTitle></CardHeader>
-                            <CardContent>
-                                <ScrollArea className="h-60">
-                                    <ul className="space-y-2 pr-4">
-                                        {(group.studentsInfo || []).map(student => (
-                                            <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
-                                                <span className="text-sm">{student.name}</span>
-                                                <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
-                                                    <Eye className="mr-2 h-4 w-4" />
-                                                    {t.viewData}
-                                                </Button>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </ScrollArea>
-                            </CardContent>
-                        </Card>
-                         {isPrivateGroup && privateStudent && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Disponibilidad del Estudiante</CardTitle>
-                                    <CardDescription>Horarios preferidos por {privateStudent.name}</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ScrollArea className="h-40">
-                                        <ul className="space-y-2 pr-4">
-                                            {filteredSlots.length > 0 ? filteredSlots.map((slot: any) => (
-                                                <li key={slot.date+slot.time} className="flex items-center justify-between p-2 rounded-md bg-secondary/50">
-                                                    <span className="text-sm font-medium">{format(slot.dateObj, "eeee, dd 'de' MMMM", {locale: es})} a las {slot.time}</span>
-                                                    <Button size="sm" onClick={() => scheduleFromAvailabilityRef.current(slot.dateObj, slot.time)}>
-                                                        <CheckCircle className="mr-2 h-4 w-4"/>
-                                                        Programar
-                                                    </Button>
-                                                </li>
-                                            )) : <p className="text-center text-muted-foreground pt-10">El estudiante no ha definido su disponibilidad.</p>}
-                                        </ul>
-                                    </ScrollArea>
-                                </CardContent>
-                            </Card>
-                        )}
+                    <TabsContent value="members" className="flex-grow overflow-auto p-4">
+                        <h3 className="text-xl font-headline mb-4">Miembros del Grupo</h3>
+                        <ScrollArea className="h-full">
+                            <ul className="space-y-2 pr-4">
+                                {(group.studentsInfo || []).map(student => (
+                                    <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
+                                        <span className="text-sm">{student.name}</span>
+                                        <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
+                                            <Eye className="mr-2 h-4 w-4" />
+                                            {t.viewData}
+                                        </Button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </ScrollArea>
                     </TabsContent>
                      <TabsContent value="meetings" className="flex-grow overflow-auto p-4">
                         <GroupCommunication 
@@ -1441,4 +1414,6 @@ export function TeacherDashboardUI() {
 
 
     
+    
+
     
