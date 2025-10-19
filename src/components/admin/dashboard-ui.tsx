@@ -189,7 +189,7 @@ const LessonViewer = ({ group, studentsById }: { group: Group, studentsById: Map
     const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
     const [modalContent, setModalContent] = useState<keyof Lesson | null>(null);
 
-    const groupMembers = useMemo(() => group.studentIds.map(id => studentsById.get(id)).filter(Boolean) as StudentProfile[], [group.studentIds, studentsById]);
+    const groupMembers = useMemo(() => (group.studentsInfo || []).map(info => studentsById.get(info.id)).filter(Boolean) as StudentProfile[], [group.studentsInfo, studentsById]);
 
     useEffect(() => {
         const fetchLessons = async () => {
@@ -773,11 +773,20 @@ export function AdminDashboardUI() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const studentsInGroups = useMemo(() => new Set(data?.groups.flatMap(g => g.studentIds)), [data?.groups]);
-  const ungroupedStudents = useMemo(() => data?.allStudents.filter(s => !studentsInGroups.has(s.id)) || [], [data, studentsInGroups]);
+  const studentsInGroups = useMemo(() => {
+    if (!data?.groups) return new Set();
+    return new Set(data.groups.flatMap(g => g.studentsInfo ? g.studentsInfo.map(s => s.id) : g.studentIds || []));
+  }, [data?.groups]);
+
+  const ungroupedStudents = useMemo(() => {
+    if (!data?.allStudents) return [];
+    return data.allStudents.filter(s => !studentsInGroups.has(s.id));
+  }, [data?.allStudents, studentsInGroups]);
+
 
   const studentsById = useMemo(() => {
-    return new Map(data?.allStudents.map(s => [s.id, s]));
+    if (!data?.allStudents) return new Map();
+    return new Map(data.allStudents.map(s => [s.id, s]));
   }, [data?.allStudents]);
   
   const pqrsByStudent = useMemo(() => {
