@@ -180,7 +180,7 @@ const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: Student
 };
 
 
-const LessonViewer = ({ group, studentsById }: { group: Group, studentsById: Map<string, StudentProfile> }) => {
+const LessonViewer = ({ group, students }: { group: Group, students: StudentProfile[] }) => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { translations } = useLanguage();
@@ -188,8 +188,6 @@ const LessonViewer = ({ group, studentsById }: { group: Group, studentsById: Map
     const t_lessons_teacher = translations.teacherDashboard.lessons;
     const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
     const [modalContent, setModalContent] = useState<keyof Lesson | null>(null);
-
-    const groupMembers = useMemo(() => (group.studentsInfo || []).map(info => studentsById.get(info.id)).filter(Boolean) as StudentProfile[], [group.studentsInfo, studentsById]);
 
     useEffect(() => {
         const fetchLessons = async () => {
@@ -280,7 +278,7 @@ const LessonViewer = ({ group, studentsById }: { group: Group, studentsById: Map
                 )}
                 {activeLesson && modalContent === 'attendance' && (
                      <ul className="space-y-2">
-                        {groupMembers.map(student => (
+                        {students.map(student => (
                             <li key={student.id} className="flex justify-between items-center text-sm p-2 rounded-md bg-secondary/50">
                             <span>{student.name}</span>
                             <Badge variant="outline" className="capitalize">
@@ -297,7 +295,7 @@ const LessonViewer = ({ group, studentsById }: { group: Group, studentsById: Map
     );
 };
 
-const AdminGroupDetailsDialog = ({ group, studentsById, allTeachers, isOpen, onOpenChange, onGroupUpdate }: { group: Group | null; studentsById: Map<string, StudentProfile>; allTeachers: User[]; isOpen: boolean; onOpenChange: (open: boolean) => void; onGroupUpdate: () => void; }) => {
+const AdminGroupDetailsDialog = ({ group, allStudents, allTeachers, isOpen, onOpenChange, onGroupUpdate }: { group: Group | null; allStudents: StudentProfile[]; allTeachers: User[]; isOpen: boolean; onOpenChange: (open: boolean) => void; onGroupUpdate: () => void; }) => {
     const { translations } = useLanguage();
     const t_groups = translations.teacherDashboard.groups;
     const { toast } = useToast();
@@ -305,13 +303,18 @@ const AdminGroupDetailsDialog = ({ group, studentsById, allTeachers, isOpen, onO
     const [editingStudent, setEditingStudent] = useState<StudentProfile | null>(null);
     const [selectedTeacherId, setSelectedTeacherId] = useState(group?.teacherId || "");
 
+    const groupStudents = useMemo(() => {
+        if (!group || !allStudents) return [];
+        const studentIds = new Set(group.studentIds || []);
+        return allStudents.filter(s => studentIds.has(s.id));
+    }, [group, allStudents]);
+
     useEffect(() => {
         if(group) setSelectedTeacherId(group.teacherId);
     }, [group]);
     
     if (!group) return null;
 
-    const groupMembers = group.studentsInfo || [];
     const scheduledClasses = group.content.scheduledClasses || [];
     const reminders = group.content.reminders || [];
 
@@ -357,15 +360,15 @@ const AdminGroupDetailsDialog = ({ group, studentsById, allTeachers, isOpen, onO
                         <TabsTrigger value="settings"><Settings className="mr-2 h-4 w-4"/>Gestionar</TabsTrigger>
                     </TabsList>
                     <TabsContent value="lessons" className="flex-grow overflow-auto p-4">
-                       <LessonViewer group={group} studentsById={studentsById} />
+                       <LessonViewer group={group} students={groupStudents} />
                     </TabsContent>
                     <TabsContent value="members" className="flex-grow overflow-auto p-4">
                          <ScrollArea className="h-full">
                             <ul className="space-y-2 pr-4">
-                                {groupMembers.map(student => (
+                                {groupStudents.map(student => (
                                     <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
                                         <span className="text-sm">{student.name}</span>
-                                        <Button variant="ghost" size="sm" onClick={() => setStudentToView(studentsById.get(student.id) || null)}>
+                                        <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
                                             <Eye className="mr-2 h-4 w-4" />
                                             {t_groups.viewData}
                                         </Button>
@@ -427,11 +430,11 @@ const AdminGroupDetailsDialog = ({ group, studentsById, allTeachers, isOpen, onO
                             <CardHeader><CardTitle>Gestionar Miembros</CardTitle></CardHeader>
                             <CardContent>
                                  <ul className="space-y-2">
-                                    {groupMembers.map(studentInfo => (
+                                    {groupStudents.map(studentInfo => (
                                         <li key={studentInfo.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
                                             <span className="text-sm">{studentInfo.name}</span>
                                             <div className="flex gap-2">
-                                                 <Button variant="outline" size="sm" onClick={() => setEditingStudent(studentsById.get(studentInfo.id) || null)}>
+                                                 <Button variant="outline" size="sm" onClick={() => setEditingStudent(studentInfo)}>
                                                     <Edit className="mr-2 h-4 w-4" /> Editar
                                                 </Button>
                                                 <AlertDialog>
@@ -752,7 +755,7 @@ export function AdminDashboardUI() {
     } catch (error) {
       console.error("Error fetching admin data:", error);
       toast({ variant: "destructive", title: t_toast.errorTitle, description: t_toast.dataError });
-      router.push('/login');
+      // Do not redirect, allow the user to see the error on the page
     } finally {
       setIsLoading(false);
     }
@@ -893,13 +896,33 @@ export function AdminDashboardUI() {
     }
   };
 
-  if (isLoading || !data || !user) {
+  if (isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
+  
+  if (!data || !user) {
+    return (
+        <div className="flex h-screen flex-col">
+            <DashboardHeader user={user} title={t.title} />
+            <main className="flex-1 overflow-auto p-4 md:p-8 flex items-center justify-center">
+                <Card className="w-full max-w-lg text-center">
+                    <CardHeader>
+                        <CardTitle className="text-destructive">{t_toast.errorTitle}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p>{t_toast.dataError}</p>
+                        <Button onClick={() => user && fetchDashboardData(user.id)} className="mt-4">Reintentar</Button>
+                    </CardContent>
+                </Card>
+            </main>
+        </div>
+    )
+  }
+
 
   return (
     <div className="flex h-screen flex-col">
@@ -1167,9 +1190,9 @@ export function AdminDashboardUI() {
       />
       
        {/* Dialog for Group Details (Admin) */}
-      {user && <AdminGroupDetailsDialog 
+      {user && data.allStudents && <AdminGroupDetailsDialog 
         group={groupToView}
-        studentsById={studentsById}
+        allStudents={data.allStudents}
         allTeachers={data.allTeachers}
         isOpen={!!groupToView}
         onOpenChange={() => setGroupToView(null)}
