@@ -1130,7 +1130,7 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
     const isPrivateGroup = useMemo(() => group?.type === 'privado', [group]);
     
     const privateStudent = useMemo(() => {
-        if (!isPrivateGroup || !group?.studentsInfo || group.studentsInfo.length === 0) return null;
+        if (!group || !isPrivateGroup || !group.studentsInfo || group.studentsInfo.length === 0) return null;
         return group.studentsInfo[0];
     }, [isPrivateGroup, group]);
 
