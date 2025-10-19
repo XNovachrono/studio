@@ -265,9 +265,9 @@ const GroupProgram = ({ group, onGroupUpdate, teacherId, onLessonCreated, refres
         <div className="space-y-6">
             <BankCardImporter ownerId={group.teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} bankType="objective" />
             
-            <div>
-                 <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-xl font-headline">{t.mainObjective}</h3>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>{t.mainObjective}</CardTitle>
                     <div className="flex gap-2">
                         <Button size="sm" variant="ghost" onClick={() => handleOpenBankImporter('main')}>
                             <Import className="mr-2 h-4 w-4" />
@@ -278,21 +278,21 @@ const GroupProgram = ({ group, onGroupUpdate, teacherId, onLessonCreated, refres
                             {t.saveButton}
                         </Button>
                     </div>
-                </div>
-                <Editor
-                    content={mainObjective}
-                    onChange={setMainObjective}
-                    editable
-                    placeholder={t.mainPlaceholder}
-                    withAiTools
-                />
-            </div>
+                </CardHeader>
+                <CardContent>
+                    <Editor
+                        content={mainObjective}
+                        onChange={setMainObjective}
+                        editable
+                        placeholder={t.mainPlaceholder}
+                        withAiTools
+                    />
+                </CardContent>
+            </Card>
 
-            <Separator />
-            
-            <div>
-                <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-xl font-headline">{t.weeklyObjectives}</h3>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>{t.weeklyObjectives}</CardTitle>
                     <div className="flex gap-2">
                          <Button size="sm" variant="ghost" onClick={() => handleOpenBankImporter('weekly')}>
                             <Import className="mr-2 h-4 w-4" />
@@ -303,15 +303,17 @@ const GroupProgram = ({ group, onGroupUpdate, teacherId, onLessonCreated, refres
                             {t.saveButton}
                         </Button>
                     </div>
-                </div>
-                <Editor
-                    content={weeklyObjectives}
-                    onChange={setWeeklyObjectives}
-                    editable
-                    placeholder={t.weeklyPlaceholder}
-                    withAiTools
-                />
-            </div>
+                </CardHeader>
+                <CardContent>
+                    <Editor
+                        content={weeklyObjectives}
+                        onChange={setWeeklyObjectives}
+                        editable
+                        placeholder={t.weeklyPlaceholder}
+                        withAiTools
+                    />
+                </CardContent>
+            </Card>
             
             <Separator />
 
