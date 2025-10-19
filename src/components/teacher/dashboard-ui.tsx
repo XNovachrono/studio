@@ -1034,7 +1034,7 @@ const GroupCommunication = ({ group, onClassScheduled, teacherName, onScheduleFr
                 </CardContent>
             </Card>
             
-             {(privateStudent as any)?.scheduledSlots && (privateStudent as any).scheduledSlots.length > 0 && (
+             {privateStudent && (privateStudent as any)?.scheduledSlots && (privateStudent as any).scheduledSlots.length > 0 && (
                 <Card>
                     <CardHeader>
                         <CardTitle>{t.availability.title}</CardTitle>
@@ -1119,12 +1119,8 @@ const GroupCommunication = ({ group, onClassScheduled, teacherName, onScheduleFr
 
 
 const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teacherId, teacherName }: { group: Group | null; isOpen: boolean; onOpenChange: (open: boolean) => void; onGroupUpdate: () => void; teacherId: string; teacherName: string; }) => {
-    const { translations } = useLanguage();
-    const t = translations.teacherDashboard.groups;
-    const t_program = translations.teacherDashboard.program;
-    const t_meetings = translations.teacherDashboard.meetings;
-    
     // Moved all hooks to the top level
+    const { translations } = useLanguage();
     const [studentToView, setStudentToView] = useState<StudentGroupInfo | null>(null);
     const [refreshLessonKey, setRefreshLessonKey] = useState(0);
     const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
@@ -1133,6 +1129,10 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
     if (!group) {
         return null;
     }
+    
+    const t = translations.teacherDashboard.groups;
+    const t_program = translations.teacherDashboard.program;
+    const t_meetings = translations.teacherDashboard.meetings;
     
     // Derived state, safe to compute on every render
     const isPrivateGroup = group?.type === 'privado';
