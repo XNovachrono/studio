@@ -1000,12 +1000,28 @@ const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.lessons;
     
+    const [isLaserMode, setIsLaserMode] = useState(false);
+    const laserPointerRef = useRef<HTMLDivElement>(null);
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (isLaserMode && laserPointerRef.current) {
+            requestAnimationFrame(() => {
+                if(laserPointerRef.current) {
+                    laserPointerRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+                }
+            });
+        }
+    };
+    
     if (!isOpen) return null;
     
     return (
         <DialogContent 
             className="max-w-4xl h-[80vh] flex flex-col"
+            onMouseMove={handleMouseMove}
+            style={{ cursor: isLaserMode ? 'none' : 'auto' }}
         >
+            <LaserPointer ref={laserPointerRef} isVisible={isLaserMode} />
             <DialogHeader>
                 <div className="flex justify-between items-center">
                     <DialogTitle className="font-headline text-2xl">
@@ -1015,6 +1031,24 @@ const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson
                                {activeModal === 'attendance' && t.attendance}
                                {activeModal === 'comments' && t.comments}
                     </DialogTitle>
+                    {activeModal === 'classNote' && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button 
+                                        size="icon" 
+                                        variant={isLaserMode ? "secondary" : "ghost"}
+                                        onClick={() => setIsLaserMode(prev => !prev)}
+                                    >
+                                        <Radio />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Activar Puntero Láser</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
                 </div>
             </DialogHeader>
             <div className="flex-grow overflow-auto py-4">
@@ -1215,18 +1249,6 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
     const [refreshLessonKey, setRefreshLessonKey] = useState(0);
     const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
 
-    const [isLaserMode, setIsLaserMode] = useState(false);
-    const laserPointerRef = useRef<HTMLDivElement>(null);
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (isLaserMode && laserPointerRef.current) {
-            requestAnimationFrame(() => {
-                if(laserPointerRef.current) {
-                    laserPointerRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
-                }
-            });
-        }
-    };
     
     if (!group) {
         return null;
@@ -1244,10 +1266,7 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent
                 className="max-w-4xl h-[90vh] flex flex-col"
-                onMouseMove={handleMouseMove}
-                style={{ cursor: isLaserMode ? 'none' : 'auto' }}
             >
-                <LaserPointer ref={laserPointerRef} isVisible={isLaserMode} />
                 <DialogHeader>
                     <div className="flex justify-between items-center">
                         <div>
@@ -1256,22 +1275,6 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
                             <Badge variant="secondary" className="capitalize">{group.type}</Badge>
                             </DialogDescription>
                         </div>
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button 
-                                        size="icon" 
-                                        variant={isLaserMode ? "secondary" : "ghost"}
-                                        onClick={() => setIsLaserMode(prev => !prev)}
-                                    >
-                                        <Radio />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Activar Puntero Láser</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
                     </div>
                 </DialogHeader>
                 <Tabs defaultValue="program" className="flex-grow flex flex-col overflow-hidden">
@@ -1543,6 +1546,7 @@ export function TeacherDashboardUI() {
     </>
   );
 }
+
 
 
 
