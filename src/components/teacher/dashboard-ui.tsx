@@ -5,7 +5,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal, Notebook, Bold, Italic, Underline, List, ListOrdered, Heading1, Heading2, Palette, Table2, Clock, CheckCircle } from "lucide-react";
+import { BookOpen, Eye, Loader2, PlusCircle, Users, MoreVertical, Save, Trash2, Import, RefreshCw, Library, ChevronRight, Expand, Calendar as CalendarIcon, Send, History, FileUp, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal, Notebook, Bold, Italic, Underline, List, ListOrdered, Heading1, Heading2, Palette, Table2, Clock, CheckCircle, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import {
@@ -55,6 +55,28 @@ interface TeacherDashboardData {
 
 interface TeacherDashboardUIProps {
 }
+
+const LaserPointer = ({ x, y }: { x: number; y: number }) => {
+    if (x === null || y === null) return null;
+
+    return (
+        <div
+            className="pointer-events-none fixed z-[9999] rounded-full"
+            style={{
+                left: `${x}px`,
+                top: `${y}px`,
+                width: '20px',
+                height: '20px',
+                backgroundColor: 'rgba(255, 0, 0, 0.7)',
+                border: '1px solid rgba(255, 100, 100, 0.8)',
+                boxShadow: '0 0 10px 5px rgba(255, 0, 0, 0.5), 0 0 20px 10px rgba(255, 0, 0, 0.3)',
+                transform: 'translate(-50%, -50%)',
+                transition: 'transform 0.05s ease-out',
+            }}
+        />
+    );
+};
+
 
 const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: StudentGroupInfo | null; isOpen: boolean; onOpenChange: (open: boolean) => void }) => {
     const { translations } = useLanguage();
@@ -526,11 +548,13 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
     const [activeModal, setActiveModal] = useState<ModalType>(null);
     const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
     
-    // Unified state for modal editor content
     const [currentEditingContent, setCurrentEditingContent] = useState<EditorContent | null>(null);
-
-    // State for student-specific comments in the comment modal
     const [currentEditingComments, setCurrentEditingComments] = useState<Record<string, EditorContent>>({});
+
+    const [isLaserMode, setIsLaserMode] = useState(false);
+    const [laserPosition, setLaserPosition] = useState<{ x: number; y: number }>({ x: -100, y: -100 });
+    const editorContainerRef = useRef<HTMLDivElement>(null);
+
 
     const groupMembers = useMemo(() => {
       return group.studentsInfo || [];
@@ -606,6 +630,7 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
       setSelectedLesson(null);
       setCurrentEditingContent(null);
       setCurrentEditingComments({});
+      setIsLaserMode(false);
     }
 
     const handleAttendanceChange = (lessonId: string, studentId: string, status: AttendanceStatus ) => {
@@ -658,6 +683,16 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
         }
         setFileBankImporterOpen(false);
     };
+    
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (isLaserMode) {
+            const rect = editorContainerRef.current?.getBoundingClientRect();
+            if (rect) {
+                setLaserPosition({ x: e.clientX, y: e.clientY });
+            }
+        }
+    };
+
 
     if (isLoading) {
         return <div className="flex justify-center items-center h-40"><Loader2 className="h-6 w-6 animate-spin" /></div>;
@@ -717,14 +752,22 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
                 );
             case 'classNote':
                 return (
-                     <Editor
-                        content={currentEditingContent}
-                        onChange={setCurrentEditingContent}
-                        editable
-                        placeholder={t.placeholders.classNote}
-                        withAiTools
-                        allowSideNotes
-                    />
+                    <div 
+                        ref={editorContainerRef}
+                        className="relative h-full"
+                        onMouseMove={handleMouseMove}
+                        style={{ cursor: isLaserMode ? 'none' : 'auto' }}
+                    >
+                         <Editor
+                            content={currentEditingContent}
+                            onChange={setCurrentEditingContent}
+                            editable
+                            placeholder={t.placeholders.classNote}
+                            withAiTools
+                            allowSideNotes
+                        />
+                         {isLaserMode && <LaserPointer x={laserPosition.x} y={laserPosition.y} />}
+                     </div>
                 )
             case 'homework':
                  return (
@@ -959,13 +1002,33 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
             <Dialog open={!!activeModal} onOpenChange={handleCloseModal}>
                 <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
                     <DialogHeader>
-                        <DialogTitle className="font-headline text-2xl">
-                           Editar {activeModal === 'objective' && t.objective}
-                                   {activeModal === 'classNote' && t.classNote}
-                                   {activeModal === 'homework' && t.homework}
-                                   {activeModal === 'attendance' && t.attendance}
-                                   {activeModal === 'comments' && t.comments}
-                        </DialogTitle>
+                        <div className="flex justify-between items-center">
+                            <DialogTitle className="font-headline text-2xl">
+                               Editar {activeModal === 'objective' && t.objective}
+                                       {activeModal === 'classNote' && t.classNote}
+                                       {activeModal === 'homework' && t.homework}
+                                       {activeModal === 'attendance' && t.attendance}
+                                       {activeModal === 'comments' && t.comments}
+                            </DialogTitle>
+                             {activeModal === 'classNote' && (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                             <Button 
+                                                size="icon" 
+                                                variant={isLaserMode ? "secondary" : "ghost"}
+                                                onClick={() => setIsLaserMode(prev => !prev)}
+                                            >
+                                                <Radio />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Activar Puntero Láser</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            )}
+                        </div>
                     </DialogHeader>
                     <div className="flex-grow overflow-auto py-4">
                         {renderModalContent()}
@@ -1465,6 +1528,7 @@ export function TeacherDashboardUI() {
     
 
     
+
 
 
 
