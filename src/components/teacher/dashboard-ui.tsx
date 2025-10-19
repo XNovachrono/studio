@@ -1121,12 +1121,13 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
     const t = translations.teacherDashboard.groups;
     const t_program = translations.teacherDashboard.program;
     const t_meetings = translations.teacherDashboard.meetings;
+    
+    // Moved all hooks to the top level
     const [studentToView, setStudentToView] = useState<StudentGroupInfo | null>(null);
     const [refreshLessonKey, setRefreshLessonKey] = useState(0);
     const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
     
-    // Move all hooks to the top level
-    const groupMembers: StudentGroupInfo[] = useMemo(() => group?.studentsInfo || [], [group]);
+    const groupMembers = useMemo(() => group?.studentsInfo || [], [group]);
     const isPrivateGroup = useMemo(() => group?.type === 'privado', [group]);
     
     const privateStudent = useMemo(() => {
