@@ -999,7 +999,6 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
 const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson, renderModalContent, handleSaveLesson, isSaving }: { isOpen: boolean, onClose: () => void, activeModal: ModalType, selectedLesson: Lesson | null, renderModalContent: () => React.ReactNode, handleSaveLesson: () => void, isSaving: boolean }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.lessons;
-    const [isLaserMode, setIsLaserMode] = useState(false);
     
     if (!isOpen) return null;
     
@@ -1016,24 +1015,6 @@ const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson
                                {activeModal === 'attendance' && t.attendance}
                                {activeModal === 'comments' && t.comments}
                     </DialogTitle>
-                     {activeModal === 'classNote' && (
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                     <Button 
-                                        size="icon" 
-                                        variant={isLaserMode ? "secondary" : "ghost"}
-                                        onClick={() => setIsLaserMode(prev => !prev)}
-                                    >
-                                        <Radio />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Activar Puntero Láser</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    )}
                 </div>
             </DialogHeader>
             <div className="flex-grow overflow-auto py-4">
@@ -1234,8 +1215,8 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
     const [refreshLessonKey, setRefreshLessonKey] = useState(0);
     const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
 
-    const [isLaserMode, setIsLaserMode] = React.useState(false);
-    const laserPointerRef = React.useRef<HTMLDivElement>(null);
+    const [isLaserMode, setIsLaserMode] = useState(false);
+    const laserPointerRef = useRef<HTMLDivElement>(null);
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         if (isLaserMode && laserPointerRef.current) {
@@ -1268,10 +1249,30 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
             >
                 <LaserPointer ref={laserPointerRef} isVisible={isLaserMode} />
                 <DialogHeader>
-                    <DialogTitle>{group.name}</DialogTitle>
-                     <DialogDescription>
-                      <Badge variant="secondary" className="capitalize">{group.type}</Badge>
-                    </DialogDescription>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <DialogTitle>{group.name}</DialogTitle>
+                            <DialogDescription>
+                            <Badge variant="secondary" className="capitalize">{group.type}</Badge>
+                            </DialogDescription>
+                        </div>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button 
+                                        size="icon" 
+                                        variant={isLaserMode ? "secondary" : "ghost"}
+                                        onClick={() => setIsLaserMode(prev => !prev)}
+                                    >
+                                        <Radio />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Activar Puntero Láser</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    </div>
                 </DialogHeader>
                 <Tabs defaultValue="program" className="flex-grow flex flex-col overflow-hidden">
                     <TabsList className="shrink-0">
@@ -1542,5 +1543,6 @@ export function TeacherDashboardUI() {
     </>
   );
 }
+
 
 
