@@ -42,7 +42,7 @@ import { format, parse, parseISO, addDays, isBefore, startOfToday, differenceInM
 import { es } from "date-fns/locale";
 import { TeacherDataSettings } from "./teacher-data-settings";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Separator } from "../ui/separator";
 
 
@@ -740,7 +740,7 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
                         <div>
                                 <h4 className="font-semibold mb-4">{t.studentComments}</h4>
                                 <Accordion type="multiple" className="w-full space-y-2">
-                                {groupMembers.map(student => (
+                                {(groupMembers || []).map(student => (
                                     <AccordionItem value={student.id} key={student.id} className="border rounded-md">
                                         <AccordionTrigger className="px-3 py-2 text-sm font-medium hover:no-underline">{student.name}</AccordionTrigger>
                                         <AccordionContent className="p-3 border-t">
@@ -775,7 +775,7 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
                                 <AlertTitle>{t.attendancePopover.noTimeError}</AlertTitle>
                             </Alert>
                         )}
-                        {groupMembers.map(student => {
+                        {(groupMembers || []).map(student => {
                             const studentAttendance = attendanceForStudent(student.id);
                             return (
                                 <div key={student.id} className="flex justify-between items-center p-2 rounded-md bg-secondary/50">
@@ -1211,7 +1211,7 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
 };
 
 
-const GroupSection = ({ title, groups, onView }: { title: string; groups: Group[]; onView: (group: Group) => void; }) => {
+const GroupSection = ({ title, groups, onView, value }: { title: string; groups: Group[]; onView: (group: Group) => void; value: string }) => {
   const { translations } = useLanguage();
   const t = translations.teacherDashboard.groups;
   
@@ -1219,54 +1219,58 @@ const GroupSection = ({ title, groups, onView }: { title: string; groups: Group[
     return null;
   }
   return (
-    <div className="space-y-4">
-      <h3 className="text-xl font-headline text-foreground">{title}</h3>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {groups.map(group => (
-          <Card key={group.id} className="flex flex-col">
-             <div onClick={() => onView(group)} className="flex-grow cursor-pointer hover:bg-accent/50 transition-colors rounded-t-lg">
-                <CardHeader>
-                    <CardTitle className="truncate">{group.name}</CardTitle>
-                    <CardDescription>
-                      <Badge variant="secondary" className="capitalize">{group.type}</Badge>
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                  <h4 className="font-semibold text-sm mb-2">{t.members}:</h4>
-                  <ul className="space-y-1 text-sm text-muted-foreground">
-                    {(group.studentsInfo || []).slice(0, 5).map(student => (
-                      <li key={student.id}>{student.name || t.unknown}</li>
-                    ))}
-                    {(group.studentsInfo || []).length > 5 && <li>...</li>}
-                  </ul>
-                </CardContent>
-             </div>
-             <div className="p-2 border-t flex items-center justify-between">
-               <div className="text-xs text-muted-foreground">
-                    {(group.studentsInfo || []).length} {t.members.toLowerCase()}
-               </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onView(group)}>
-                        <BookOpen className="mr-2 h-4 w-4"/>
-                        {t.viewGroup}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                        <Users className="mr-2 h-4 w-4"/>
-                        {t.editGroup}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-             </div>
-          </Card>
-        ))}
-      </div>
-    </div>
+    <AccordionItem value={value}>
+        <AccordionTrigger className="text-xl font-headline text-foreground hover:no-underline">
+            {title}
+        </AccordionTrigger>
+        <AccordionContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pt-4">
+                {groups.map(group => (
+                  <Card key={group.id} className="flex flex-col">
+                     <div onClick={() => onView(group)} className="flex-grow cursor-pointer hover:bg-accent/50 transition-colors rounded-t-lg">
+                        <CardHeader>
+                            <CardTitle className="truncate">{group.name}</CardTitle>
+                            <CardDescription>
+                              <Badge variant="secondary" className="capitalize">{group.type}</Badge>
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex-grow">
+                          <h4 className="font-semibold text-sm mb-2">{t.members}:</h4>
+                          <ul className="space-y-1 text-sm text-muted-foreground">
+                            {(group.studentsInfo || []).slice(0, 5).map(student => (
+                              <li key={student.id}>{student.name || t.unknown}</li>
+                            ))}
+                            {(group.studentsInfo || []).length > 5 && <li>...</li>}
+                          </ul>
+                        </CardContent>
+                     </div>
+                     <div className="p-2 border-t flex items-center justify-between">
+                       <div className="text-xs text-muted-foreground">
+                            {(group.studentsInfo || []).length} {t.members.toLowerCase()}
+                       </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onView(group)}>
+                                <BookOpen className="mr-2 h-4 w-4"/>
+                                {t.viewGroup}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                                <Users className="mr-2 h-4 w-4"/>
+                                {t.editGroup}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                     </div>
+                  </Card>
+                ))}
+            </div>
+        </AccordionContent>
+    </AccordionItem>
   );
 };
 
@@ -1347,10 +1351,12 @@ export function TeacherDashboardUI() {
                   <TabsTrigger value="active"><Users className="mr-2 h-4 w-4"/>{t.groups.title}</TabsTrigger>
                   <TabsTrigger value="history"><History className="mr-2 h-4 w-4"/>{t.groups.history}</TabsTrigger>
               </TabsList>
-              <TabsContent value="active" className="mt-6 space-y-8">
-                  <GroupSection title={t.groups.private} groups={privateGroups} onView={setGroupToView}/>
-                  <GroupSection title={t.groups.small} groups={smallGroups} onView={setGroupToView}/>
-                  <GroupSection title={t.groups.large} groups={largeGroups} onView={setGroupToView}/>
+              <TabsContent value="active" className="mt-6 space-y-4">
+                  <Accordion type="multiple" className="w-full space-y-4" defaultValue={['private', 'small', 'large']}>
+                    <GroupSection value="private" title={t.groups.private} groups={privateGroups} onView={setGroupToView}/>
+                    <GroupSection value="small" title={t.groups.small} groups={smallGroups} onView={setGroupToView}/>
+                    <GroupSection value="large" title={t.groups.large} groups={largeGroups} onView={setGroupToView}/>
+                  </Accordion>
                   {data?.groups.length === 0 && (
                       <p className="text-center text-muted-foreground pt-8">{t.groups.noGroups}</p>
                   )}
@@ -1420,3 +1426,4 @@ export function TeacherDashboardUI() {
     
 
     
+
