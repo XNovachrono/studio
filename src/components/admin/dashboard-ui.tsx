@@ -304,7 +304,14 @@ const AdminGroupDetailsDialog = ({ group, allStudents, allTeachers, isOpen, onOp
     const [selectedTeacherId, setSelectedTeacherId] = useState(group?.teacherId || "");
 
     const groupStudents = useMemo(() => {
-        if (!group || !allStudents) return [];
+        if (!group || !(group.studentsInfo || group.studentIds)) return [];
+        
+        // Prioritize the detailed studentsInfo array
+        if (group.studentsInfo && group.studentsInfo.length > 0) {
+            return allStudents.filter(s => group.studentsInfo.some(info => info.id === s.id));
+        }
+        
+        // Fallback to studentIds if studentsInfo is not available
         const studentIds = new Set(group.studentIds || []);
         return allStudents.filter(s => studentIds.has(s.id));
     }, [group, allStudents]);
@@ -665,7 +672,7 @@ const TeacherDetailsDialog = ({ teacher, groups, pqrs, bankCards, isOpen, onOpen
                                             <CardDescription><Badge variant="outline" className="capitalize">{group.type}</Badge></CardDescription>
                                         </CardHeader>
                                         <CardContent>
-                                            <p className="text-sm"><strong>Miembros:</strong> {group.studentIds.length}</p>
+                                            <p className="text-sm"><strong>Miembros:</strong> {(group.studentIds || []).length}</p>
                                         </CardContent>
                                     </Card>
                                 ))}
@@ -778,7 +785,7 @@ export function AdminDashboardUI() {
 
   const studentsInGroups = useMemo(() => {
     if (!data?.groups) return new Set();
-    return new Set(data.groups.flatMap(g => g.studentsInfo ? g.studentsInfo.map(s => s.id) : g.studentIds || []));
+    return new Set(data.groups.flatMap(g => g.studentIds || []));
   }, [data?.groups]);
 
   const ungroupedStudents = useMemo(() => {
@@ -1074,7 +1081,7 @@ export function AdminDashboardUI() {
                                 </CardHeader>
                                 <CardContent className="space-y-2 text-sm">
                                     <p><strong>Docente:</strong> {group.teacherName}</p>
-                                    <p><strong>Estudiantes:</strong> {group.studentIds.length}</p>
+                                    <p><strong>Estudiantes:</strong> {(group.studentIds || []).length}</p>
                                 </CardContent>
                             </Card>
                         ))}

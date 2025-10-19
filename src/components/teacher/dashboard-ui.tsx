@@ -1242,7 +1242,7 @@ const GroupSection = ({ title, groups, onView, value }: { title: string; groups:
                      </div>
                      <div className="p-2 border-t flex items-center justify-between">
                        <div className="text-xs text-muted-foreground">
-                            {(group.studentsInfo || []).length} {t.members.toLowerCase()}
+                            {(group.studentIds || []).length} {t.members.toLowerCase()}
                        </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -1422,5 +1422,6 @@ export function TeacherDashboardUI() {
     
 
     
+
 
 
