@@ -289,9 +289,16 @@ const GenerateToc = ({ editor }: { editor: TiptapEditor }) => {
     };
 
     return (
-        <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={handleGenerateToc} title="Insertar Índice">
-            <ListTree />
-        </Button>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={handleGenerateToc}>
+                    <ListTree />
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+                <p>Insertar Índice</p>
+            </TooltipContent>
+        </Tooltip>
     );
 };
 
@@ -626,38 +633,31 @@ interface EditorProps {
 const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }: any) => {
     const [localContent, setLocalContent] = useState(initialContent);
     const dragControls = useDragControls();
+    const [size, setSize] = useState({ width: 350, height: 400 });
 
-    // This effect ensures that if the initial content from the parent changes (e.g., AI result comes in),
-    // the local state of this note is updated.
     useEffect(() => {
         setLocalContent(initialContent);
     }, [initialContent]);
 
     const handleContentChange = (newContent: any) => {
-        // Update both local state for immediate feedback and call parent's onUpdate
         setLocalContent(newContent);
         onUpdate(newContent);
     };
 
     const handlePointerDown = (e: React.PointerEvent) => {
-        // Stop propagation if the event is coming from inside the editor content
-        if ((e.target as HTMLElement).closest('.ProseMirror')) {
+        if ((e.target as HTMLElement).closest('.ProseMirror') || (e.target as HTMLElement).closest('[data-resize-handle]')) {
             return;
         }
-
-        // Right-click drag
-        if (e.button === 2) {
+        if (e.button === 2) { // Right-click drag
             dragControls.start(e, { snapToCursor: false });
         }
-        
         onFocus();
     }
 
     const handleDoubleClick = (e: React.MouseEvent) => {
-         if ((e.target as HTMLElement).closest('.ProseMirror')) {
+        if ((e.target as HTMLElement).closest('.ProseMirror') || (e.target as HTMLElement).closest('[data-resize-handle]')) {
             return;
         }
-        // Double-click and hold drag
         dragControls.start(e, { snapToCursor: false });
     }
 
@@ -670,11 +670,11 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
             onPointerDown={handlePointerDown}
             onDoubleClick={handleDoubleClick}
             className="fixed top-1/4 left-1/4 bg-card border rounded-lg shadow-2xl flex flex-col overflow-hidden cursor-grab active:cursor-grabbing"
-            style={{ zIndex, width: 350, height: 400 }}
+            style={{ zIndex, width: size.width, height: size.height, minWidth: 200, minHeight: 150 }}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            onContextMenu={(e) => e.preventDefault()} // Prevent context menu on right click
+            onContextMenu={(e) => e.preventDefault()}
         >
             <div 
                 className="flex items-center justify-between p-2 border-b bg-secondary/50"
@@ -685,7 +685,7 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
                 </Button>
             </div>
             
-            <div className="flex-grow p-2 overflow-auto cursor-auto">
+            <div className="flex-grow p-2 overflow-auto cursor-auto relative">
                 {localContent.type === 'loading' ? (
                     <div className="flex items-center justify-center h-full">
                         <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -696,11 +696,25 @@ const FloatingNote = ({ id, initialContent, onUpdate, onClose, zIndex, onFocus }
                         onChange={handleContentChange}
                         editable={true}
                         placeholder="Nuevo apunte..."
-                        withAiTools={true} // AI tools can be available in notes too
-                        allowSideNotes={false} // Prevent notes within notes
+                        withAiTools={true}
+                        allowSideNotes={false}
                     />
                 )}
             </div>
+            <motion.div
+                data-resize-handle
+                className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
+                drag="x"
+                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                dragElastic={0}
+                dragMomentum={false}
+                onDrag={(event, info) => {
+                    setSize(prev => ({
+                        width: Math.max(200, prev.width + info.delta.x),
+                        height: Math.max(150, prev.height + info.delta.y)
+                    }));
+                }}
+            />
         </motion.div>
     );
 };
@@ -845,58 +859,58 @@ export function Editor({
   };
     
   return (
-    <div className={cn("w-full relative min-h-[150px] rounded-lg border bg-background p-4 flex flex-col")}>
-        {withAiTools && allowSideNotes && (
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                         <Button onClick={() => handleAddSideNote({ type: "doc", content: [{ type: "paragraph" }]})} size="icon" variant="ghost" className="absolute top-2 right-2 z-10 text-muted-foreground hover:text-foreground h-7 w-7">
-                            <Pencil className="h-4 w-4" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Añadir Apunte</p>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-        )}
-         <div className="w-full h-full relative flex flex-col flex-grow">
-            {withAiTools && <Toolbar editor={editor} onAskAI={localOnAskAI} onExplain={localOnExplain} />}
-            <div className={cn("flex-grow relative h-full")}>
-                 <EditorContent editor={editor} className={"h-full"}/>
-            </div>
-            
-            <AnimatePresence>
-                {(aiState === 'prompting' || aiState === 'loading') && (
-                    <motion.div
-                        key="ai-prompt" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                        className={cn("absolute bottom-0 left-0 right-0 bg-secondary p-2 rounded-lg shadow-lg flex items-center gap-2")}>
-                        <Sparkles className="text-primary h-5 w-5"/>
-                        <Input placeholder={t.ai.placeholder} className="bg-transparent border-none focus-visible:ring-0"
-                            value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={handlePromptKeyDown}
-                            disabled={aiState === 'loading'} autoFocus />
-                         {aiState === 'loading' ? (
-                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/>
-                         ) : (
-                            <Button variant="ghost" size="icon" onClick={handleCancelAI}><X/></Button>
-                         )}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
-        
-        <AnimatePresence>
-            {sideNotePanels.map((panel, index) => (
-                <FloatingNote
-                    key={panel.id} id={panel.id} initialContent={panel.content}
-                    onUpdate={(newContent: any) => handleUpdateNoteContent(panel.id, newContent)}
-                    onClose={() => handleCloseSideNote(panel.id)}
-                    zIndex={activeNoteId === panel.id ? 1000 : 100 + index}
-                    onFocus={() => setActiveNoteId(panel.id)}
-                />
-            ))}
-        </AnimatePresence>
-    </div>
+    <TooltipProvider>
+      <div className={cn("w-full relative min-h-[150px] rounded-lg border bg-background p-4 flex flex-col")}>
+          {withAiTools && allowSideNotes && (
+              <Tooltip>
+                  <TooltipTrigger asChild>
+                      <Button onClick={() => handleAddSideNote({ type: "doc", content: [{ type: "paragraph" }]})} size="icon" variant="ghost" className="absolute top-2 right-2 z-10 text-muted-foreground hover:text-foreground h-7 w-7">
+                          <Pencil className="h-4 w-4" />
+                      </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                      <p>Añadir Apunte</p>
+                  </TooltipContent>
+              </Tooltip>
+          )}
+          <div className="w-full h-full relative flex flex-col flex-grow">
+              {withAiTools && <Toolbar editor={editor} onAskAI={localOnAskAI} onExplain={localOnExplain} />}
+              <div className={cn("flex-grow relative h-full")}>
+                  <EditorContent editor={editor} className={"h-full"}/>
+              </div>
+              
+              <AnimatePresence>
+                  {(aiState === 'prompting' || aiState === 'loading') && (
+                      <motion.div
+                          key="ai-prompt" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                          className={cn("absolute bottom-0 left-0 right-0 bg-secondary p-2 rounded-lg shadow-lg flex items-center gap-2")}>
+                          <Sparkles className="text-primary h-5 w-5"/>
+                          <Input placeholder={t.ai.placeholder} className="bg-transparent border-none focus-visible:ring-0"
+                              value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={handlePromptKeyDown}
+                              disabled={aiState === 'loading'} autoFocus />
+                          {aiState === 'loading' ? (
+                              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/>
+                          ) : (
+                              <Button variant="ghost" size="icon" onClick={handleCancelAI}><X/></Button>
+                          )}
+                      </motion.div>
+                  )}
+              </AnimatePresence>
+          </div>
+          
+          <AnimatePresence>
+              {sideNotePanels.map((panel, index) => (
+                  <FloatingNote
+                      key={panel.id} id={panel.id} initialContent={panel.content}
+                      onUpdate={(newContent: any) => handleUpdateNoteContent(panel.id, newContent)}
+                      onClose={() => handleCloseSideNote(panel.id)}
+                      zIndex={activeNoteId === panel.id ? 1000 : 100 + index}
+                      onFocus={() => setActiveNoteId(panel.id)}
+                  />
+              ))}
+          </AnimatePresence>
+      </div>
+    </TooltipProvider>
   );
 }
 
