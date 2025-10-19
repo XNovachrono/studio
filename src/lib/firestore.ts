@@ -132,30 +132,41 @@ export const getStudentData = async (userId: string): Promise<{ user: StudentPro
     // Find the group the student belongs to
     const groupsRef = collection(db, "groups");
     const q = query(groupsRef, where("studentIds", "array-contains", userId));
-    const querySnapshot = await getDocs(q);
+    
+    try {
+        const querySnapshot = await getDocs(q);
 
-    let group: Group | null = null;
-    if (!querySnapshot.empty) {
-        const groupDoc = querySnapshot.docs[0];
-        const groupData = groupDoc.data() as Omit<Group, 'id'>;
-        
-        // Convert Timestamps to string dates for serialization
-        if (groupData.content.scheduledClasses) {
-            groupData.content.scheduledClasses = groupData.content.scheduledClasses.map(c => ({
-                ...c,
-                time: c.time instanceof Timestamp ? c.time.toDate().toISOString() : c.time,
-            }));
+        let group: Group | null = null;
+        if (!querySnapshot.empty) {
+            const groupDoc = querySnapshot.docs[0];
+            const groupData = groupDoc.data() as Omit<Group, 'id'>;
+            
+            // Convert Timestamps to string dates for serialization
+            if (groupData.content.scheduledClasses) {
+                groupData.content.scheduledClasses = groupData.content.scheduledClasses.map(c => ({
+                    ...c,
+                    time: c.time instanceof Timestamp ? c.time.toDate().toISOString() : c.time,
+                }));
+            }
+            if (groupData.content.reminders) {
+                 groupData.content.reminders = groupData.content.reminders.map(r => ({
+                    ...r,
+                    sentAt: r.sentAt instanceof Timestamp ? r.sentAt.toDate().toISOString() : r.sentAt,
+                }));
+            }
+            group = { id: groupDoc.id, ...groupData };
         }
-        if (groupData.content.reminders) {
-             groupData.content.reminders = groupData.content.reminders.map(r => ({
-                ...r,
-                sentAt: r.sentAt instanceof Timestamp ? r.sentAt.toDate().toISOString() : r.sentAt,
-            }));
-        }
-        group = { id: groupDoc.id, ...groupData };
+    
+        return { user, group };
+    } catch (serverError) {
+         const error = new FirestorePermissionError({
+            path: groupsRef.path,
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', error);
+        throw error;
     }
 
-    return { user, group };
 }
 
 
@@ -167,10 +178,19 @@ export const submitPQRS = async (pqrsData: Omit<PQRSMessage, 'createdAt' | 'id' 
     }
 
     const pqrsCollectionRef = collection(db, 'pqrs');
-    await addDoc(pqrsCollectionRef, {
+    const data = {
         ...pqrsData,
         teacherName: teacherProfile.name,
         createdAt: Timestamp.now(),
+    };
+    
+    addDoc(pqrsCollectionRef, data).catch(serverError => {
+        const error = new FirestorePermissionError({
+            path: pqrsCollectionRef.path,
+            operation: 'create',
+            requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', error);
     });
 };
 
@@ -198,10 +218,19 @@ export const getStudentNotes = async (studentId: string): Promise<StudentNote[]>
     const notesRef = collection(db, "student_notes");
     const q = query(notesRef, where("studentId", "==", studentId));
     
-    const querySnapshot = await getDocs(q);
-    const notes = querySnapshot.docs.map(doc => fromDoc<StudentNote>(doc));
-    // Sort by updatedAt date in descending order on the client
-    return notes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    try {
+        const querySnapshot = await getDocs(q);
+        const notes = querySnapshot.docs.map(doc => fromDoc<StudentNote>(doc));
+        // Sort by updatedAt date in descending order on the client
+        return notes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    } catch (serverError) {
+         const error = new FirestorePermissionError({
+            path: notesRef.path,
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 }
 
 export const updateStudentNote = async (noteId: string, data: Partial<StudentNote>) => {
@@ -246,45 +275,75 @@ export const deleteStudentNote = async (noteId: string) => {
 export const getAllPqrsMessages = async (): Promise<PQRSMessage[]> => {
     const pqrsRef = collection(db, "pqrs");
     const q = query(pqrsRef, orderBy("createdAt", "desc"));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(pqrsFromDoc);
+    try {
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(pqrsFromDoc);
+    } catch (serverError) {
+        const error = new FirestorePermissionError({ path: pqrsRef.path, operation: 'list' });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
 
 // Delete a PQRS message
 export const deletePQRSMessage = async (messageId: string): Promise<void> => {
     const pqrsDocRef = doc(db, "pqrs", messageId);
-    await deleteDoc(pqrsDocRef);
+    try {
+        await deleteDoc(pqrsDocRef);
+    } catch (serverError) {
+         const error = new FirestorePermissionError({ path: pqrsDocRef.path, operation: 'delete' });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
 
 
 export const getUsersInRole = async (role: UserRole): Promise<User[]> => {
     const usersRef = collection(db, 'users');
     const q = query(usersRef, where("role", "==", role));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
+    try {
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
+    } catch (serverError) {
+        const error = new FirestorePermissionError({ path: usersRef.path, operation: 'list' });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
 
 export const getAllGroups = async (): Promise<Group[]> => {
     const groupsRef = collection(db, "groups");
-    const groupsSnap = await getDocs(groupsRef);
-    const groups = groupsSnap.docs.map(d => {
-        const groupData = d.data() as Omit<Group, 'id'>;
-         // Convert Timestamps to string dates for serialization
-        if (groupData.content.scheduledClasses) {
-            groupData.content.scheduledClasses = groupData.content.scheduledClasses.map(c => ({
-                ...c,
-                time: c.time instanceof Timestamp ? c.time.toDate().toISOString() : c.time,
-            }));
-        }
-        return { id: d.id, ...groupData } as Group
-    });
-    return groups;
+    try {
+        const groupsSnap = await getDocs(groupsRef);
+        const groups = groupsSnap.docs.map(d => {
+            const groupData = d.data() as Omit<Group, 'id'>;
+             // Convert Timestamps to string dates for serialization
+            if (groupData.content.scheduledClasses) {
+                groupData.content.scheduledClasses = groupData.content.scheduledClasses.map(c => ({
+                    ...c,
+                    time: c.time instanceof Timestamp ? c.time.toDate().toISOString() : c.time,
+                }));
+            }
+            return { id: d.id, ...groupData } as Group
+        });
+        return groups;
+    } catch (serverError) {
+        const error = new FirestorePermissionError({ path: groupsRef.path, operation: 'list' });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 }
 
 export const getAllBankCards = async (): Promise<BankCard[]> => {
     const bankCardsRef = collection(db, "bank_cards");
-    const bankCardsSnap = await getDocs(bankCardsRef);
-    return bankCardsSnap.docs.map(bankCardFromDoc);
+    try {
+        const bankCardsSnap = await getDocs(bankCardsRef);
+        return bankCardsSnap.docs.map(bankCardFromDoc);
+    } catch (serverError) {
+        const error = new FirestorePermissionError({ path: bankCardsRef.path, operation: 'list' });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 }
 
 
@@ -307,7 +366,7 @@ export const createGroupWithTeacher = async (teacher: User, students: StudentPro
 
     const defaultObjectiveContent: EditorContent = { type: "doc", content: [{ type: "paragraph" }] };
 
-    batch.set(newGroupRef, {
+    const groupData = {
         name: groupName,
         type: plan,
         teacherId: teacher.id,
@@ -321,9 +380,21 @@ export const createGroupWithTeacher = async (teacher: User, students: StudentPro
             notes: [],
             reminders: [],
         },
-    });
+    };
 
-    await batch.commit();
+    batch.set(newGroupRef, groupData);
+
+    try {
+        await batch.commit();
+    } catch (serverError) {
+         const error = new FirestorePermissionError({
+            path: newGroupRef.path,
+            operation: 'create',
+            requestResourceData: groupData,
+        });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
 
 
@@ -340,35 +411,57 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
     
     // Get all groups currently assigned to this teacher
     const qGroups = query(groupsRef, where("teacherId", "==", teacherId));
-    const groupsSnap = await getDocs(qGroups);
-    const groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
+    let groups: Group[] = [];
+    try {
+        const groupsSnap = await getDocs(qGroups);
+        groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
+    } catch(serverError) {
+        const error = new FirestorePermissionError({ path: groupsRef.path, operation: 'list' });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
     
     // Get all groups from the teacher's history
     let groupHistory: Group[] = [];
     const historyIds = teacherProfile?.groupHistory || [];
     if (historyIds.length > 0) {
-        const historyChunks: string[][] = [];
-        for (let i = 0; i < historyIds.length; i += 30) {
-            historyChunks.push(historyIds.slice(i, i + 30));
-        }
-        const historyPromises = historyChunks.map(chunk => getDocs(query(collection(db, "groups"), where("__name__", "in", chunk))));
-        const historySnapshots = await Promise.all(historyPromises);
-
-        historySnapshots.forEach(snapshot => {
-            snapshot.forEach(doc => {
-                 groupHistory.push({ id: doc.id, ...doc.data() } as Group);
+        try {
+            const historyChunks: string[][] = [];
+            for (let i = 0; i < historyIds.length; i += 30) {
+                historyChunks.push(historyIds.slice(i, i + 30));
+            }
+            const historyPromises = historyChunks.map(chunk => getDocs(query(collection(db, "groups"), where("__name__", "in", chunk))));
+            const historySnapshots = await Promise.all(historyPromises);
+    
+            historySnapshots.forEach(snapshot => {
+                snapshot.forEach(doc => {
+                     groupHistory.push({ id: doc.id, ...doc.data() } as Group);
+                });
             });
-        });
+        } catch (serverError) {
+            const error = new FirestorePermissionError({ path: groupsRef.path, operation: 'list' });
+            errorEmitter.emit('permission-error', error);
+            throw error;
+        }
     }
 
-    // No need to fetch all student profiles anymore, as the info is embedded.
     return { teacher: teacherProfile, groups, groupHistory };
 }
 
 // Update group objectives
 export const updateGroupObjectives = async (groupId: string, data: { mainObjective?: EditorContent, weeklyObjectives?: EditorContent }): Promise<void> => {
     const groupRef = doc(db, "groups", groupId);
-    await updateDoc(groupRef, data);
+    try {
+        await updateDoc(groupRef, data);
+    } catch (serverError) {
+         const error = new FirestorePermissionError({
+            path: groupRef.path,
+            operation: 'update',
+            requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
 
 // === Lesson Functions ===
@@ -377,9 +470,15 @@ export const updateGroupObjectives = async (groupId: string, data: { mainObjecti
 export const getLessonsForGroup = async (groupId: string): Promise<Lesson[]> => {
     const lessonsRef = collection(db, "groups", groupId, "lessons");
     const q = query(lessonsRef, orderBy("number", "asc"));
-    const querySnapshot = await getDocs(q);
     
-    return querySnapshot.docs.map(lessonFromDoc);
+    try {
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(lessonFromDoc);
+    } catch (serverError) {
+        const error = new FirestorePermissionError({ path: lessonsRef.path, operation: 'list' });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
 
 const defaultContent: EditorContent = {
@@ -418,13 +517,30 @@ export const createLessonForGroup = async (groupId: string, groupName: string, s
         attendance: {},
     };
 
-    await addDoc(lessonsRef, newLesson);
+    addDoc(lessonsRef, newLesson).catch(serverError => {
+        const error = new FirestorePermissionError({
+            path: lessonsRef.path,
+            operation: 'create',
+            requestResourceData: newLesson,
+        });
+        errorEmitter.emit('permission-error', error);
+    });
 };
 
 // Update an existing lesson
 export const updateLesson = async (groupId: string, lessonId: string, data: Partial<Lesson>): Promise<void> => {
     const lessonRef = doc(db, "groups", groupId, "lessons", lessonId);
-    await updateDoc(lessonRef, data);
+    try {
+        await updateDoc(lessonRef, data);
+    } catch (serverError) {
+        const error = new FirestorePermissionError({
+            path: lessonRef.path,
+            operation: 'update',
+            requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
 
 
@@ -434,40 +550,79 @@ export const updateLesson = async (groupId: string, lessonId: string, data: Part
 export const getBankCards = async (type: BankType): Promise<BankCard[]> => {
     const bankRef = collection(db, "bank_cards");
     const q = query(bankRef, where("type", "==", type));
-    const querySnapshot = await getDocs(q);
-    const cards = querySnapshot.docs.map(bankCardFromDoc);
-    return cards.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    try {
+        const querySnapshot = await getDocs(q);
+        const cards = querySnapshot.docs.map(bankCardFromDoc);
+        return cards.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (serverError) {
+        const error = new FirestorePermissionError({ path: bankRef.path, operation: 'list' });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
 
 // Get all bank files of a specific type (for teachers and admins to view all)
 export const getBankFiles = async (type: 'image' | 'video' | 'audio'): Promise<BankCard[]> => {
     const bankRef = collection(db, "bank_cards");
     const q = query(bankRef, where("type", "==", type));
-    const querySnapshot = await getDocs(q);
-    const files = querySnapshot.docs.map(bankCardFromDoc);
-    return files.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    try {
+        const querySnapshot = await getDocs(q);
+        const files = querySnapshot.docs.map(bankCardFromDoc);
+        return files.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (serverError) {
+        const error = new FirestorePermissionError({ path: bankRef.path, operation: 'list' });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 }
 
 // Create a new bank card
 export const createBankCard = async (data: Omit<BankCard, 'id' | 'createdAt'>): Promise<string> => {
     const bankRef = collection(db, "bank_cards");
-    const newCardRef = await addDoc(bankRef, {
+    const cardData = {
         ...data,
         createdAt: Timestamp.now(),
-    });
-    return newCardRef.id;
+    };
+    try {
+        const newCardRef = await addDoc(bankRef, cardData);
+        return newCardRef.id;
+    } catch (serverError) {
+        const error = new FirestorePermissionError({
+            path: bankRef.path,
+            operation: 'create',
+            requestResourceData: cardData,
+        });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
 
 // Update a bank card
 export const updateBankCard = async (cardId: string, data: Partial<BankCard>): Promise<void> => {
     const cardRef = doc(db, "bank_cards", cardId);
-    await updateDoc(cardRef, data);
+    try {
+        await updateDoc(cardRef, data);
+    } catch (serverError) {
+        const error = new FirestorePermissionError({
+            path: cardRef.path,
+            operation: 'update',
+            requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
 
 // Delete a bank card
 export const deleteBankCard = async (cardId: string): Promise<void> => {
     const cardRef = doc(db, "bank_cards", cardId);
-    await deleteDoc(cardRef);
+    try {
+        await deleteDoc(cardRef);
+    } catch (serverError) {
+        const error = new FirestorePermissionError({ path: cardRef.path, operation: 'delete' });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
 
 // Upload a file to a bank
@@ -489,20 +644,20 @@ export const uploadBankFile = (ownerId: string, ownerName: string, type: BankTyp
         reject(error);
       },
       async () => {
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        
-        const bankRef = collection(db, "bank_cards");
-        await addDoc(bankRef, {
-            ownerId,
-            ownerName,
-            type,
-            name: file.name,
-            fileUrl: downloadURL,
-            filePath: filePath,
-            createdAt: Timestamp.now(),
-        });
-
-        resolve();
+        try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            await createBankCard({
+                ownerId,
+                ownerName,
+                type,
+                name: file.name,
+                fileUrl: downloadURL,
+                filePath: filePath,
+            });
+            resolve();
+        } catch (error) {
+            reject(error);
+        }
       }
     );
   });
@@ -510,11 +665,14 @@ export const uploadBankFile = (ownerId: string, ownerName: string, type: BankTyp
 
 // Delete a bank file from Storage and Firestore
 export const deleteBankFile = async (cardId: string, filePath: string): Promise<void> => {
-    const cardRef = doc(db, "bank_cards", cardId);
-    await deleteDoc(cardRef);
-
     const storageRef = ref(storage, filePath);
-    await deleteObject(storageRef);
+    try {
+        await deleteObject(storageRef);
+    } catch(e) {
+        console.warn(`Could not delete file from storage: ${filePath}`, e);
+    }
+    
+    await deleteBankCard(cardId);
 }
 
 
@@ -535,22 +693,39 @@ export const addContentToGroup = async (
              time: Timestamp.fromDate(classDate) as any, // Store as Timestamp
              name: teacherName,
         };
-        await updateDoc(groupRef, {
-            'content.scheduledClasses': arrayUnion(scheduledClass)
-        });
-        
-        const groupSnap = await getDoc(groupRef);
-        const groupData = groupSnap.data() as Group;
-        const students = groupData.studentsInfo.map(s => ({...s, role: 'student'} as StudentProfile));
-        
-        await createLessonForGroup(groupId, groupData.name, students, classDate.toISOString());
+        try {
+            await updateDoc(groupRef, {
+                'content.scheduledClasses': arrayUnion(scheduledClass)
+            });
+            
+            const groupSnap = await getDoc(groupRef);
+            const groupData = groupSnap.data() as Group;
+            const students = groupData.studentsInfo.map(s => ({...s, role: 'student'} as StudentProfile));
+            
+            await createLessonForGroup(groupId, groupData.name, students, classDate.toISOString());
+
+        } catch (serverError) {
+             const error = new FirestorePermissionError({
+                path: groupRef.path,
+                operation: 'update',
+                requestResourceData: { 'content.scheduledClasses': arrayUnion(scheduledClass) },
+            });
+            errorEmitter.emit('permission-error', error);
+            throw error;
+        }
     }
 };
 
 // Function to dissolve a group
 export const dissolveGroup = async (groupId: string): Promise<void> => {
     const groupRef = doc(db, "groups", groupId);
-    await deleteDoc(groupRef);
+    try {
+        await deleteDoc(groupRef);
+    } catch (serverError) {
+        const error = new FirestorePermissionError({ path: groupRef.path, operation: 'delete' });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
 
 // Function to add students to an existing group
@@ -563,24 +738,44 @@ export const addStudentsToGroup = async (groupId: string, students: StudentProfi
         level: s.level || 'N/A',
         plan: s.plan!,
     }));
-    await updateDoc(groupRef, {
-        studentIds: arrayUnion(...studentIds),
-        studentsInfo: arrayUnion(...studentsInfo)
-    });
+    try {
+        await updateDoc(groupRef, {
+            studentIds: arrayUnion(...studentIds),
+            studentsInfo: arrayUnion(...studentsInfo)
+        });
+    } catch (serverError) {
+        const error = new FirestorePermissionError({
+            path: groupRef.path,
+            operation: 'update',
+            requestResourceData: { studentIds: arrayUnion(...studentIds) },
+        });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
 
 // Function to remove students from an existing group
 export const removeStudentsFromGroup = async (groupId: string, studentIds: string[]): Promise<void> => {
     const groupRef = doc(db, "groups", groupId);
     
-    const groupSnap = await getDoc(groupRef);
-    const groupData = groupSnap.data() as Group;
-    const remainingStudentsInfo = groupData.studentsInfo.filter(info => !studentIds.includes(info.id));
-
-    await updateDoc(groupRef, {
-        studentIds: arrayRemove(...studentIds),
-        studentsInfo: remainingStudentsInfo
-    });
+    try {
+        const groupSnap = await getDoc(groupRef);
+        const groupData = groupSnap.data() as Group;
+        const remainingStudentsInfo = groupData.studentsInfo.filter(info => !studentIds.includes(info.id));
+    
+        await updateDoc(groupRef, {
+            studentIds: arrayRemove(...studentIds),
+            studentsInfo: remainingStudentsInfo
+        });
+    } catch (serverError) {
+         const error = new FirestorePermissionError({
+            path: groupRef.path,
+            operation: 'update',
+            requestResourceData: { studentIds: arrayRemove(...studentIds) },
+        });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
 
 // Function for admin to change a group's teacher and update history
@@ -599,5 +794,14 @@ export const updateGroupTeacherAndHistory = async (groupId: string, newTeacherId
     const newTeacherRef = doc(db, "users", newTeacherId);
     batch.update(newTeacherRef, { groupHistory: arrayRemove(groupId) });
 
-    await batch.commit();
+    try {
+        await batch.commit();
+    } catch (serverError) {
+        const error = new FirestorePermissionError({
+            path: `BATCH WRITE on ${groupRef.path}, ${oldTeacherRef.path}, ${newTeacherRef.path}`,
+            operation: 'update',
+        });
+        errorEmitter.emit('permission-error', error);
+        throw error;
+    }
 };
