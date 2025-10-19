@@ -505,7 +505,13 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
     // State for student-specific comments in the comment modal
     const [currentEditingComments, setCurrentEditingComments] = useState<Record<string, EditorContent>>({});
 
-    const groupMembers = useMemo(() => group.studentsInfo || [], [group]);
+    const groupMembers = useMemo(() => {
+      if (!group.studentsInfo) {
+        return [];
+      }
+
+      return group.studentsInfo
+    }, [group]);
 
     const fetchLessons = async () => {
         setIsLoading(true);
@@ -954,7 +960,7 @@ const GroupCommunication = ({ group, onClassScheduled, teacherName, onScheduleFr
     const [link, setLink] = useState('');
     const [isScheduling, setIsScheduling] = useState(false);
     
-    const privateStudent = group.type === 'privado' && group.studentsInfo.length > 0 ? group.studentsInfo[0] : null;
+    const privateStudent = group.type === 'privado' && group.studentsInfo && group.studentsInfo.length > 0 ? group.studentsInfo[0] : null;
 
     useEffect(() => {
         onScheduleFromAvailability = (newDate, newTime) => {
@@ -1126,28 +1132,21 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
     const [studentToView, setStudentToView] = useState<StudentGroupInfo | null>(null);
     const [refreshLessonKey, setRefreshLessonKey] = useState(0);
     const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
-    
-    const isPrivateGroup = useMemo(() => group?.type === 'privado', [group]);
-    
-    const privateStudent = useMemo(() => {
-        if (!group || !isPrivateGroup || !group.studentsInfo || group.studentsInfo.length === 0) return null;
-        return group.studentsInfo[0];
-    }, [isPrivateGroup, group]);
-
-    const filteredSlots = useMemo(() => {
-        const slots = (privateStudent as any)?.scheduledSlots;
-        if (!slots || !Array.isArray(slots)) return [];
-        const oneWeekAgo = subWeeks(startOfToday(), 1);
-        return (slots)
-            .map((slot: any) => ({ ...slot, dateObj: parseISO(slot.date) }))
-            .filter((slot: any) => slot.dateObj && !isBefore(slot.dateObj, oneWeekAgo))
-            .slice(0, 3);
-    }, [privateStudent]);
 
     // Early return after all hooks are called
     if (!group) {
         return null;
     }
+    
+    // Derived state, safe to compute on every render
+    const groupMembers: StudentGroupInfo[] = group.studentsInfo || [];
+    const isPrivateGroup = group?.type === 'privado';
+    const privateStudent = isPrivateGroup && groupMembers.length > 0 ? groupMembers[0] : null;
+
+    const filteredSlots = (privateStudent as any)?.scheduledSlots
+        ?.map((slot: any) => ({ ...slot, dateObj: parseISO(slot.date) }))
+        .filter((slot: any) => slot.dateObj && !isBefore(slot.dateObj, subWeeks(startOfToday(), 1)))
+        .slice(0, 3) || [];
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -1179,7 +1178,7 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
                             <CardContent>
                                 <ScrollArea className="h-full">
                                     <ul className="space-y-2 pr-4">
-                                        {(group.studentsInfo || []).map(student => (
+                                        {groupMembers.map(student => (
                                             <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
                                                 <span className="text-sm">{student.name}</span>
                                                 <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
