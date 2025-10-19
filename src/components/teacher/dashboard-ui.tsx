@@ -553,8 +553,6 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
     const [currentEditingContent, setCurrentEditingContent] = useState<EditorContent | null>(null);
     const [currentEditingComments, setCurrentEditingComments] = useState<Record<string, EditorContent>>({});
 
-    const { isLaserMode, setIsLaserMode, dialogContentRef } = useLaserPointer();
-
 
     const groupMembers = useMemo(() => {
       return group.studentsInfo || [];
@@ -612,7 +610,7 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
       }
     };
     
-    const handleOpenModal = (lesson: Lesson, modalType: ModalType) => {
+    const handleOpenModal = (lesson: Lesson, modalType: ModalType, isLaserOn: boolean) => {
         setSelectedLesson(lesson);
         setActiveModal(modalType);
 
@@ -631,7 +629,6 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
       setSelectedLesson(null);
       setCurrentEditingContent(null);
       setCurrentEditingComments({});
-      setIsLaserMode(false);
     }
 
     const handleAttendanceChange = (lessonId: string, studentId: string, status: AttendanceStatus ) => {
@@ -705,7 +702,7 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
         );
     }
     
-     const renderModalContent = () => {
+     const renderModalContent = (isLaserMode: boolean) => {
         if (!selectedLesson || !activeModal) return null;
         
         const isClassTimeValid = !!selectedLesson.scheduledTime;
@@ -910,27 +907,27 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
                         <AccordionContent className="p-4 border-t">
                              <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <Card onClick={() => handleOpenModal(lesson, 'objective')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                    <Card onClick={() => handleOpenModal(lesson, 'objective', false)} className="cursor-pointer hover:bg-accent/50 transition-colors">
                                         <CardHeader>
                                             <CardTitle className="font-headline text-base flex items-center gap-2"><Target/> {t.objective}</CardTitle>
                                         </CardHeader>
                                     </Card>
-                                    <Card onClick={() => handleOpenModal(lesson, 'classNote')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                    <Card onClick={() => handleOpenModal(lesson, 'classNote', false)} className="cursor-pointer hover:bg-accent/50 transition-colors">
                                         <CardHeader>
                                             <CardTitle className="font-headline text-base flex items-center gap-2"><FileText/> {t.classNote}</CardTitle>
                                         </CardHeader>
                                     </Card>
-                                    <Card onClick={() => handleOpenModal(lesson, 'homework')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                    <Card onClick={() => handleOpenModal(lesson, 'homework', false)} className="cursor-pointer hover:bg-accent/50 transition-colors">
                                         <CardHeader>
                                             <CardTitle className="font-headline text-base flex items-center gap-2"><BookCheck/> {t.homework}</CardTitle>
                                         </CardHeader>
                                     </Card>
-                                     <Card onClick={() => handleOpenModal(lesson, 'attendance')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                     <Card onClick={() => handleOpenModal(lesson, 'attendance', false)} className="cursor-pointer hover:bg-accent/50 transition-colors">
                                         <CardHeader>
                                             <CardTitle className="font-headline text-base flex items-center gap-2"><Users2/> {t.attendance}</CardTitle>
                                         </CardHeader>
                                     </Card>
-                                     <Card onClick={() => handleOpenModal(lesson, 'comments')} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                                     <Card onClick={() => handleOpenModal(lesson, 'comments', false)} className="cursor-pointer hover:bg-accent/50 transition-colors">
                                         <CardHeader>
                                             <CardTitle className="font-headline text-base flex items-center gap-2"><MessageSquareQuote/> {t.comments}</CardTitle>
                                         </CardHeader>
@@ -984,56 +981,99 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
             )}
 
             <Dialog open={!!activeModal} onOpenChange={handleCloseModal}>
-                <DialogContent 
-                    ref={dialogContentRef}
-                    className="max-w-4xl h-[80vh] flex flex-col"
-                    style={{ cursor: isLaserMode ? 'none' : 'auto' }}
-                >
-                    <DialogHeader>
-                        <div className="flex justify-between items-center">
-                            <DialogTitle className="font-headline text-2xl">
-                               Editar {activeModal === 'objective' && t.objective}
-                                       {activeModal === 'classNote' && t.classNote}
-                                       {activeModal === 'homework' && t.homework}
-                                       {activeModal === 'attendance' && t.attendance}
-                                       {activeModal === 'comments' && t.comments}
-                            </DialogTitle>
-                             {activeModal === 'classNote' && (
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                             <Button 
-                                                size="icon" 
-                                                variant={isLaserMode ? "secondary" : "ghost"}
-                                                onClick={() => setIsLaserMode(prev => !prev)}
-                                            >
-                                                <Radio />
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>Activar Puntero Láser</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            )}
-                        </div>
-                    </DialogHeader>
-                    <div className="flex-grow overflow-auto py-4">
-                        {renderModalContent()}
-                    </div>
-                    {activeModal !== 'attendance' && (
-                        <DialogFooter>
-                            <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
-                            <Button onClick={handleSaveLesson} disabled={isSaving === selectedLesson?.id}>
-                                {isSaving === selectedLesson?.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Guardar y Cerrar
-                            </Button>
-                        </DialogFooter>
-                    )}
-                </DialogContent>
+                <GroupLessonContentDialog 
+                    isOpen={!!activeModal}
+                    onClose={handleCloseModal}
+                    activeModal={activeModal}
+                    selectedLesson={selectedLesson}
+                    renderModalContent={renderModalContent}
+                    handleSaveLesson={handleSaveLesson}
+                    isSaving={isSaving === selectedLesson?.id}
+                />
             </Dialog>
 
         </div>
+    );
+};
+
+const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson, renderModalContent, handleSaveLesson, isSaving }: { isOpen: boolean, onClose: () => void, activeModal: ModalType, selectedLesson: Lesson | null, renderModalContent: (isLaserMode: boolean) => React.ReactNode, handleSaveLesson: () => void, isSaving: boolean }) => {
+    const { translations } = useLanguage();
+    const t = translations.teacherDashboard.lessons;
+    const dialogContentRef = React.useRef<HTMLDivElement>(null);
+    const [isLaserMode, setIsLaserMode] = useState(false);
+
+    useEffect(() => {
+        const dialogElement = dialogContentRef.current;
+        if (!dialogElement || !isLaserMode) return;
+        
+        const handleMouseMove = (e: MouseEvent) => {
+            const laserPointer = document.getElementById('laser-pointer');
+            if (laserPointer) {
+                 // Use clientX and clientY for position relative to the viewport
+                laserPointer.style.left = `${e.clientX}px`;
+                laserPointer.style.top = `${e.clientY}px`;
+            }
+        };
+
+        dialogElement.addEventListener('mousemove', handleMouseMove);
+
+        return () => {
+            dialogElement.removeEventListener('mousemove', handleMouseMove);
+        };
+    }, [isLaserMode]);
+
+
+    if (!isOpen) return null;
+    
+    return (
+        <DialogContent 
+            ref={dialogContentRef}
+            className="max-w-4xl h-[80vh] flex flex-col"
+            style={{ cursor: isLaserMode ? 'none' : 'auto' }}
+        >
+            <LaserPointer isVisible={isLaserMode} />
+            <DialogHeader>
+                <div className="flex justify-between items-center">
+                    <DialogTitle className="font-headline text-2xl">
+                       Editar {activeModal === 'objective' && t.objective}
+                               {activeModal === 'classNote' && t.classNote}
+                               {activeModal === 'homework' && t.homework}
+                               {activeModal === 'attendance' && t.attendance}
+                               {activeModal === 'comments' && t.comments}
+                    </DialogTitle>
+                     {activeModal === 'classNote' && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                     <Button 
+                                        size="icon" 
+                                        variant={isLaserMode ? "secondary" : "ghost"}
+                                        onClick={() => setIsLaserMode(prev => !prev)}
+                                    >
+                                        <Radio />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Activar Puntero Láser</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+                </div>
+            </DialogHeader>
+            <div className="flex-grow overflow-auto py-4">
+                {renderModalContent(isLaserMode)}
+            </div>
+            {activeModal !== 'attendance' && (
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
+                    <Button onClick={handleSaveLesson} disabled={isSaving}>
+                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Guardar y Cerrar
+                    </Button>
+                </DialogFooter>
+            )}
+        </DialogContent>
     );
 };
 
@@ -1209,35 +1249,6 @@ const GroupCommunication = ({ group, onClassScheduled, teacherName, onScheduleFr
     );
 };
 
-const useLaserPointer = () => {
-    const [isLaserMode, setIsLaserMode] = useState(false);
-    const dialogContentRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const dialogElement = dialogContentRef.current;
-        const handleMouseMove = (e: MouseEvent) => {
-            // Find the laser pointer element in the document
-            const laserPointer = document.getElementById('laser-pointer');
-            if (isLaserMode && laserPointer) {
-                laserPointer.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
-            }
-        };
-
-        if (isLaserMode && dialogElement) {
-            dialogElement.addEventListener('mousemove', handleMouseMove);
-        }
-
-        return () => {
-            if (dialogElement) {
-                dialogElement.removeEventListener('mousemove', handleMouseMove);
-            }
-        };
-    }, [isLaserMode]);
-
-    return { isLaserMode, setIsLaserMode, dialogContentRef };
-};
-
-
 const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teacherId, teacherName }: { group: Group | null; isOpen: boolean; onOpenChange: (open: boolean) => void; onGroupUpdate: () => void; teacherId: string; teacherName: string; }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.groups;
@@ -1358,7 +1369,7 @@ const GroupSection = ({ title, groups, onView, value }: { title: string; groups:
                             {(group.studentsInfo || []).slice(0, 5).map(student => (
                               <li key={student.id}>{student.name || t.unknown}</li>
                             ))}
-                            {(group.studentsInfo || []).length > 5 && <li>...</li>}
+                            {(group.studentIds || []).length > 5 && <li>...</li>}
                           </ul>
                         </CardContent>
                      </div>
@@ -1403,24 +1414,6 @@ export function TeacherDashboardUI() {
   const [groupToView, setGroupToView] = useState<Group | null>(null);
   const [isBanksModalOpen, setIsBanksModalOpen] = useState(false);
   
-  const { isLaserMode } = useLaserPointer();
-  const laserPointerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-        if (isLaserMode && laserPointerRef.current) {
-            laserPointerRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
-        }
-    };
-    if (isLaserMode) {
-        window.addEventListener('mousemove', handleMouseMove);
-    }
-    return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-    };
-  }, [isLaserMode]);
-
-
   const fetchDashboardData = async (teacherId: string) => {
       try {
         const teacherData = await getTeacherDataForDashboard(teacherId);
@@ -1479,7 +1472,6 @@ export function TeacherDashboardUI() {
 
   return (
     <>
-      <LaserPointer ref={laserPointerRef} isVisible={isLaserMode} />
       <div className="flex h-screen flex-col">
         <DashboardHeader user={user} title={t.title} />
         <main className="flex-1 overflow-auto p-4 md:p-8 space-y-8">
@@ -1557,3 +1549,4 @@ export function TeacherDashboardUI() {
     </>
   );
 }
+
