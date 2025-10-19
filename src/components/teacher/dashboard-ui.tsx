@@ -55,7 +55,7 @@ interface TeacherDashboardData {
 interface TeacherDashboardUIProps {
 }
 
-const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: StudentProfile | null; isOpen: boolean; onOpenChange: (open: boolean) => void }) => {
+const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: StudentGroupInfo | null; isOpen: boolean; onOpenChange: (open: boolean) => void }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.studentDataDialog;
 
@@ -65,11 +65,11 @@ const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: Student
         { label: t.name, value: student.name },
         { label: t.plan, value: student.plan, isBadge: true },
         { label: t.level, value: student.level },
-        { label: t.age, value: student.age },
-        { label: t.email, value: student.email },
-        { label: t.phone, value: student.phone },
-        { label: t.interests, value: student.interests?.join(', ') },
-        { label: t.objective, value: student.objective },
+        { label: t.age, value: (student as any).age },
+        { label: t.email, value: (student as any).email },
+        { label: t.phone, value: (student as any).phone },
+        { label: t.interests, value: (student as any).interests?.join(', ') },
+        { label: t.objective, value: (student as any).objective },
     ];
 
     return (
@@ -83,7 +83,7 @@ const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: Student
                         <div key={data.label} className="grid grid-cols-3 gap-2 text-sm">
                             <span className="font-semibold text-muted-foreground">{data.label}:</span>
                             <span className="col-span-2">
-                                {data.isBadge ? <Badge variant="secondary" className="capitalize">{data.value}</Badge> : data.value}
+                                {data.isBadge ? <Badge variant="secondary" className="capitalize">{data.value}</Badge> : String(data.value)}
                             </span>
                         </div>
                     ) : null)}
@@ -207,7 +207,7 @@ const FileBankImporter = ({ onSelectFile, isOpen, onOpenChange }: { onSelectFile
 
 type ModalType = 'objective' | 'classNote' | 'homework' | 'attendance' | 'comments' | null;
 
-const GroupProgram = ({ group, onGroupUpdate, studentsById, teacherId, onLessonCreated, refreshLessonKey }: { group: Group, onGroupUpdate: () => void, studentsById: Map<string, StudentProfile>, teacherId: string, onLessonCreated: () => void, refreshLessonKey: number }) => {
+const GroupProgram = ({ group, onGroupUpdate, teacherId, onLessonCreated, refreshLessonKey }: { group: Group, onGroupUpdate: () => void, teacherId: string, onLessonCreated: () => void, refreshLessonKey: number }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.program;
     const t_toast = translations.teacherDashboard.toasts;
@@ -317,7 +317,7 @@ const GroupProgram = ({ group, onGroupUpdate, studentsById, teacherId, onLessonC
 
             <div>
                  <h3 className="text-xl font-headline mb-4">{translations.teacherDashboard.lessons.title}</h3>
-                 <GroupLessons key={refreshLessonKey} group={group} studentsById={studentsById} teacherId={teacherId} onLessonCreated={onLessonCreated} />
+                 <GroupLessons key={refreshLessonKey} group={group} teacherId={teacherId} onLessonCreated={onLessonCreated} />
             </div>
         </div>
     );
@@ -483,7 +483,7 @@ const AttendancePopover = ({
 
 
 
-const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { group: Group, studentsById: Map<string, StudentProfile>, teacherId: string, onLessonCreated: () => void }) => {
+const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, teacherId: string, onLessonCreated: () => void }) => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -677,70 +677,82 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
         
         switch(activeModal) {
             case 'objective':
+                return (
+                    <Editor
+                        content={currentEditingContent}
+                        onChange={setCurrentEditingContent}
+                        editable
+                        placeholder={t.placeholders.objective}
+                        withAiTools
+                    />
+                );
             case 'classNote':
+                return (
+                     <Editor
+                        content={currentEditingContent}
+                        onChange={setCurrentEditingContent}
+                        editable
+                        placeholder={t.placeholders.classNote}
+                        withAiTools
+                        allowSideNotes
+                    />
+                )
             case 'homework':
-            case 'comments':
-                const isCommentsModal = activeModal === 'comments';
-                const showImportButtons = activeModal === 'homework';
-                const allowSideNotes = activeModal === 'classNote';
                  return (
                     <div className="space-y-4">
-                        {showImportButtons && (
-                             <div className="flex gap-2">
-                                <Button size="sm" variant="outline" onClick={handleOpenBankImporter}>
-                                    <Import className="mr-2 h-4 w-4" />
-                                    {t.importFromBank}
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={handleOpenFileBankImporter}>
-                                    <FileUp className="mr-2 h-4 w-4"/>
-                                    {t.importFile}
-                                </Button>
-                            </div>
-                        )}
-                        {isCommentsModal ? (
-                            <>
-                                <div>
-                                    <h4 className="font-semibold mb-2">{t.generalComment}</h4>
-                                    <Editor
-                                        content={currentEditingContent}
-                                        onChange={setCurrentEditingContent}
-                                        editable
-                                        placeholder={currentPlaceholder}
-                                        withAiTools
-                                    />
-                                </div>
-                                <Separator />
-                                <div>
-                                     <h4 className="font-semibold mb-4">{t.studentComments}</h4>
-                                     <Accordion type="multiple" className="w-full space-y-2">
-                                        {groupMembers.map(student => (
-                                            <AccordionItem value={student.id} key={student.id} className="border rounded-md">
-                                                <AccordionTrigger className="px-3 py-2 text-sm font-medium hover:no-underline">{student.name}</AccordionTrigger>
-                                                <AccordionContent className="p-3 border-t">
-                                                    <Editor
-                                                        content={currentEditingComments[student.id] || { type: "doc", content: []}}
-                                                        onChange={(newContent) => setCurrentEditingComments(prev => ({...prev, [student.id]: newContent}))}
-                                                        editable
-                                                        placeholder={`${t.placeholders.studentComment} ${student.name}...`}
-                                                        withAiTools
-                                                    />
-                                                </AccordionContent>
-                                            </AccordionItem>
-                                        ))}
-                                     </Accordion>
-                                </div>
-                            </>
-                        ) : (
-                             <Editor
+                        <div className="flex gap-2">
+                           <Button size="sm" variant="outline" onClick={handleOpenBankImporter}>
+                               <Import className="mr-2 h-4 w-4" />
+                               {t.importFromBank}
+                           </Button>
+                           <Button size="sm" variant="outline" onClick={handleOpenFileBankImporter}>
+                               <FileUp className="mr-2 h-4 w-4"/>
+                               {t.importFile}
+                           </Button>
+                       </div>
+                        <Editor
+                           content={currentEditingContent}
+                           onChange={setCurrentEditingContent}
+                           editable
+                           placeholder={t.placeholders.homework}
+                           withAiTools
+                       />
+                    </div>
+                )
+            case 'comments':
+                return (
+                    <>
+                        <div>
+                            <h4 className="font-semibold mb-2">{t.generalComment}</h4>
+                            <Editor
                                 content={currentEditingContent}
                                 onChange={setCurrentEditingContent}
                                 editable
                                 placeholder={currentPlaceholder}
                                 withAiTools
-                                allowSideNotes={allowSideNotes}
                             />
-                        )}
-                    </div>
+                        </div>
+                        <Separator />
+                        <div>
+                                <h4 className="font-semibold mb-4">{t.studentComments}</h4>
+                                <Accordion type="multiple" className="w-full space-y-2">
+                                {groupMembers.map(student => (
+                                    <AccordionItem value={student.id} key={student.id} className="border rounded-md">
+                                        <AccordionTrigger className="px-3 py-2 text-sm font-medium hover:no-underline">{student.name}</AccordionTrigger>
+                                        <AccordionContent className="p-3 border-t">
+                                            <Editor
+                                                content={currentEditingComments[student.id] || { type: "doc", content: []}}
+                                                onChange={(newContent) => setCurrentEditingComments(prev => ({...prev, [student.id]: newContent}))}
+                                                editable
+                                                placeholder={`${t.placeholders.studentComment} ${student.name}...`}
+                                                withAiTools
+                                            />
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                ))}
+                                </Accordion>
+                        </div>
+                    </>
                 );
             case 'attendance':
                 return (
@@ -931,7 +943,7 @@ const GroupLessons = ({ group, studentsById, teacherId, onLessonCreated }: { gro
     );
 };
 
-const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName, onScheduleFromAvailability }: { group: Group, studentsById: Map<string, StudentProfile>, onClassScheduled: () => void, teacherName: string, onScheduleFromAvailability: (date: Date, time: string) => void }) => {
+const GroupCommunication = ({ group, onClassScheduled, teacherName, onScheduleFromAvailability }: { group: Group, onClassScheduled: () => void, teacherName: string, onScheduleFromAvailability: (date: Date, time: string) => void }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.meetings;
     const t_toasts = translations.teacherDashboard.toasts;
@@ -942,7 +954,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
     const [link, setLink] = useState('');
     const [isScheduling, setIsScheduling] = useState(false);
     
-    const privateStudent = group.type === 'privado' && group.studentIds.length > 0 ? studentsById.get(group.studentIds[0]) : null;
+    const privateStudent = group.type === 'privado' && group.studentsInfo.length > 0 ? group.studentsInfo[0] : null;
 
     useEffect(() => {
         onScheduleFromAvailability = (newDate, newTime) => {
@@ -1020,20 +1032,20 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
                 </CardContent>
             </Card>
             
-             {privateStudent?.scheduledSlots && privateStudent.scheduledSlots.length > 0 && (
+             {(privateStudent as any)?.scheduledSlots && (privateStudent as any).scheduledSlots.length > 0 && (
                 <Card>
                     <CardHeader>
                         <CardTitle>{t.availability.title}</CardTitle>
-                        <CardDescription>{t.availability.description.replace('{studentName}', privateStudent.name)}</CardDescription>
+                        <CardDescription>{t.availability.description.replace('{studentName}', privateStudent!.name)}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <ScrollArea className="h-40">
                              <div className="space-y-2 pr-4">
-                                {(privateStudent.scheduledSlots || [])
-                                    .map(slot => ({ ...slot, dateObj: parseISO(slot.date) }))
-                                    .filter(slot => !isBefore(slot.dateObj, subWeeks(startOfToday(), 1)))
+                                {((privateStudent as any).scheduledSlots || [])
+                                    .map((slot: any) => ({ ...slot, dateObj: parseISO(slot.date) }))
+                                    .filter((slot: any) => !isBefore(slot.dateObj, subWeeks(startOfToday(), 1)))
                                     .slice(0, 3)
-                                    .map(slot => (
+                                    .map((slot: any) => (
                                     <div key={slot.date+slot.time} className="flex items-center justify-between p-2 rounded-md bg-secondary/50">
                                         <span className="font-medium text-sm">{format(slot.dateObj, 'PPPP', {locale: es})} a las {slot.time}</span>
                                         <Button size="sm" variant="outline" onClick={() => onScheduleFromAvailability(slot.dateObj, slot.time)}>
@@ -1042,7 +1054,7 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
                                         </Button>
                                     </div>
                                 ))}
-                                {privateStudent.scheduledSlots.length === 0 && <p className="text-center text-muted-foreground">El estudiante no ha definido su disponibilidad.</p>}
+                                {(privateStudent as any).scheduledSlots.length === 0 && <p className="text-center text-muted-foreground">El estudiante no ha definido su disponibilidad.</p>}
                             </div>
                         </ScrollArea>
                     </CardContent>
@@ -1104,12 +1116,12 @@ const GroupCommunication = ({ group, studentsById, onClassScheduled, teacherName
 };
 
 
-const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroupUpdate, teacherId, teacherName }: { group: Group | null; studentsById: Map<string, StudentProfile>; isOpen: boolean; onOpenChange: (open: boolean) => void; onGroupUpdate: () => void; teacherId: string; teacherName: string; }) => {
+const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teacherId, teacherName }: { group: Group | null; isOpen: boolean; onOpenChange: (open: boolean) => void; onGroupUpdate: () => void; teacherId: string; teacherName: string; }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.groups;
     const t_program = translations.teacherDashboard.program;
     const t_meetings = translations.teacherDashboard.meetings;
-    const [studentToView, setStudentToView] = useState<StudentProfile | null>(null);
+    const [studentToView, setStudentToView] = useState<StudentGroupInfo | null>(null);
     const [refreshLessonKey, setRefreshLessonKey] = useState(0);
 
     const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
@@ -1118,19 +1130,24 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
     const isPrivateGroup = useMemo(() => group?.type === 'privado', [group]);
     const privateStudent = useMemo(() => {
         if (!isPrivateGroup || groupMembers.length === 0) return null;
-        return studentsById.get(groupMembers[0].id) || null;
-    }, [isPrivateGroup, groupMembers, studentsById]);
+        return groupMembers[0];
+    }, [isPrivateGroup, groupMembers]);
+    
+    if (!group) return null;
+
+    // This is a hack to get full student profile for the dialog.
+    // In a better structure, we might fetch this on demand.
+    const fullStudentProfiles = new Map(group.studentsInfo.map(s => [s.id, s as StudentProfile]));
 
     const filteredSlots = useMemo(() => {
-        if (!privateStudent?.scheduledSlots) return [];
+        const slots = (privateStudent as any)?.scheduledSlots;
+        if (!slots) return [];
         const oneWeekAgo = subWeeks(startOfToday(), 1);
-        return (privateStudent.scheduledSlots || [])
-            .map(slot => ({ ...slot, dateObj: parseISO(slot.date) }))
-            .filter(slot => !isBefore(slot.dateObj, oneWeekAgo))
+        return (slots || [])
+            .map((slot: any) => ({ ...slot, dateObj: parseISO(slot.date) }))
+            .filter((slot: any) => !isBefore(slot.dateObj, oneWeekAgo))
             .slice(0, 3);
     }, [privateStudent]);
-
-    if (!group) return null;
 
 
     return (
@@ -1152,7 +1169,6 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
                         <GroupProgram 
                             group={group} 
                             onGroupUpdate={onGroupUpdate} 
-                            studentsById={studentsById}
                             teacherId={teacherId}
                             onLessonCreated={() => setRefreshLessonKey(k => k + 1)}
                             refreshLessonKey={refreshLessonKey}
@@ -1167,7 +1183,7 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
                                         {groupMembers.map(student => (
                                             <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
                                                 <span className="text-sm">{student.name}</span>
-                                                <Button variant="ghost" size="sm" onClick={() => setStudentToView(studentsById.get(student.id) || null)}>
+                                                <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
                                                     <Eye className="mr-2 h-4 w-4" />
                                                     {t.viewData}
                                                 </Button>
@@ -1186,7 +1202,7 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
                                 <CardContent>
                                     <ScrollArea className="h-40">
                                         <ul className="space-y-2 pr-4">
-                                            {filteredSlots.length > 0 ? filteredSlots.map(slot => (
+                                            {filteredSlots.length > 0 ? filteredSlots.map((slot: any) => (
                                                 <li key={slot.date+slot.time} className="flex items-center justify-between p-2 rounded-md bg-secondary/50">
                                                     <span className="text-sm font-medium">{format(slot.dateObj, "eeee, dd 'de' MMMM", {locale: es})} a las {slot.time}</span>
                                                     <Button size="sm" onClick={() => scheduleFromAvailabilityRef.current(slot.dateObj, slot.time)}>
@@ -1204,7 +1220,6 @@ const GroupDetailsDialog = ({ group, studentsById, isOpen, onOpenChange, onGroup
                      <TabsContent value="meetings" className="flex-grow overflow-auto p-4">
                         <GroupCommunication 
                             group={group} 
-                            studentsById={studentsById} 
                             onClassScheduled={() => setRefreshLessonKey(k => k + 1)} 
                             teacherName={teacherName}
                             onScheduleFromAvailability={(date, time) => {
@@ -1338,19 +1353,6 @@ export function TeacherDashboardUI() {
      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const studentsById = useMemo(() => {
-      if (!data) return new Map<string, StudentProfile>();
-
-      const allStudentsFromGroups = (data.groups || []).flatMap(g => g.studentsInfo || []);
-      const allStudentsFromHistory = (data.groupHistory || []).flatMap(g => g.studentsInfo || []);
-      const allStudents = [...allStudentsFromGroups, ...allStudentsFromHistory];
-      
-      return allStudents.reduce((map, student) => {
-          map.set(student.id, student as StudentProfile);
-          return map;
-      }, new Map<string, StudentProfile>());
-  }, [data]);
-
   const privateGroups = useMemo(() => data?.groups.filter(g => g.type === 'privado') || [], [data?.groups]);
   const smallGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo pequeño') || [], [data?.groups]);
   const largeGroups = useMemo(() => data?.groups.filter(g => g.type === 'grupo grande') || [], [data?.groups]);
@@ -1423,7 +1425,6 @@ export function TeacherDashboardUI() {
         
         <GroupDetailsDialog 
             group={groupToView} 
-            studentsById={studentsById} 
             isOpen={!!groupToView} 
             onOpenChange={() => setGroupToView(null)} 
             onGroupUpdate={() => fetchDashboardData(user.id)}
@@ -1444,5 +1445,6 @@ export function TeacherDashboardUI() {
     </>
   );
 }
+
 
     
