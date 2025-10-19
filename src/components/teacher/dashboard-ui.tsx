@@ -1119,22 +1119,19 @@ const GroupCommunication = ({ group, onClassScheduled, teacherName, onScheduleFr
 
 
 const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teacherId, teacherName }: { group: Group | null; isOpen: boolean; onOpenChange: (open: boolean) => void; onGroupUpdate: () => void; teacherId: string; teacherName: string; }) => {
-    // Moved all hooks to the top level
     const { translations } = useLanguage();
-    const [studentToView, setStudentToView] = useState<StudentGroupInfo | null>(null);
-    const [refreshLessonKey, setRefreshLessonKey] = useState(0);
-    const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
-
-    // Early return after all hooks are called
-    if (!group) {
-        return null;
-    }
-    
     const t = translations.teacherDashboard.groups;
     const t_program = translations.teacherDashboard.program;
     const t_meetings = translations.teacherDashboard.meetings;
     
-    // Derived state, safe to compute on every render
+    const [studentToView, setStudentToView] = useState<StudentGroupInfo | null>(null);
+    const [refreshLessonKey, setRefreshLessonKey] = useState(0);
+    const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
+    
+    if (!group) {
+        return null;
+    }
+    
     const isPrivateGroup = group?.type === 'privado';
     const privateStudent = isPrivateGroup && group.studentsInfo && group.studentsInfo.length > 0 ? group.studentsInfo[0] : null;
 
@@ -1167,21 +1164,27 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
                             refreshLessonKey={refreshLessonKey}
                         />
                     </TabsContent>
-                    <TabsContent value="members" className="flex-grow overflow-auto p-4">
-                        <h3 className="text-xl font-headline mb-4">Miembros del Grupo</h3>
-                        <ScrollArea className="h-full">
-                            <ul className="space-y-2 pr-4">
-                                {(group.studentsInfo || []).map(student => (
-                                    <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
-                                        <span className="text-sm">{student.name}</span>
-                                        <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
-                                            <Eye className="mr-2 h-4 w-4" />
-                                            {t.viewData}
-                                        </Button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </ScrollArea>
+                    <TabsContent value="members" className="flex-grow overflow-auto p-4 space-y-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Miembros del Grupo</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ScrollArea className="h-60">
+                                    <ul className="space-y-2 pr-4">
+                                        {(group.studentsInfo || []).map(student => (
+                                            <li key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
+                                                <span className="text-sm">{student.name}</span>
+                                                <Button variant="ghost" size="sm" onClick={() => setStudentToView(student)}>
+                                                    <Eye className="mr-2 h-4 w-4" />
+                                                    {t.viewData}
+                                                </Button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </ScrollArea>
+                            </CardContent>
+                        </Card>
                     </TabsContent>
                      <TabsContent value="meetings" className="flex-grow overflow-auto p-4">
                         <GroupCommunication 
@@ -1189,8 +1192,6 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
                             onClassScheduled={() => setRefreshLessonKey(k => k + 1)} 
                             teacherName={teacherName}
                             onScheduleFromAvailability={(date, time) => {
-                                // This is a bit of a hack to communicate between sibling components.
-                                // We're using a ref that the GroupCommunication component will populate.
                                 const meetingsTab = document.querySelector('[data-radix-collection-item][data-state="inactive"][value="meetings"]');
                                 if (meetingsTab) (meetingsTab as HTMLElement).click();
                                 
