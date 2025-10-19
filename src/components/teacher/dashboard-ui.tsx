@@ -61,18 +61,17 @@ const LaserPointer = React.forwardRef<HTMLDivElement, { isVisible: boolean }>(({
     return (
         <div
             ref={ref}
-            className="pointer-events-none fixed rounded-full"
+            className="pointer-events-none fixed rounded-full top-0 left-0"
             style={{
                 width: '20px',
                 height: '20px',
                 backgroundColor: 'rgba(255, 0, 0, 0.7)',
                 border: '1px solid rgba(255, 100, 100, 0.8)',
                 boxShadow: '0 0 10px 5px rgba(255, 0, 0, 0.5), 0 0 20px 10px rgba(255, 0, 0, 0.3)',
-                transform: 'translate(-50%, -50%)',
                 opacity: isVisible ? 1 : 0,
                 transition: 'opacity 0.2s ease-in-out',
                 willChange: 'transform',
-                zIndex: 9999, // Ensure it's on top
+                zIndex: 99999,
             }}
         />
     );
@@ -1003,22 +1002,31 @@ const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson
     const [isLaserMode, setIsLaserMode] = useState(false);
     const laserPointerRef = useRef<HTMLDivElement>(null);
 
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (isLaserMode && laserPointerRef.current) {
-            requestAnimationFrame(() => {
-                if(laserPointerRef.current) {
-                    laserPointerRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
-                }
-            });
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (laserPointerRef.current) {
+                requestAnimationFrame(() => {
+                    if(laserPointerRef.current) {
+                        laserPointerRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+                    }
+                });
+            }
+        };
+
+        if (isLaserMode) {
+            window.addEventListener('mousemove', handleMouseMove);
         }
-    };
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+        };
+    }, [isLaserMode]);
     
     if (!isOpen) return null;
     
     return (
         <DialogContent 
             className="max-w-4xl h-[80vh] flex flex-col"
-            onMouseMove={handleMouseMove}
             style={{ cursor: isLaserMode ? 'none' : 'auto' }}
         >
             <LaserPointer ref={laserPointerRef} isVisible={isLaserMode} />
@@ -1546,6 +1554,7 @@ export function TeacherDashboardUI() {
     </>
   );
 }
+
 
 
 
