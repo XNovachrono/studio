@@ -1218,10 +1218,10 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
     const [isLaserMode, setIsLaserMode] = useState(false);
     const laserPointerRef = useRef<HTMLDivElement>(null);
 
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const handleMouseMove = (e: React.MouseEvent) => {
         if (isLaserMode && laserPointerRef.current) {
             requestAnimationFrame(() => {
-                if (laserPointerRef.current) {
+                if(laserPointerRef.current) {
                     laserPointerRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
                 }
             });
@@ -1543,6 +1543,7 @@ export function TeacherDashboardUI() {
     </>
   );
 }
+
 
 
 
