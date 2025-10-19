@@ -44,6 +44,7 @@ import { TeacherDataSettings } from "./teacher-data-settings";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Separator } from "../ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 
 interface TeacherDashboardData {
@@ -268,16 +269,30 @@ const GroupProgram = ({ group, onGroupUpdate, teacherId, onLessonCreated, refres
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <h3 className="text-xl font-headline font-semibold">{t.mainObjective}</h3>
-                    <div className="flex gap-2">
-                        <Button size="sm" variant="ghost" onClick={() => handleOpenBankImporter('main')}>
-                            <Import className="mr-2 h-4 w-4" />
-                            {translations.teacherDashboard.lessons.importFromBank}
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={handleSaveMainObjective} disabled={isSavingMain}>
-                            {isSavingMain ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                            {t.saveButton}
-                        </Button>
-                    </div>
+                     <TooltipProvider>
+                        <div className="flex gap-2">
+                             <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button size="icon" variant="ghost" onClick={() => handleOpenBankImporter('main')}>
+                                        <Import />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{translations.teacherDashboard.lessons.importFromBank}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                             <Tooltip>
+                                <TooltipTrigger asChild>
+                                     <Button size="icon" variant="ghost" onClick={handleSaveMainObjective} disabled={isSavingMain}>
+                                        {isSavingMain ? <Loader2 className="animate-spin"/> : <Save />}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{t.saveButton}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
+                    </TooltipProvider>
                 </div>
                 <Editor
                     content={mainObjective}
@@ -291,16 +306,30 @@ const GroupProgram = ({ group, onGroupUpdate, teacherId, onLessonCreated, refres
             <div className="space-y-4">
                  <div className="flex items-center justify-between">
                     <h3 className="text-xl font-headline font-semibold">{t.weeklyObjectives}</h3>
-                    <div className="flex gap-2">
-                         <Button size="sm" variant="ghost" onClick={() => handleOpenBankImporter('weekly')}>
-                            <Import className="mr-2 h-4 w-4" />
-                            {translations.teacherDashboard.lessons.importFromBank}
-                        </Button>
-                         <Button size="sm" variant="ghost" onClick={handleSaveWeeklyObjectives} disabled={isSavingWeekly}>
-                            {isSavingWeekly ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                            {t.saveButton}
-                        </Button>
-                    </div>
+                    <TooltipProvider>
+                        <div className="flex gap-2">
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button size="icon" variant="ghost" onClick={() => handleOpenBankImporter('weekly')}>
+                                        <Import />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{translations.teacherDashboard.lessons.importFromBank}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                     <Button size="icon" variant="ghost" onClick={handleSaveWeeklyObjectives} disabled={isSavingWeekly}>
+                                        {isSavingWeekly ? <Loader2 className="animate-spin"/> : <Save />}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{t.saveButton}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
+                    </TooltipProvider>
                 </div>
                 <Editor
                     content={weeklyObjectives}
@@ -700,16 +729,30 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
             case 'homework':
                  return (
                     <div className="space-y-4">
-                        <div className="flex gap-2">
-                           <Button size="sm" variant="outline" onClick={handleOpenBankImporter}>
-                               <Import className="mr-2 h-4 w-4" />
-                               {t.importFromBank}
-                           </Button>
-                           <Button size="sm" variant="outline" onClick={handleOpenFileBankImporter}>
-                               <FileUp className="mr-2 h-4 w-4"/>
-                               {t.importFile}
-                           </Button>
-                       </div>
+                        <TooltipProvider>
+                            <div className="flex gap-2">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button size="icon" variant="outline" onClick={handleOpenBankImporter}>
+                                            <Import />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{t.importFromBank}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button size="icon" variant="outline" onClick={handleOpenFileBankImporter}>
+                                            <FileUp/>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{t.importFile}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
+                        </TooltipProvider>
                         <Editor
                            content={currentEditingContent}
                            onChange={setCurrentEditingContent}
@@ -1162,8 +1205,8 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
                             refreshLessonKey={refreshLessonKey}
                         />
                     </TabsContent>
-                    <TabsContent value="members" className="flex-grow overflow-auto p-4 space-y-4">
-                        <Card>
+                    <TabsContent value="members" className="flex-grow overflow-auto p-4">
+                       <Card>
                             <CardHeader>
                                 <CardTitle>Miembros del Grupo</CardTitle>
                             </CardHeader>
@@ -1370,7 +1413,7 @@ export function TeacherDashboardUI() {
                                   </CardHeader>
                                   <CardContent>
                                       <p className="text-sm"><strong>Docente actual:</strong> {group.teacherName}</p>
-                                      <p className="text-sm"><strong>Miembros:</strong> {(group.studentsInfo || []).length}</p>
+                                      <p className="text-sm"><strong>Miembros:</strong> {(group.studentIds || []).length}</p>
                                   </CardContent>
                               </Card>
                           ))}
@@ -1422,6 +1465,7 @@ export function TeacherDashboardUI() {
     
 
     
+
 
 
 

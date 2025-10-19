@@ -55,6 +55,7 @@ import type { EditorContent as EditorContentType } from "@/lib/types";
 import { Separator } from "../ui/separator";
 import { Label } from "../ui/label";
 import { Node } from '@tiptap/core';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 // Custom Font Size Extension
 const FontSize = Node.create({
@@ -826,10 +827,18 @@ export function Editor({
   return (
     <div className={cn("w-full relative min-h-[150px] rounded-lg border bg-background p-4 flex flex-col")}>
         {withAiTools && allowSideNotes && (
-             <Button onClick={() => handleAddSideNote({ type: "doc", content: [{ type: "paragraph" }]})} size="sm" variant="ghost" className="absolute top-2 right-2 z-10 text-muted-foreground hover:text-foreground h-7 px-2">
-                <Pencil className="mr-2 h-4 w-4" />
-                Añadir Apunte
-            </Button>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button onClick={() => handleAddSideNote({ type: "doc", content: [{ type: "paragraph" }]})} size="icon" variant="ghost" className="absolute top-2 right-2 z-10 text-muted-foreground hover:text-foreground h-7 w-7">
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Añadir Apunte</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
         )}
          <div className="w-full h-full relative flex flex-col flex-grow">
             {withAiTools && <Toolbar editor={editor} onAskAI={localOnAskAI} onExplain={localOnExplain} />}
