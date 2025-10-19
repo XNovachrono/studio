@@ -83,7 +83,7 @@ const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: Student
                         <div key={data.label} className="grid grid-cols-3 gap-2 text-sm">
                             <span className="font-semibold text-muted-foreground">{data.label}:</span>
                             <span className="col-span-2">
-                                {data.isBadge ? <Badge variant="secondary" className="capitalize">{data.value}</Badge> : String(data.value)}
+                                {data.isBadge ? <Badge variant="secondary" className="capitalize">{String(data.value)}</Badge> : String(data.value)}
                             </span>
                         </div>
                     ) : null)}
@@ -1126,18 +1126,18 @@ const GroupDetailsDialog = ({ group, isOpen, onOpenChange, onGroupUpdate, teache
 
     const scheduleFromAvailabilityRef = useRef<(date: Date, time: string) => void>(() => {});
     
-    const groupMembers: StudentGroupInfo[] = useMemo(() => group?.studentsInfo || [], [group]);
+    if (!group) return null;
+
+    const groupMembers: StudentGroupInfo[] = useMemo(() => group.studentsInfo || [], [group]);
     const isPrivateGroup = useMemo(() => group?.type === 'privado', [group]);
     const privateStudent = useMemo(() => {
         if (!isPrivateGroup || groupMembers.length === 0) return null;
         return groupMembers[0];
     }, [isPrivateGroup, groupMembers]);
     
-    if (!group) return null;
-
     // This is a hack to get full student profile for the dialog.
     // In a better structure, we might fetch this on demand.
-    const fullStudentProfiles = new Map(group.studentsInfo.map(s => [s.id, s as StudentProfile]));
+    const fullStudentProfiles = new Map((group.studentsInfo || []).map(s => [s.id, s as StudentProfile]));
 
     const filteredSlots = useMemo(() => {
         const slots = (privateStudent as any)?.scheduledSlots;
