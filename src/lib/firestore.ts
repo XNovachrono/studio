@@ -318,7 +318,7 @@ export const getAllGroups = async (): Promise<Group[]> => {
         const groups = groupsSnap.docs.map(d => {
             const groupData = d.data() as Omit<Group, 'id'>;
              // Convert Timestamps to string dates for serialization
-            if (groupData.content.scheduledClasses) {
+            if (groupData.content?.scheduledClasses) {
                 groupData.content.scheduledClasses = groupData.content.scheduledClasses.map(c => ({
                     ...c,
                     time: c.time instanceof Timestamp ? c.time.toDate().toISOString() : c.time,
@@ -414,7 +414,11 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
     let groups: Group[] = [];
     try {
         const groupsSnap = await getDocs(qGroups);
-        groups = groupsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Group));
+        // Correctly map the document data to the Group type
+        groups = groupsSnap.docs.map(doc => ({
+            id: doc.id,
+            ...(doc.data() as Omit<Group, 'id'>)
+        }));
     } catch(serverError) {
         const error = new FirestorePermissionError({ path: groupsRef.path, operation: 'list' });
         errorEmitter.emit('permission-error', error);
@@ -700,7 +704,7 @@ export const addContentToGroup = async (
             
             const groupSnap = await getDoc(groupRef);
             const groupData = groupSnap.data() as Group;
-            const students = groupData.studentsInfo.map(s => ({...s, role: 'student'} as StudentProfile));
+            const students = (groupData.studentsInfo || []).map(s => ({...s, role: 'student'} as StudentProfile));
             
             await createLessonForGroup(groupId, groupData.name, students, classDate.toISOString());
 

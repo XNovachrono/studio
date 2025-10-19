@@ -506,12 +506,8 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
     const [currentEditingComments, setCurrentEditingComments] = useState<Record<string, EditorContent>>({});
 
     const groupMembers = useMemo(() => {
-      if (!group.studentsInfo) {
-        return [];
-      }
-
-      return group.studentsInfo
-    }, [group]);
+      return group.studentsInfo || [];
+    }, [group.studentsInfo]);
 
     const fetchLessons = async () => {
         setIsLoading(true);
@@ -1265,13 +1261,13 @@ const GroupSection = ({ title, groups, onView }: { title: string; groups: Group[
                     {(group.studentsInfo || []).slice(0, 5).map(student => (
                       <li key={student.id}>{student.name || t.unknown}</li>
                     ))}
-                    {group.studentIds.length > 5 && <li>...</li>}
+                    {(group.studentsInfo || []).length > 5 && <li>...</li>}
                   </ul>
                 </CardContent>
              </div>
              <div className="p-2 border-t flex items-center justify-between">
                <div className="text-xs text-muted-foreground">
-                    {group.studentIds.length} {t.members.toLowerCase()}
+                    {(group.studentsInfo || []).length} {t.members.toLowerCase()}
                </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -1396,7 +1392,7 @@ export function TeacherDashboardUI() {
                                   </CardHeader>
                                   <CardContent>
                                       <p className="text-sm"><strong>Docente actual:</strong> {group.teacherName}</p>
-                                      <p className="text-sm"><strong>Miembros:</strong> {group.studentIds.length}</p>
+                                      <p className="text-sm"><strong>Miembros:</strong> {(group.studentsInfo || []).length}</p>
                                   </CardContent>
                               </Card>
                           ))}
