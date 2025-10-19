@@ -57,28 +57,6 @@ interface TeacherDashboardData {
 interface TeacherDashboardUIProps {
 }
 
-const LaserPointer = React.forwardRef<HTMLDivElement, { isVisible: boolean }>(({ isVisible }, ref) => {
-    return (
-        <div
-            ref={ref}
-            className="pointer-events-none fixed rounded-full top-0 left-0"
-            style={{
-                width: '20px',
-                height: '20px',
-                backgroundColor: 'rgba(255, 0, 0, 0.7)',
-                border: '1px solid rgba(255, 100, 100, 0.8)',
-                boxShadow: '0 0 10px 5px rgba(255, 0, 0, 0.5), 0 0 20px 10px rgba(255, 0, 0, 0.3)',
-                opacity: isVisible ? 1 : 0,
-                transition: 'opacity 0.2s ease-in-out',
-                willChange: 'transform',
-                zIndex: 99999,
-            }}
-        />
-    );
-});
-LaserPointer.displayName = 'LaserPointer';
-
-
 const StudentDataDialog = ({ student, isOpen, onOpenChange }: { student: StudentGroupInfo | null; isOpen: boolean; onOpenChange: (open: boolean) => void }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.studentDataDialog;
@@ -1000,25 +978,21 @@ const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson
     const t = translations.teacherDashboard.lessons;
     
     const [isLaserMode, setIsLaserMode] = useState(false);
-    const laserPointerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            if (laserPointerRef.current) {
-                requestAnimationFrame(() => {
-                    if(laserPointerRef.current) {
-                        laserPointerRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
-                    }
-                });
+        const toggleLaserClass = (active: boolean) => {
+            if (active) {
+                document.body.classList.add('laser-cursor-active');
+            } else {
+                document.body.classList.remove('laser-cursor-active');
             }
         };
 
-        if (isLaserMode) {
-            window.addEventListener('mousemove', handleMouseMove);
-        }
+        toggleLaserClass(isLaserMode);
 
+        // Cleanup function to remove the class when the dialog closes
         return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
+            toggleLaserClass(false);
         };
     }, [isLaserMode]);
     
@@ -1027,9 +1001,7 @@ const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson
     return (
         <DialogContent 
             className="max-w-4xl h-[80vh] flex flex-col"
-            style={{ cursor: isLaserMode ? 'none' : 'auto' }}
         >
-            <LaserPointer ref={laserPointerRef} isVisible={isLaserMode} />
             <DialogHeader>
                 <div className="flex justify-between items-center">
                     <DialogTitle className="font-headline text-2xl">
@@ -1554,6 +1526,7 @@ export function TeacherDashboardUI() {
     </>
   );
 }
+
 
 
 
