@@ -302,6 +302,7 @@ export function CardBank({ user, bankType }: CardBankProps) {
                   content={editingCard?.content || defaultContent}
                   onChange={(content) => setEditingCard(prev => ({...prev!, content}))}
                   editable
+                  withAiTools
               />
             </div>
           </div>
