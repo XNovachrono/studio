@@ -980,13 +980,29 @@ const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson
     const [isLaserMode, setIsLaserMode] = useState(false);
     const [isSizePopoverOpen, setSizePopoverOpen] = useState(false);
     const [laserSize, setLaserSize] = useState(8);
-    const bodyRef = useRef(document.body);
     const styleTagRef = useRef<HTMLStyleElement | null>(null);
 
-    const createLaserCursorStyle = (size: number) => {
-        const glow = size / 2.5;
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><defs><filter id="glow"><feGaussianBlur stdDeviation="${glow}" result="coloredBlur"/></filter></defs><g><circle cx="12" cy="12" r="${size * 0.8}" fill="red" style="filter:url(%23glow); opacity: 0.7;"/><circle cx="12" cy="12" r="${size * 0.4}" fill="red"/></g></svg>`;
-        return `url('data:image/svg+xml;utf8,${encodeURIComponent(svg)}') 12 12, auto`;
+    const createLaserCursorStyle = (size: number): string => {
+        const viewBoxSize = size * 2;
+        const center = viewBoxSize / 2;
+        const glowRadius = size * 0.7;
+        const ringRadius = size * 0.25;
+        const ringStroke = size * 0.1;
+        const glowDeviation = size * 0.2;
+
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${viewBoxSize}" height="${viewBoxSize}" viewBox="0 0 ${viewBoxSize} ${viewBoxSize}">
+            <defs>
+                <filter id="laserGlow">
+                    <feGaussianBlur stdDeviation="${glowDeviation}" result="coloredBlur"/>
+                </filter>
+            </defs>
+            <g>
+                <circle cx="${center}" cy="${center}" r="${glowRadius}" fill="red" style="filter:url(%23laserGlow);" fill-opacity="0.7"/>
+                <circle cx="${center}" cy="${center}" r="${ringRadius}" fill="none" stroke="red" stroke-width="${ringStroke}"/>
+            </g>
+        </svg>`;
+
+        return `url('data:image/svg+xml;utf8,${encodeURIComponent(svg)}') ${center} ${center}, auto`;
     };
 
     useEffect(() => {
@@ -995,17 +1011,25 @@ const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson
             document.head.appendChild(styleTagRef.current);
         }
 
+        const body = document.body;
         if (isLaserMode) {
-            bodyRef.current.classList.add('laser-cursor-active');
+            body.classList.add('laser-cursor-active');
             styleTagRef.current.innerHTML = `.laser-cursor-active, .laser-cursor-active * { cursor: ${createLaserCursorStyle(laserSize)} !important; }`;
         } else {
-            bodyRef.current.classList.remove('laser-cursor-active');
+            body.classList.remove('laser-cursor-active');
+            if (styleTagRef.current) {
+                styleTagRef.current.innerHTML = '';
+            }
         }
-
+        
         return () => {
-             bodyRef.current.classList.remove('laser-cursor-active');
+             body.classList.remove('laser-cursor-active');
+             if (styleTagRef.current) {
+                styleTagRef.current.innerHTML = '';
+             }
         }
     }, [isLaserMode, laserSize]);
+
     
     if (!isOpen) return null;
     
@@ -1016,6 +1040,10 @@ const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson
                 if ((e.target as HTMLElement).closest('[data-radix-popper-content-wrapper]')) {
                     e.preventDefault();
                 }
+            }}
+            onCloseAutoFocus={(e) => {
+                // Prevent focus on main trigger when laser popover is open
+                if (isSizePopoverOpen) e.preventDefault();
             }}
         >
             <DialogHeader>
@@ -1549,12 +1577,3 @@ export function TeacherDashboardUI() {
     </>
   );
 }
-
-
-
-
-
-
-
-
-
