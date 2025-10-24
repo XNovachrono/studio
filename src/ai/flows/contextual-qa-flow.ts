@@ -4,7 +4,7 @@
  * @fileOverview A flow for answering questions or explaining text within a specific context.
  */
 
-import {ai, geminiProModel} from '@/ai/genkit';
+import {ai, gemini15Flash} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const ContextualQASchema = z.object({
@@ -19,7 +19,7 @@ const ContextualQAOutputSchema = z
   .describe(
     'The generated content as an HTML string.'
   );
-export type ContextualQAOutput = z.infer<typeof ContextualQAOutputSchema>;
+export type ContextualQAOutput = z.infer<typeof ContextualQASchema>;
 
 export async function contextualQA(
   input: ContextualQAInput
@@ -45,7 +45,7 @@ const contextualQAFlow = ai.defineFlow(
          Selected Text: "${selectedText}"`;
     
     const {text} = await ai.generate({
-      model: geminiProModel,
+      model: gemini15Flash,
       prompt: promptText,
     });
     return text;
