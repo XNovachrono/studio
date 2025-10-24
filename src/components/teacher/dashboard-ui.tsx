@@ -980,32 +980,39 @@ const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson
     const [isLaserMode, setIsLaserMode] = useState(false);
     const [isSizePopoverOpen, setSizePopoverOpen] = useState(false);
     const [laserSize, setLaserSize] = useState(8);
+    const bodyRef = useRef(document.body);
+    const styleTagRef = useRef<HTMLStyleElement | null>(null);
+
+    const createLaserCursorStyle = (size: number) => {
+        const glow = size / 2.5;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><defs><filter id="glow"><feGaussianBlur stdDeviation="${glow}" result="coloredBlur"/></filter></defs><g><circle cx="12" cy="12" r="${size * 0.8}" fill="red" style="filter:url(%23glow); opacity: 0.7;"/><circle cx="12" cy="12" r="${size * 0.4}" fill="red"/></g></svg>`;
+        return `url('data:image/svg+xml;utf8,${encodeURIComponent(svg)}') 12 12, auto`;
+    };
 
     useEffect(() => {
-        const toggleLaserClass = (active: boolean) => {
-            if (active) {
-                document.body.classList.add('laser-cursor-active');
-            } else {
-                document.body.classList.remove('laser-cursor-active');
-            }
-        };
+        if (!styleTagRef.current) {
+            styleTagRef.current = document.createElement('style');
+            document.head.appendChild(styleTagRef.current);
+        }
 
-        toggleLaserClass(isLaserMode);
-        return () => toggleLaserClass(false);
-    }, [isLaserMode]);
+        if (isLaserMode) {
+            bodyRef.current.classList.add('laser-cursor-active');
+            styleTagRef.current.innerHTML = `.laser-cursor-active, .laser-cursor-active * { cursor: ${createLaserCursorStyle(laserSize)} !important; }`;
+        } else {
+            bodyRef.current.classList.remove('laser-cursor-active');
+        }
+
+        return () => {
+             bodyRef.current.classList.remove('laser-cursor-active');
+        }
+    }, [isLaserMode, laserSize]);
     
-    useEffect(() => {
-        document.documentElement.style.setProperty('--laser-size', String(laserSize));
-        document.documentElement.style.setProperty('--laser-glow', String(laserSize / 2.5));
-    }, [laserSize]);
-
     if (!isOpen) return null;
     
     return (
         <DialogContent 
             className="max-w-4xl h-[80vh] flex flex-col"
             onInteractOutside={(e) => {
-                // Prevent closing when interacting with the popover
                 if ((e.target as HTMLElement).closest('[data-radix-popper-content-wrapper]')) {
                     e.preventDefault();
                 }
@@ -1023,22 +1030,13 @@ const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson
                     {activeModal === 'classNote' && (
                        <Popover open={isSizePopoverOpen} onOpenChange={setSizePopoverOpen}>
                             <PopoverTrigger asChild>
-                               <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button 
-                                                size="icon" 
-                                                variant={isLaserMode ? "secondary" : "ghost"}
-                                                onClick={() => setIsLaserMode(prev => !prev)}
-                                            >
-                                                <Radio />
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>Activar Puntero Láser</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
+                                <Button 
+                                    size="icon" 
+                                    variant={isLaserMode ? "secondary" : "ghost"}
+                                    onClick={() => setIsLaserMode(prev => !prev)}
+                                >
+                                    <Radio />
+                                </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-40" side="bottom" align="end">
                                 <div className="space-y-2">
@@ -1551,6 +1549,7 @@ export function TeacherDashboardUI() {
     </>
   );
 }
+
 
 
 
