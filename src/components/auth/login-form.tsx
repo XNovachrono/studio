@@ -105,6 +105,9 @@ export function LoginForm() {
         case 'auth/invalid-email':
           description = t.errorInvalidEmail;
           break;
+        case 'auth/requests-to-this-api-identitytoolkit-method-google.cloud.identitytoolkit.v1.authenticationservice.signinwithpassword-are-blocked.':
+          description = "El inicio de sesión con contraseña no está habilitado para este proyecto. Por favor, habilítalo en la Consola de Firebase > Authentication > Sign-in method.";
+          break;
         default:
           description = error.message || description;
       }
