@@ -100,6 +100,9 @@
     
     --font-body: var(--font-inter);
     --font-headline: var(--font-space-grotesk);
+
+    --laser-size: 8;
+    --laser-glow: 3;
   }
 
   * {
@@ -143,5 +146,5 @@
 }
 
 .laser-cursor-active, .laser-cursor-active * {
-  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><defs><filter id="glow"><feGaussianBlur stdDeviation="2.5" result="coloredBlur"/></filter></defs><g><circle cx="12" cy="12" r="7" fill="red" style="filter:url(%23glow); opacity: 0.7;"/><circle cx="12" cy="12" r="4" fill="red"/></g></svg>') 12 12, auto !important;
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><defs><filter id="glow"><feGaussianBlur stdDeviation="calc(var(--laser-glow) * 1px)" result="coloredBlur"/></filter></defs><g><circle cx="12" cy="12" r="calc(var(--laser-size) * 0.8px)" fill="red" style="filter:url(%23glow); opacity: 0.7;"/><circle cx="12" cy="12" r="calc(var(--laser-size) * 0.4px)" fill="red"/></g></svg>') 12 12, auto !important;
 }

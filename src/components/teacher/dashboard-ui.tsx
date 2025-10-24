@@ -46,6 +46,7 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Separator } from "../ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { Slider } from "../ui/slider";
 
 
 interface TeacherDashboardData {
@@ -976,8 +977,9 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
 const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson, renderModalContent, handleSaveLesson, isSaving }: { isOpen: boolean, onClose: () => void, activeModal: ModalType, selectedLesson: Lesson | null, renderModalContent: () => React.ReactNode, handleSaveLesson: () => void, isSaving: boolean }) => {
     const { translations } = useLanguage();
     const t = translations.teacherDashboard.lessons;
-    
     const [isLaserMode, setIsLaserMode] = useState(false);
+    const [isSizePopoverOpen, setSizePopoverOpen] = useState(false);
+    const [laserSize, setLaserSize] = useState(8);
 
     useEffect(() => {
         const toggleLaserClass = (active: boolean) => {
@@ -989,18 +991,25 @@ const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson
         };
 
         toggleLaserClass(isLaserMode);
-
-        // Cleanup function to remove the class when the dialog closes
-        return () => {
-            toggleLaserClass(false);
-        };
+        return () => toggleLaserClass(false);
     }, [isLaserMode]);
     
+    useEffect(() => {
+        document.documentElement.style.setProperty('--laser-size', String(laserSize));
+        document.documentElement.style.setProperty('--laser-glow', String(laserSize / 2.5));
+    }, [laserSize]);
+
     if (!isOpen) return null;
     
     return (
         <DialogContent 
             className="max-w-4xl h-[80vh] flex flex-col"
+            onInteractOutside={(e) => {
+                // Prevent closing when interacting with the popover
+                if ((e.target as HTMLElement).closest('[data-radix-popper-content-wrapper]')) {
+                    e.preventDefault();
+                }
+            }}
         >
             <DialogHeader>
                 <div className="flex justify-between items-center">
@@ -1012,22 +1021,38 @@ const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson
                                {activeModal === 'comments' && t.comments}
                     </DialogTitle>
                     {activeModal === 'classNote' && (
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button 
-                                        size="icon" 
-                                        variant={isLaserMode ? "secondary" : "ghost"}
-                                        onClick={() => setIsLaserMode(prev => !prev)}
-                                    >
-                                        <Radio />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Activar Puntero Láser</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
+                       <Popover open={isSizePopoverOpen} onOpenChange={setSizePopoverOpen}>
+                            <PopoverTrigger asChild>
+                               <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button 
+                                                size="icon" 
+                                                variant={isLaserMode ? "secondary" : "ghost"}
+                                                onClick={() => setIsLaserMode(prev => !prev)}
+                                            >
+                                                <Radio />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Activar Puntero Láser</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-40" side="bottom" align="end">
+                                <div className="space-y-2">
+                                    <Label className="text-xs">Tamaño del Láser</Label>
+                                    <Slider
+                                        defaultValue={[laserSize]}
+                                        min={4}
+                                        max={24}
+                                        step={1}
+                                        onValueChange={(value) => setLaserSize(value[0])}
+                                    />
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                     )}
                 </div>
             </DialogHeader>
@@ -1526,6 +1551,7 @@ export function TeacherDashboardUI() {
     </>
   );
 }
+
 
 
 
