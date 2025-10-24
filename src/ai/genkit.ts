@@ -8,6 +8,6 @@ enableFirebaseTelemetry();
 export const gemini15Flash = googleAI.model('gemini-1.5-flash');
 
 export const ai = genkit({
-  plugins: [googleAI({apiKey: process.env.GOOGLE_GENAI_API_KEY})],
+  plugins: [googleAI({apiKey: process.env.GOOGLE_GENAI_API_KEY, apiVersion: 'v1'})],
   model: gemini15Flash,
 });
