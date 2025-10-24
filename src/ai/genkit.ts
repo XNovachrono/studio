@@ -5,9 +5,13 @@ import {enableFirebaseTelemetry} from '@genkit-ai/firebase';
 
 enableFirebaseTelemetry();
 
-export const gemini15Flash = googleAI.model('gemini-1.5-flash');
+export const geminiProModel = googleAI.model('gemini-pro');
 
 export const ai = genkit({
-  plugins: [googleAI()],
-  model: gemini15Flash,
+  plugins: [
+    googleAI({
+      apiVersion: 'v1beta',
+    }),
+  ],
+  model: geminiProModel,
 });
