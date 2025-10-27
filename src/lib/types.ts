@@ -126,6 +126,7 @@ export interface Lesson {
 
 export interface HomeworkSubmission {
   id: string;
+  groupId: string; // Add groupId to know the top-level collection
   lessonId: string;
   studentId: string;
   studentName: string;

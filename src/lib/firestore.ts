@@ -4,7 +4,7 @@ import {
     doc, getDoc, getDocs, setDoc, updateDoc, collection, query, where, writeBatch, arrayUnion, Timestamp, deleteDoc, arrayRemove, addDoc, orderBy, collectionGroup
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
-import { db } from "./firebase";
+import { db, auth } from "./firebase";
 import type { User, StudentProfile, Group, StudentPlan, TeacherInteraction, PQRSMessage, Reminder, Lesson, EditorContent, BankCard, BankType, ScheduledClass, StudentNote, UserRole, StudentGroupInfo, HomeworkSubmission } from "./types";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
@@ -775,13 +775,18 @@ export const uploadHomeworkFile = async (studentId: string, lessonId: string, fi
 
 export const getHomeworkSubmissionsForLesson = async (lessonIds: string[], studentId?: string): Promise<HomeworkSubmission[]> => {
     const submissionsRef = collectionGroup(db, 'homework_submissions');
-    let q;
-    if (studentId) {
-        q = query(submissionsRef, where('lessonId', 'in', lessonIds), where('studentId', '==', studentId));
-    } else {
-        q = query(submissionsRef, where('lessonId', 'in', lessonIds));
+    
+    // Fallback to the provided studentId if the current user is not available
+    const currentUserId = auth.currentUser?.uid || studentId;
+    if (!currentUserId) {
+        console.warn("No student ID available for homework submission query.");
+        return [];
     }
 
+    let q;
+    // Always filter by studentId to make the query secure and efficient
+    q = query(submissionsRef, where('lessonId', 'in', lessonIds), where('studentId', '==', currentUserId));
+    
     try {
         const querySnapshot = await getDocs(q);
         return querySnapshot.docs.map(submissionFromDoc);
@@ -793,7 +798,9 @@ export const getHomeworkSubmissionsForLesson = async (lessonIds: string[], stude
 };
 
 export const createOrUpdateHomeworkSubmission = async (studentId: string, lessonId: string, data: Partial<Omit<HomeworkSubmission, 'id' | 'submittedAt'>>): Promise<void> => {
-    const submissionsRef = collection(db, 'lessons', lessonId, 'homework_submissions');
+    // The path is now directly to the subcollection, which is more standard.
+    const parentLessonRef = doc(db, "groups", data.groupId!, "lessons", lessonId);
+    const submissionsRef = collection(parentLessonRef, 'homework_submissions');
     const q = query(submissionsRef, where('studentId', '==', studentId));
 
     try {
@@ -813,8 +820,8 @@ export const createOrUpdateHomeworkSubmission = async (studentId: string, lesson
         }
     } catch (serverError) {
         const error = new FirestorePermissionError({
-            path: `lessons/${lessonId}/homework_submissions`,
-            operation: 'create',
+            path: submissionsRef.path,
+            operation: 'create', // or 'update'
             requestResourceData: data,
         });
         errorEmitter.emit('permission-error', error);
