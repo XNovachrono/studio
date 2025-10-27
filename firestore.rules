@@ -6,77 +6,77 @@ service cloud.firestore {
      * @description Controls access to user profiles.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
+      allow get: if isSignedIn() && isOwner(userId);
       allow list: if false;
-      allow create: if request.auth.uid == userId;
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
     }
 
     /**
      * @description Controls access to group information.
      */
     match /groups/{groupId} {
-      allow get: if true;
+      allow get: if isSignedIn();
       allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isGroupTeacher(groupId);
-      allow delete: if isGroupTeacher(groupId);
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.teacherId;
+      allow update: if isSignedIn() && isGroupTeacher(groupId);
+      allow delete: if isSignedIn() && isGroupTeacher(groupId);
     }
 
     /**
      * @description Controls access to lessons within a group.
      */
     match /groups/{groupId}/lessons/{lessonId} {
-      allow get: if true;
+      allow get: if isSignedIn();
       allow list: if true;
-      allow create: if isGroupTeacher(groupId);
-      allow update: if isGroupTeacher(groupId);
-      allow delete: if isGroupTeacher(groupId);
+      allow create: if isSignedIn() && isGroupTeacher(groupId);
+      allow update: if isSignedIn() && isGroupTeacher(groupId);
+      allow delete: if isSignedIn() && isGroupTeacher(groupId);
     }
 
     /**
      * @description Controls access to homework submissions for a specific lesson.
      */
     match /groups/{groupId}/lessons/{lessonId}/homework_submissions/{submissionId} {
-      allow get: if isGroupTeacher(groupId) || isHomeworkSubmissionOwner(groupId, lessonId, submissionId);
+      allow get: if isSignedIn() && (isGroupTeacher(groupId) || isHomeworkSubmissionOwner(groupId, lessonId, submissionId));
       allow list: if false;
       allow create: if isSignedIn();
-      allow update: if isGroupTeacher(groupId);
-      allow delete: if isGroupTeacher(groupId);
+      allow update: if isSignedIn() && isGroupTeacher(groupId);
+      allow delete: if isSignedIn() && isGroupTeacher(groupId);
     }
 
     /**
      * @description Controls access to PQRS messages.
      */
     match /pqrs/{pqrsId} {
-      allow get: if isPqrsOwner(pqrsId);
+      allow get: if isSignedIn() && isPqrsOwner(pqrsId);
       allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isPqrsOwner(pqrsId);
-      allow delete: if isPqrsOwner(pqrsId);
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
+      allow update: if isSignedIn() && isPqrsOwner(pqrsId);
+      allow delete: if isSignedIn() && isPqrsOwner(pqrsId);
     }
 
     /**
      * @description Controls access to student notes.
      */
     match /student_notes/{noteId} {
-      allow get: if isStudentNoteOwner(noteId);
+      allow get: if isSignedIn() && isStudentNoteOwner(noteId);
       allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isStudentNoteOwner(noteId);
-      allow delete: if isStudentNoteOwner(noteId);
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
+      allow update: if isSignedIn() && isStudentNoteOwner(noteId);
+      allow delete: if isSignedIn() && isStudentNoteOwner(noteId);
     }
 
     /**
      * @description Controls access to bank cards.
      */
     match /bank_cards/{cardId} {
-      allow get: if true;
+      allow get: if isSignedIn();
       allow list: if true;
-      allow create: if isSignedIn();
-      allow update: if isBankCardOwner(cardId);
-      allow delete: if isBankCardOwner(cardId);
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.ownerId;
+      allow update: if isSignedIn() && isBankCardOwner(cardId);
+      allow delete: if isSignedIn() && isBankCardOwner(cardId);
     }
 
     // --- Helper functions ---
@@ -90,23 +90,23 @@ service cloud.firestore {
     }
 
     function isGroupTeacher(groupId) {
-      return get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid;
+      return request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId;
     }
 
     function isHomeworkSubmissionOwner(groupId, lessonId, submissionId) {
-      return get(/databases/$(database)/documents/groups/$(groupId)/lessons/$(lessonId)/homework_submissions/$(submissionId)).data.studentId == request.auth.uid;
+      return request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)/lessons/$(lessonId)/homework_submissions/$(submissionId)).data.studentId;
     }
 
     function isPqrsOwner(pqrsId) {
-      return get(/databases/$(database)/documents/pqrs/$(pqrsId)).data.studentId == request.auth.uid;
+      return request.auth.uid == get(/databases/$(database)/documents/pqrs/$(pqrsId)).data.studentId;
     }
 
     function isStudentNoteOwner(noteId) {
-      return get(/databases/$(database)/documents/student_notes/$(noteId)).data.studentId == request.auth.uid;
+      return request.auth.uid == get(/databases/$(database)/documents/student_notes/$(noteId)).data.studentId;
     }
 
     function isBankCardOwner(cardId) {
-      return get(/databases/$(database)/documents/bank_cards/$(cardId)).data.ownerId == request.auth.uid;
+      return request.auth.uid == get(/databases/$(database)/documents/bank_cards/$(cardId)).data.ownerId;
     }
   }
 }
