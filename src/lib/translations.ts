@@ -324,6 +324,8 @@ export const translations = {
                 noInstructions: "No hay instrucciones para esta tarea.",
                 yourSubmission: "Tu Entrega",
                 noSubmission: "Aún no has entregado esta tarea.",
+                uploadButton: "Subir Entrega",
+                grade: "Nota",
                 attendance: "Asistencia",
                 yourStatus: "Tu estado",
                 notRegistered: "No registrado"
@@ -392,7 +394,7 @@ export const translations = {
                     joinButton: "Unirse",
                     noClass: "No hay clases programadas."
                 },
-                availability: {
+                 availability: {
                     title: "Disponibilidad del Estudiante",
                     description: "Horarios preferidos por {studentName}",
                     scheduleButton: "Programar"
@@ -424,6 +426,18 @@ export const translations = {
                     ausente: "No asistió",
                     tarde: "Tarde",
                     na: "N/A"
+                },
+                submissions: {
+                    title: "Entregas para {lessonName}",
+                    viewButton: "Ver Entregas",
+                    students: "Estudiantes",
+                    selectStudent: "Selecciona un estudiante para ver su entrega.",
+                    submissionFrom: "Entrega de {studentName}",
+                    noSubmission: "Este estudiante no ha realizado la entrega.",
+                    noFiles: "No hay archivos adjuntos.",
+                    grade: "Nota",
+                    gradePlaceholder: "Asignar nota (ej. A+, 9.5)",
+                    saveGrade: "Guardar Nota",
                 },
                 attendancePopover: {
                     title: "Registrar Tardanza",
@@ -849,6 +863,8 @@ export const translations = {
                 noInstructions: "No instructions for this assignment.",
                 yourSubmission: "Your Submission",
                 noSubmission: "You have not submitted this assignment yet.",
+                uploadButton: "Upload Submission",
+                grade: "Grade",
                 attendance: "Attendance",
                 yourStatus: "Your status",
                 notRegistered: "Not registered"
@@ -949,6 +965,18 @@ export const translations = {
                     ausente: "Did not attend",
                     tarde: "Late",
                     na: "N/A"
+                },
+                 submissions: {
+                    title: "Submissions for {lessonName}",
+                    viewButton: "View Submissions",
+                    students: "Students",
+                    selectStudent: "Select a student to view their submission.",
+                    submissionFrom: "Submission from {studentName}",
+                    noSubmission: "This student has not made a submission.",
+                    noFiles: "No attached files.",
+                    grade: "Grade",
+                    gradePlaceholder: "Assign grade (e.g. A+, 9.5)",
+                    saveGrade: "Save Grade",
                 },
                 attendancePopover: {
                     title: "Register Lateness",

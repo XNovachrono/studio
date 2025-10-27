@@ -21,8 +21,8 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, StudentProfile, Group, Lesson, EditorContent, BankCard, AttendanceStatus, StudentGroupInfo } from "@/lib/types";
-import { getTeacherDataForDashboard, getLessonsForGroup, createLessonForGroup, updateLesson, getBankCards, addContentToGroup, getBankFiles, updateGroupObjectives } from "@/lib/firestore";
+import type { User, StudentProfile, Group, Lesson, EditorContent, BankCard, AttendanceStatus, StudentGroupInfo, HomeworkSubmission } from "@/lib/types";
+import { getTeacherDataForDashboard, getLessonsForGroup, createLessonForGroup, updateLesson, getBankCards, addContentToGroup, getBankFiles, updateGroupObjectives, getHomeworkSubmissionsForLesson, createOrUpdateHomeworkSubmission } from "@/lib/firestore";
 import { Badge } from "../ui/badge";
 import { useLanguage } from "@/context/language-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -47,6 +47,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Separator } from "../ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { Slider } from "../ui/slider";
+import Image from "next/image";
 
 
 interface TeacherDashboardData {
@@ -392,7 +393,6 @@ const VideoPlayer = ({ url }: { url: string }) => {
         );
     }
     
-    // Fallback for direct video links
     if(url.match(/\.(mp4|webm|ogg)$/)) {
         return <video src={url} controls className="w-full aspect-video rounded-md" />
     }
@@ -450,7 +450,6 @@ const AttendancePopover = ({
             const diff = differenceInMinutes(parsedTime, classStartTime);
             setMinutesLate(diff > 0 ? diff : 0);
         } catch (error) {
-            // Handle invalid time format if necessary
         }
     };
     
@@ -510,6 +509,107 @@ const AttendancePopover = ({
     );
 };
 
+const HomeworkSubmissionsViewer = ({ isOpen, onOpenChange, lesson, groupMembers }: { isOpen: boolean, onOpenChange: (open: boolean) => void, lesson: Lesson | null, groupMembers: StudentGroupInfo[] }) => {
+    const { translations } = useLanguage();
+    const t = translations.teacherDashboard.lessons.submissions;
+    const { toast } = useToast();
+    const [submissions, setSubmissions] = useState<HomeworkSubmission[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+    const [grade, setGrade] = useState('');
+
+    useEffect(() => {
+        if (isOpen && lesson) {
+            setIsLoading(true);
+            getHomeworkSubmissionsForLesson([lesson.id])
+                .then(setSubmissions)
+                .finally(() => setIsLoading(false));
+        } else {
+            setSelectedStudentId(null);
+            setSubmissions([]);
+        }
+    }, [isOpen, lesson]);
+
+    useEffect(() => {
+        if (selectedStudentId) {
+            const submission = submissions.find(s => s.studentId === selectedStudentId);
+            setGrade(submission?.grade || '');
+        }
+    }, [selectedStudentId, submissions]);
+
+    const handleSaveGrade = async () => {
+        if (!selectedStudentId || !lesson) return;
+        try {
+            await createOrUpdateHomeworkSubmission(selectedStudentId, lesson.id, { grade });
+            toast({ title: "Nota guardada", description: "La nota ha sido guardada para este estudiante." });
+            setSubmissions(prev => prev.map(s => s.studentId === selectedStudentId ? { ...s, grade } : s));
+        } catch (error) {
+            console.error(error);
+            toast({ variant: "destructive", title: "Error", description: "No se pudo guardar la nota." });
+        }
+    };
+    
+    const selectedSubmission = submissions.find(s => s.studentId === selectedStudentId);
+
+    if (!lesson) return null;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+                <DialogHeader>
+                    <DialogTitle>{t.title.replace('{lessonName}', lesson.name)}</DialogTitle>
+                </DialogHeader>
+                <div className="flex-grow grid grid-cols-3 gap-4 overflow-hidden">
+                    <div className="col-span-1 border-r pr-4">
+                        <h3 className="font-semibold mb-2">{t.students}</h3>
+                        <ScrollArea className="h-full">
+                            {groupMembers.map(student => (
+                                <Button 
+                                    key={student.id} 
+                                    variant={selectedStudentId === student.id ? "secondary" : "ghost"}
+                                    className="w-full justify-start mb-1"
+                                    onClick={() => setSelectedStudentId(student.id)}
+                                >
+                                    {student.name}
+                                </Button>
+                            ))}
+                        </ScrollArea>
+                    </div>
+                    <div className="col-span-2">
+                        {isLoading && <Loader2 className="h-6 w-6 animate-spin" />}
+                        {!isLoading && !selectedStudentId && <p className="text-center text-muted-foreground pt-10">{t.selectStudent}</p>}
+                        {!isLoading && selectedStudentId && !selectedSubmission && <p className="text-center text-muted-foreground pt-10">{t.noSubmission}</p>}
+                        {!isLoading && selectedSubmission && (
+                            <div className="space-y-4">
+                                <h3 className="font-semibold">{t.submissionFrom.replace('{studentName}', selectedSubmission.studentName)}</h3>
+                                {selectedSubmission.files && selectedSubmission.files.length > 0 ? (
+                                    <ScrollArea className="h-[45vh]">
+                                        <div className="grid grid-cols-2 gap-4 pr-4">
+                                            {selectedSubmission.files.map((file, index) => (
+                                                <a key={index} href={file.url} target="_blank" rel="noopener noreferrer">
+                                                    <Image src={file.url} alt={file.name} width={200} height={200} className="rounded-md w-full h-auto object-cover"/>
+                                                </a>
+                                            ))}
+                                        </div>
+                                    </ScrollArea>
+                                ) : (
+                                    <p className="text-muted-foreground">{t.noFiles}</p>
+                                )}
+                                <div className="space-y-2">
+                                    <Label htmlFor="grade">{t.grade}</Label>
+                                    <div className="flex gap-2">
+                                        <Input id="grade" placeholder={t.gradePlaceholder} value={grade} onChange={(e) => setGrade(e.target.value)} />
+                                        <Button onClick={handleSaveGrade}>{t.saveGrade}</Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 
 const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, teacherId: string, onLessonCreated: () => void }) => {
@@ -524,6 +624,7 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
     const [isSaving, setIsSaving] = useState<string | null>(null);
     const [isBankImporterOpen, setBankImporterOpen] = useState(false);
     const [isFileBankImporterOpen, setFileBankImporterOpen] = useState(false);
+    const [isSubmissionsViewerOpen, setIsSubmissionsViewerOpen] = useState(false);
     
     const [activeModal, setActiveModal] = useState<ModalType>(null);
     const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
@@ -731,30 +832,32 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
             case 'homework':
                  return (
                     <div className="space-y-4">
-                        <TooltipProvider>
+                        <div className="flex justify-between items-center">
                             <div className="flex gap-2">
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button size="icon" variant="outline" onClick={handleOpenBankImporter}>
-                                            <Import />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>{t.importFromBank}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button size="icon" variant="outline" onClick={handleOpenFileBankImporter}>
-                                            <FileUp/>
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>{t.importFile}</p>
-                                    </TooltipContent>
-                                </Tooltip>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button size="icon" variant="outline" onClick={handleOpenBankImporter}>
+                                                <Import />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent><p>{t.importFromBank}</p></TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button size="icon" variant="outline" onClick={handleOpenFileBankImporter}>
+                                                <FileUp/>
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent><p>{t.importFile}</p></TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
                             </div>
-                        </TooltipProvider>
+                            <Button variant="secondary" onClick={() => setIsSubmissionsViewerOpen(true)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                {t.submissions.viewButton}
+                            </Button>
+                        </div>
                         <Editor
                            content={currentEditingContent}
                            onChange={setCurrentEditingContent}
@@ -872,6 +975,8 @@ const GroupLessons = ({ group, teacherId, onLessonCreated }: { group: Group, tea
         <div className="space-y-4">
              <BankCardImporter ownerId={teacherId} isOpen={isBankImporterOpen} onOpenChange={setBankImporterOpen} onSelectCard={handleImportFromBank} bankType="homework"/>
              <FileBankImporter isOpen={isFileBankImporterOpen} onOpenChange={setFileBankImporterOpen} onSelectFile={handleImportFileFromBank} />
+             <HomeworkSubmissionsViewer isOpen={isSubmissionsViewerOpen} onOpenChange={setIsSubmissionsViewerOpen} lesson={selectedLesson} groupMembers={groupMembers} />
+
              {lessons.length > 0 ? (
                 <Accordion type="multiple" className="w-full space-y-4">
                  {lessons.map(lesson => {
@@ -1042,7 +1147,6 @@ const GroupLessonContentDialog = ({ isOpen, onClose, activeModal, selectedLesson
                 }
             }}
             onCloseAutoFocus={(e) => {
-                // Prevent focus on main trigger when laser popover is open
                 if (isSizePopoverOpen) e.preventDefault();
             }}
         >
@@ -1480,7 +1584,6 @@ export function TeacherDashboardUI() {
     } else {
         router.push("/login");
     }
-     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const privateGroups = useMemo(() => data?.groups.filter(g => g.type === 'privado') || [], [data?.groups]);

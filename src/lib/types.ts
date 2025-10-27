@@ -37,7 +37,6 @@ export interface StudentProfile extends User {
   }>;
 }
 
-// Simplified student info for embedding in groups
 export interface StudentGroupInfo {
     id: string;
     name: string;
@@ -50,8 +49,8 @@ export interface Group {
   id:string;
   name: string;
   type: StudentPlan;
-  studentIds: string[]; // Keep this for reference and mutations
-  studentsInfo: StudentGroupInfo[]; // Embed necessary student info
+  studentIds: string[];
+  studentsInfo: StudentGroupInfo[];
   teacherId: string;
   teacherName: string; 
   mainObjective: EditorContent;
@@ -96,10 +95,6 @@ export interface PQRSMessage {
     createdAt: string; // ISO date string
 }
 
-
-// --- New Lesson System Types ---
-
-// The content for the editor is a JSON object
 export type EditorContent = {
   type: "doc";
   content: {
@@ -124,7 +119,7 @@ export interface Lesson {
   content: EditorContent;
   classNote: EditorContent;
   homework: EditorContent;
-  comments: EditorContent; // For teacher/admin private notes
+  comments: EditorContent;
   studentComments: Record<string, EditorContent>; // Key: studentId
   attendance: Record<string, AttendanceStatus>; // Key: studentId
 }
@@ -133,24 +128,23 @@ export interface HomeworkSubmission {
   id: string;
   lessonId: string;
   studentId: string;
-  files: { name: string; url: string }[];
+  studentName: string;
+  files: { name: string; url: string; path: string; }[];
   submittedAt: string; // ISO date string
+  grade?: string;
 }
 
-// --- Bank System Types ---
 export type BankType = 'objective' | 'homework' | 'image' | 'video' | 'audio';
 
 export interface BankCard {
     id: string;
     type: BankType;
     name: string;
-    ownerId: string; // Teacher or Admin ID
-    ownerName: string; // Teacher or Admin Name
+    ownerId: string;
+    ownerName: string;
     createdAt: string; // ISO date string
-    level?: string; // e.g., "A1", "A2.2", "B1"
-    // For cards with rich text content
+    level?: string;
     content?: EditorContent; 
-    // For file-based cards
     fileUrl?: string;
     filePath?: string;
 }
@@ -160,8 +154,7 @@ export interface StudentNote {
     studentId: string;
     title: string;
     content: EditorContent;
-    lessonId?: string; // Optional: link to a specific lesson
+    lessonId?: string;
     createdAt: string; // ISO date string
     updatedAt: string; // ISO date string
 }
-    

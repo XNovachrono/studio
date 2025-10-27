@@ -2,13 +2,13 @@
 
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Calendar as CalendarIcon, Loader2, MessageCircleQuestion, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal, Notebook } from "lucide-react";
+import { BookOpen, Calendar as CalendarIcon, Loader2, MessageCircleQuestion, Video, Target, FileText, BookCheck, Users2, MessageSquareQuote, Goal, Notebook, Upload } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/common/dashboard-header";
-import type { User, Group, StudentProfile, Lesson, ScheduledClass, TeacherInteraction } from "@/lib/types";
-import { getStudentData, getLessonsForGroup, updateUserProfile } from "@/lib/firestore";
+import type { User, Group, StudentProfile, Lesson, ScheduledClass, TeacherInteraction, HomeworkSubmission } from "@/lib/types";
+import { getStudentData, getLessonsForGroup, updateUserProfile, uploadHomeworkFile, getHomeworkSubmissionsForLesson, createOrUpdateHomeworkSubmission } from "@/lib/firestore";
 import { useLanguage } from "@/context/language-context";
 import {
   Accordion,
@@ -30,13 +30,90 @@ import { Input } from "../ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { StudentNotesManager } from "./notes-manager";
+import Image from "next/image";
 
 
 interface StudentDashboardData {
     user: StudentProfile;
     group: Group | null;
     lessons: Lesson[];
+    submissions: HomeworkSubmission[];
 }
+
+const HomeworkUploader = ({ student, lesson, submission, onUploadSuccess }: { student: StudentProfile, lesson: Lesson, submission: HomeworkSubmission | null, onUploadSuccess: () => void }) => {
+    const { translations } = useLanguage();
+    const t = translations.studentDashboard.lessons;
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const { toast } = useToast();
+
+    const handleFileSelect = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        try {
+            const { downloadURL, filePath } = await uploadHomeworkFile(student.id, lesson.id, file);
+            const newFile = { name: file.name, url: downloadURL, path: filePath };
+            const existingFiles = submission?.files || [];
+            
+            await createOrUpdateHomeworkSubmission(student.id, lesson.id, {
+                files: [...existingFiles, newFile],
+                studentName: student.name,
+            });
+
+            toast({ title: "Archivo subido", description: "Tu entrega ha sido actualizada." });
+            onUploadSuccess();
+        } catch (error) {
+            console.error(error);
+            toast({ variant: "destructive", title: "Error", description: "No se pudo subir el archivo." });
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    return (
+        <div className="p-4 border rounded-lg bg-secondary/50 mt-6">
+            <h4 className="text-center font-semibold mb-4">{t.yourSubmission}</h4>
+            {submission?.files && submission.files.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                    {submission.files.map((file, index) => (
+                        <div key={index} className="relative aspect-square w-full">
+                            <Image src={file.url} alt={file.name} layout="fill" objectFit="cover" className="rounded-md" />
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-center text-muted-foreground text-sm mb-4">{t.noSubmission}</p>
+            )}
+
+            <div className="flex justify-center">
+                 <Button onClick={handleFileSelect} disabled={isUploading}>
+                    {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                    {t.uploadButton}
+                </Button>
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    accept="image/*"
+                />
+            </div>
+            {submission?.grade && (
+                <div className="mt-4 text-center">
+                    <p className="font-semibold">{t.grade}</p>
+                    <p className="text-lg font-bold text-primary">{submission.grade}</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 const CalendarDialog = ({ user, onOpenChange, isOpen }: { user: StudentProfile, isOpen: boolean, onOpenChange: (open: boolean) => void }) => {
     const { toast } = useToast();
@@ -173,7 +250,7 @@ export function StudentDashboardUI() {
   const [modalContent, setModalContent] = useState<keyof Lesson | null>(null);
 
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (forceRefresh = false) => {
         const storedUser = localStorage.getItem("uncoverly-user");
         if (!storedUser) {
             router.push("/login");
@@ -181,11 +258,10 @@ export function StudentDashboardUI() {
         }
         const parsedUser = JSON.parse(storedUser);
         
-        setIsLoading(true);
+        if (!forceRefresh) setIsLoading(true);
         try {
             const studentData = await getStudentData(parsedUser.id);
             
-            // Role-based redirection
             if (studentData.user.role !== 'student') {
                 router.push(studentData.user.role === 'admin' ? '/admin/dashboard' : '/teacher/dashboard');
                 return;
@@ -196,13 +272,16 @@ export function StudentDashboardUI() {
             }
 
             let lessons: Lesson[] = [];
+            let submissions: HomeworkSubmission[] = [];
             if (studentData.group) {
                 lessons = await getLessonsForGroup(studentData.group.id);
+                if (lessons.length > 0) {
+                    submissions = await getHomeworkSubmissionsForLesson(lessons.map(l => l.id), parsedUser.id);
+                }
             }
-            setData({ ...studentData, lessons });
+            setData({ ...studentData, lessons, submissions });
         } catch (error) {
             console.error("Error fetching student data:", error);
-            // If profile doesn't exist or another error, maybe send back to login
             router.push("/login");
         } finally {
             setIsLoading(false);
@@ -233,7 +312,6 @@ export function StudentDashboardUI() {
     if (!data?.group?.content?.scheduledClasses?.length) {
       return null;
     }
-    // Sort classes to find the most recent one (or upcoming one in the future)
     const sortedClasses = [...data.group.content.scheduledClasses].sort(
       (a, b) => new Date(b.time as string).getTime() - new Date(a.time as string).getTime()
     );
@@ -247,7 +325,7 @@ export function StudentDashboardUI() {
     return {
       teacherId: data.group.teacherId,
       teacherName: data.group.teacherName,
-      lastInteraction: new Date().toISOString(), // This can be a placeholder or fetched if needed
+      lastInteraction: new Date().toISOString(),
     };
   }, [data?.group]);
   
@@ -261,6 +339,7 @@ export function StudentDashboardUI() {
 
   const user = data?.user;
   const lessons = data?.lessons || [];
+  const submissions = data?.submissions || [];
   const isPrivateStudent = user?.plan === 'privado';
 
   return (
@@ -269,7 +348,6 @@ export function StudentDashboardUI() {
       <main className="flex-1 overflow-auto p-4 md:p-8 space-y-6">
         
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
-            {/* Next Class Card */}
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline text-2xl flex items-center gap-2">
@@ -293,7 +371,6 @@ export function StudentDashboardUI() {
                 </CardContent>
             </Card>
 
-            {/* Notes Card */}
              <Card>
                 <CardHeader>
                     <CardTitle className="font-headline text-2xl flex items-center gap-2">
@@ -307,9 +384,8 @@ export function StudentDashboardUI() {
                 </CardContent>
             </Card>
 
-            {/* Goals Section - No Card */}
             {data.group && (
-                <div className="rounded-lg xl:col-span-2">
+                 <div className="rounded-lg xl:col-span-2">
                     <div className="p-6">
                         <h2 className="font-headline text-2xl flex items-center gap-2 mb-4">
                             <Goal />
@@ -337,7 +413,6 @@ export function StudentDashboardUI() {
                 </div>
             )}
 
-            {/* PQRS Card */}
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline text-2xl flex items-center gap-2">
@@ -366,7 +441,6 @@ export function StudentDashboardUI() {
                 </CardContent>
             </Card>
             
-             {/* Calendar Card - Only for private students */}
             {isPrivateStudent && (
                 <Card>
                     <CardHeader>
@@ -465,14 +539,19 @@ export function StudentDashboardUI() {
              <DialogDescription>{activeLesson?.name}</DialogDescription>
           </DialogHeader>
           <div className="py-4 max-h-[60vh] overflow-y-auto">
-            {activeLesson && modalContent && (
+            {activeLesson && modalContent && modalContent !== 'homework' && (
               <Editor content={activeLesson[modalContent as keyof Lesson]} onChange={() => {}} editable={false} placeholder="Tu docente aún no ha añadido contenido here."/>
             )}
-             {activeLesson && modalContent === 'homework' && (
-                  <div className="p-4 border rounded-lg bg-secondary/50 mt-6">
-                    <p className="text-center font-semibold">{t.lessons.yourSubmission}</p>
-                    <p className="text-center text-muted-foreground text-sm">{t.lessons.noSubmission}</p>
-                  </div>
+             {activeLesson && user && modalContent === 'homework' && (
+                  <>
+                    <Editor content={activeLesson.homework} onChange={() => {}} editable={false} placeholder={t.lessons.noInstructions} />
+                    <HomeworkUploader 
+                        student={user} 
+                        lesson={activeLesson} 
+                        submission={submissions.find(s => s.lessonId === activeLesson.id) || null}
+                        onUploadSuccess={() => fetchDashboardData(true)}
+                    />
+                  </>
             )}
           </div>
         </DialogContent>
