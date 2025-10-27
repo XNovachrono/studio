@@ -307,36 +307,34 @@ export function StudentDashboardUI() {
                 </CardContent>
             </Card>
 
-            {/* Goals Card */}
+            {/* Goals Section - No Card */}
             {data.group && (
-                <Card className="xl:col-span-2">
-                    <CardHeader>
-                        <CardTitle className="font-headline text-2xl flex items-center gap-2">
+                <div className="rounded-lg xl:col-span-2">
+                    <div className="p-6">
+                        <h2 className="font-headline text-2xl flex items-center gap-2 mb-4">
                             <Goal />
                             {t_goals.title}
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                         <Accordion type="multiple" className="w-full space-y-2">
-                            <AccordionItem value="main-objective" className="border rounded-lg bg-background">
-                                <AccordionTrigger className="px-4 py-3 font-semibold text-lg hover:no-underline">
+                        </h2>
+                        <Accordion type="multiple" className="w-full space-y-2">
+                            <AccordionItem value="main-objective" className="border-none">
+                                <AccordionTrigger className="px-4 py-3 font-semibold text-lg hover:no-underline bg-secondary/50 rounded-md">
                                     {t_goals.mainObjective}
                                 </AccordionTrigger>
-                                <AccordionContent className="p-4 border-t">
+                                <AccordionContent className="p-4 pt-4">
                                     <Editor content={data.group.mainObjective} onChange={() => {}} editable={false} placeholder="Tu docente aún no ha definido el objetivo del programa."/>
                                 </AccordionContent>
                             </AccordionItem>
-                             <AccordionItem value="weekly-objectives" className="border rounded-lg bg-background">
-                                <AccordionTrigger className="px-4 py-3 font-semibold text-lg hover:no-underline">
+                             <AccordionItem value="weekly-objectives" className="border-none">
+                                <AccordionTrigger className="px-4 py-3 font-semibold text-lg hover:no-underline bg-secondary/50 rounded-md">
                                     {t_goals.weeklyObjectives}
                                 </AccordionTrigger>
-                                <AccordionContent className="p-4 border-t">
+                                <AccordionContent className="p-4 pt-4">
                                     <Editor content={data.group.weeklyObjectives} onChange={() => {}} editable={false} placeholder="Tu docente aún no ha definido los contenidos semanales."/>
                                 </AccordionContent>
                             </AccordionItem>
                         </Accordion>
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             )}
 
             {/* PQRS Card */}
