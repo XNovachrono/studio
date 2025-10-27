@@ -12,8 +12,7 @@ import { getStorage } from "firebase/storage";
 const firebaseConfig = {
   "projectId": "uncoverly-hub",
   "appId": "1:506136237998:web:06fd0145a782cbd4865a3f",
-  "storageBucket": "uncoverly-hub.appspot.com",
-  "apiKey": "AIzaSyA1EQRofvpASthsReB_C5wSRyGQoElkojk",
+  "apiKey": "AIzaSyC2bLv4_Mqcnfw-eaztHlwTatGlWtlWe1Q",
   "authDomain": "uncoverly-hub.firebaseapp.com",
   "messagingSenderId": "506136237998"
 };

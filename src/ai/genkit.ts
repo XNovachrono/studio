@@ -9,7 +9,7 @@ export const geminiProModel = googleAI.model('gemini-pro');
 
 export const ai = genkit({
   plugins: [
-    googleAI({ apiKey: "AIzaSyA1EQRofvpASthsReB_C5wSRyGQoElkojk" }),
+    googleAI({ apiKey: "AIzaSyC2bLv4_Mqcnfw-eaztHlwTatGlWtlWe1Q" }),
   ],
   model: geminiProModel,
 });
