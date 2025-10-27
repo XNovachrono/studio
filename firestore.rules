@@ -1,152 +1,237 @@
+/**
+ * @description This ruleset enforces a strict user-ownership model for user profiles and personal notes.
+ *  Groups and their associated lessons and homework submissions follow a shared-access model,
+ *  where group members (teachers and students) have access.
+ *  PQRS messages are generally open for reading. Bank Cards are owner-only for writes.
+ * @dataStructure
+ *  - /users/{userId}: Stores user profile information.
+ *  - /groups/{groupId}: Stores information about class groups.
+ *  - /groups/{groupId}/lessons/{lessonId}: Stores lessons within a group.
+ *  - /groups/{groupId}/lessons/{lessonId}/homework_submissions/{submissionId}: Stores homework submissions for a lesson.
+ *  - /pqrs/{pqrsId}: Stores PQRS messages.
+ *  - /student_notes/{noteId}: Stores personal student notes.
+ *  - /bank_cards/{cardId}: Stores reusable bank cards.
+ * @keySecurityDecisions
+ *  - Users can only read and write their own profile data.
+ *  - Groups are accessible to teachers and students who are members of the group.
+ *  - Listing of users is disallowed for privacy.
+ *  - PQRS messages are publicly readable but can only be created by authenticated users.
+ *  - Student notes are private to the student who created them.
+ *  - Bank cards are owner-only for writes
+ * @denormalizationForAuthorization
+ *  - Group membership is denormalized as `studentIds` and `teacherId` within the `/groups/{groupId}` document to avoid costly `get()` operations.
+ */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows users to read and write their own user documents.
+     * @description Controls access to user profile documents. Users can only read and write their own profile.
      * @path /users/{userId}
-     * @allow (get, create, update, delete) User with ID 'user123' can read/write document 'user123'.
-     * @deny (get, create, update, delete) User with ID 'user123' cannot read/write document 'user456'.
+     * @allow (create) - Authenticated user creates their own profile with a matching userId in the document.
+     * @allow (get, update, delete) - Authenticated user reads/updates/deletes their own profile.
+     * @deny (create) - Unauthenticated user attempts to create a user profile.
+     * @deny (get, update, delete) - Authenticated user attempts to access another user's profile.
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
       function isSignedIn() {
         return request.auth != null;
       }
+
       function isOwner(userId) {
         return request.auth.uid == userId;
       }
+
       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+        return isSignedIn() && resource.data.id == request.auth.uid;
       }
 
-      allow get: if isOwner(userId);
+      allow get: if isSignedIn() && isOwner(userId);
       allow list: if false;
-
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == request.auth.uid;
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Allows authenticated users to read groups, but restricts modifications to teachers.
+     * @description Controls access to group documents. Teachers and students in the group can read, but only teachers can modify.
      * @path /groups/{groupId}
-     * @allow (get, list) Any signed-in user can read group data.
-     * @allow (create, update, delete) Teacher with ID 'teacher123' can create/update/delete group if they are the teacher.
-     * @deny (create, update, delete) Student cannot modify group data.
-     * @principle Restricts group management to authorized teachers.
+     * @allow (get, list) - Authenticated user who is a member of the group (either teacher or student) can read group data.
+     * @allow (create, update, delete) - Authenticated user who is the teacher of the group can modify group data.
+     * @deny (create, update, delete) - Authenticated user who is not the teacher attempts to modify group data.
+     * @deny (get, list) - Unauthenticated user attempts to read group data.
+     * @principle Enforces shared access for group members with teacher-only write access.
      */
     match /groups/{groupId} {
-        function isSignedIn() {
-            return request.auth != null;
-        }
+      function isSignedIn() {
+        return request.auth != null;
+      }
 
-        allow get, list: if isSignedIn();
+      function isTeacher() {
+        return isSignedIn() && request.auth.uid == resource.data.teacherId;
+      }
 
-        allow create: if isSignedIn(); // TODO: Implement role-based creation if needed.
-        allow update: if isSignedIn(); // TODO: Implement role-based updates if needed.
-        allow delete: if isSignedIn(); // TODO: Implement role-based deletion if needed.
+      function canAccessGroup() {
+        return isSignedIn() && (request.auth.uid == resource.data.teacherId || resource.data.studentIds.hasAny([request.auth.uid]));
+      }
+
+      function isExistingTeacher() {
+        return isSignedIn() && resource.data.teacherId == request.auth.uid;
+      }
+
+      allow get, list: if isSignedIn() && canAccessGroup();
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.teacherId;
+      allow update: if isSignedIn() && isExistingTeacher();
+      allow delete: if isSignedIn() && isExistingTeacher();
     }
 
     /**
-     * @description Allows teachers to manage lessons within a group.
+     * @description Controls access to lesson documents within a group. Teachers and students in the group can read, but only teachers can modify.
      * @path /groups/{groupId}/lessons/{lessonId}
-     * @allow (get, list) Any signed-in user can read lesson data.
-     * @allow (create, update, delete) Teacher associated with the group can manage lessons.
-     * @deny (create, update, delete) Student cannot modify lesson data.
-     * @principle Restricts lesson management to the group's teacher.
+     * @allow (get, list) - Authenticated user who is a member of the group can read lessons.
+     * @allow (create, update, delete) - Authenticated user who is the teacher of the group can modify lessons.
+     * @deny (create, update, delete) - Authenticated user who is not the teacher attempts to modify lessons.
+     * @deny (get, list) - Unauthenticated user attempts to read lessons.
+     * @principle Enforces shared access for group members with teacher-only write access.
      */
     match /groups/{groupId}/lessons/{lessonId} {
         function isSignedIn() {
-            return request.auth != null;
+          return request.auth != null;
         }
 
-        allow get, list: if isSignedIn();
-
-        allow create: if isSignedIn(); // TODO: Implement role-based creation if needed.
-        allow update: if isSignedIn(); // TODO: Implement role-based updates if needed.
-        allow delete: if isSignedIn(); // TODO: Implement role-based deletion if needed.
-    }
-
-     /**
-      * @description Allows listing of homework submissions.
-      * @path /groups/{groupId}/lessons/{lessonId}/homework_submissions/{submissionId}
-      * @allow (list) Any authenticated user can list homework submissions.
-      * @deny (create, update, delete) Only the owner can modify/delete their homework submission
-      * @principle Homework submissions can be listed, owner only writes.
-      */
-    match /groups/{groupId}/lessons/{lessonId}/homework_submissions/{submissionId} {
-        function isSignedIn() {
-            return request.auth != null;
+        function getGroup() {
+          return get(/databases/$(database)/documents/groups/$(groupId));
         }
-        allow get: if isSignedIn();
-        allow list: if isSignedIn();
-        allow create: if request.auth.uid == request.resource.data.ownerId; // TODO: Implement role-based creation if needed.
-        allow update: if request.auth.uid == request.resource.data.ownerId; // TODO: Implement role-based updates if needed.
-        allow delete: if request.auth.uid == resource.data.ownerId; // TODO: Implement role-based deletion if needed.
 
+        function isTeacher() {
+          return isSignedIn() && request.auth.uid == getGroup().data.teacherId;
+        }
+
+        function canAccessLesson() {
+          return isSignedIn() && (request.auth.uid == getGroup().data.teacherId || getGroup().data.studentIds.hasAny([request.auth.uid]));
+        }
+
+        function isExistingTeacher() {
+          return isSignedIn() && getGroup().data.teacherId == request.auth.uid;
+        }
+
+        allow get: if isSignedIn() && canAccessLesson();
+        allow list: if isSignedIn() && canAccessLesson();
+        allow create: if isSignedIn() && isTeacher();
+        allow update: if isSignedIn() && isTeacher();
+        allow delete: if isSignedIn() && isTeacher();
     }
 
     /**
-     * @description Allows authenticated users to create PQRS messages, but restricts reading to teachers and admins.
+     * @description Controls access to homework submission documents within a lesson. Students can create their own submissions, and teachers can read/update/delete.
+     * @path /groups/{groupId}/lessons/{lessonId}/homework_submissions/{submissionId}
+     * @allow (create) - Authenticated user who is a student in the group can create a homework submission for themselves.
+     * @allow (get, list, update, delete) - Authenticated user who is the teacher of the group can manage homework submissions.
+     * @deny (create) - Authenticated user attempts to create a submission for another student.
+     * @deny (create, get, list, update, delete) - Unauthenticated user attempts to access homework submissions.
+     * @principle Enforces student-ownership for creation and teacher-only management.
+     */
+    match /groups/{groupId}/lessons/{lessonId}/homework_submissions/{submissionId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function getLesson() {
+        return get(/databases/$(database)/documents/groups/$(groupId)/lessons/$(lessonId));
+      }
+
+      function getGroup() {
+        return get(/databases/$(database)/documents/groups/$(groupId));
+      }
+
+      function isStudent() {
+        return isSignedIn() && request.auth.uid == request.resource.data.studentId && getGroup().data.studentIds.hasAny([request.auth.uid]);
+      }
+
+      function isTeacher() {
+          return isSignedIn() && request.auth.uid == getGroup().data.teacherId;
+      }
+
+      function isExistingTeacher() {
+          return isSignedIn() && getGroup().data.teacherId == request.auth.uid;
+      }
+
+      allow get, list: if isSignedIn() && isTeacher();
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.studentId && getGroup().data.studentIds.hasAny([request.auth.uid]);
+      allow update: if isSignedIn() && isExistingTeacher();
+      allow delete: if isSignedIn() && isExistingTeacher();
+    }
+
+    /**
+     * @description Controls access to PQRS (complaints, requests, suggestions) messages. Anyone can read, but only authenticated users can create.
      * @path /pqrs/{pqrsId}
-     * @allow (create) Any signed-in user can create a PQRS message.
-     * @deny (get, list, update, delete) Students cannot read, update, or delete PQRS messages (except their own creation, if implemented).
-     * @principle Restricts PQRS access based on role.
+     * @allow (get, list) - Anyone can read PQRS messages.
+     * @allow (create) - Authenticated user can create a PQRS message.
+     * @deny (create, update, delete) - Unauthenticated user attempts to modify PQRS messages.
+     * @principle Allows public read access with authenticated-user-only creation.
      */
     match /pqrs/{pqrsId} {
-        function isSignedIn() {
-            return request.auth != null;
-        }
-        allow get: if isSignedIn(); // TODO: Implement role-based access if needed.
-        allow list: if isSignedIn(); // TODO: Implement role-based access if needed.
-        allow create: if isSignedIn();
-        allow update: if false; // PQRS messages should not be updated.
-        allow delete: if false; // TODO: Implement role-based deletion if needed.
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get, list: if true;
+      allow create: if isSignedIn();
+      allow update: if false;
+      allow delete: if false;
     }
 
     /**
-     * @description Allows students to manage their own notes.
+     * @description Controls access to student notes. Only the owner student can read and write their own notes.
      * @path /student_notes/{noteId}
-     * @allow (get, create, update, delete) Student with ID 'student123' can read/write note 'note123' if they are the owner.
-     * @deny (get, create, update, delete) Student with ID 'student123' cannot read/write note 'note456' if they are not the owner.
+     * @allow (create, get, update, delete) - Authenticated user can only access their own notes.
+     * @deny (create, get, update, delete) - Authenticated user attempts to access another user's notes.
      * @principle Enforces document ownership for student notes.
      */
     match /student_notes/{noteId} {
-        function isSignedIn() {
-            return request.auth != null;
-        }
-        function isOwner(ownerId) {
-            return request.auth.uid == ownerId;
-        }
+      function isSignedIn() {
+        return request.auth != null;
+      }
 
-        allow get: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-        allow list: if isSignedIn();
-        allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-        allow update: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-        allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      function isOwner() {
+        return request.auth.uid == request.resource.data.studentId;
+      }
+
+       function isExistingOwner() {
+        return isSignedIn() && resource.data.studentId == request.auth.uid;
+      }
+
+
+      allow get: if isSignedIn() && isExistingOwner();
+      allow list: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
+      allow update: if isSignedIn() && isExistingOwner();
+      allow delete: if isSignedIn() && isExistingOwner();
     }
 
-    /**
-     * @description Allows bank card owners to manage their own cards.
-     * @path /bank_cards/{cardId}
-     * @allow (get, create, update, delete) User with ID 'user123' can read/write card 'card123' if they are the owner.
-     * @deny (get, create, update, delete) User with ID 'user123' cannot read/write card 'card456' if they are not the owner.
-     * @principle Enforces document ownership for bank cards.
-     */
-    match /bank_cards/{cardId} {
-        function isSignedIn() {
+     /**
+      * @description Controls access to bank cards. Only the owner can write and create them.
+      * @path /bank_cards/{cardId}
+      */
+     match /bank_cards/{cardId} {
+          function isSignedIn() {
             return request.auth != null;
-        }
-        function isOwner(ownerId) {
-            return request.auth.uid == ownerId;
-        }
+          }
 
-        allow get: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-        allow list: if isSignedIn();
-        allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-        allow update: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-        allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-    }
+          function isOwner() {
+            return request.auth.uid == request.resource.data.ownerId;
+          }
+
+          function isExistingOwner() {
+            return isSignedIn() && resource.data.ownerId == request.auth.uid;
+          }
+
+
+          allow get, list: if true;
+          allow create: if isSignedIn() && request.auth.uid == request.resource.data.ownerId;
+          allow update: if isSignedIn() && isExistingOwner();
+          allow delete: if isSignedIn() && isExistingOwner();
+     }
   }
 }
