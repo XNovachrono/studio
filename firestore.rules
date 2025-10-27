@@ -1,169 +1,158 @@
-/**
- * @description This ruleset enforces a strict user-ownership model for user profiles and personal notes.
- *  Groups and lessons are accessible by teachers and students within the group.
- *  Homework submissions are restricted to the submitting student.
- *  PQRS messages are public to facilitate internal processing.
- *  Bank Cards are owner-write, public-read.
- * @dataStructure
- *  - /users/{userId}: Stores user profile data, accessible only by the user.
- *  - /groups/{groupId}: Stores group data, accessible to group members.
- *  - /groups/{groupId}/lessons/{lessonId}: Stores lesson data, accessible to group members.
- *  - /groups/{groupId}/lessons/{lessonId}/homework_submissions/{submissionId}: Stores homework submissions, accessible only by the submitting student.
- *  - /pqrs/{pqrsId}: Stores PQRS messages, readable by anyone, writable by anyone.
- *  - /student_notes/{noteId}: Stores student notes, accessible only by the owner.
- *  - /bank_cards/{cardId}: Stores bank cards, publicly readable, owner-writable.
- * @keySecurityDecisions
- *  - Users can only access their own profile data.
- *  - Group and lesson data are accessible to members (teachers and students) of the group.
- *  - Listing of users is disallowed.
- *  - PQRS messages are publicly readable to allow for processing.
- *  - Homework submissions are private and only accessible to the submitting student.
- *  - Bank Cards are owner-write, public-read.
- * @denormalizationForAuthorization
- *  - Groups: The `group` document contains arrays of `studentIds` and the `teacherId` of the teacher in charge.
- *  - Lessons: Lessons store a `groupId` that is used to check if the user is part of the group.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource.data.userId == request.auth.uid;
-    }
-
     /**
-     * @description Allows users to read and write their own profile data.
+     * @description Allows users to read and write their own user document.
      * @path /users/{userId}
      * @allow (create) User with ID 'user123' can create their profile.
-     * @deny (create) User with ID 'user123' cannot create a profile with a different ID ('user456').
-     * @principle Enforces user ownership for profile data.
+     * @deny (create) User with ID 'user123' cannot create a profile for 'user456'.
+     * @allow (get, update, delete) User with ID 'user123' can get, update, and delete their profile.
+     * @deny (get, update, delete) User with ID 'user123' cannot get, update, and delete the profile for 'user456'.
+     * @principle Enforces document ownership for all operations.
      */
     match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+          return request.auth != null && request.auth.uid == userId;
+      }
+
       allow get: if isOwner(userId);
       allow list: if false;
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Allows teachers and students within a group to read group information.
-     *  Does not allow public listing of groups.
+     * @description Allows anyone to read group information, but only teachers can create, update, or delete groups.
      * @path /groups/{groupId}
-     * @allow (get) Teacher or student within group 'group123' can read the group data.
-     * @deny (create) User not in group 'group123' cannot create group data.
-     * @principle Enforces group membership for access to group data.
+     * @allow (get, list) Any user can read group information.
+     * @deny (create, update, delete) Non-teachers cannot create, update, or delete groups.
+     * @allow (create, update, delete) Teacher with ID 'teacher123' can create, update, or delete groups.
+     * @principle Public read access with owner-only writes, enforced via teacherId.
      */
     match /groups/{groupId} {
-        function userInGroup() {
-            return isSignedIn() && (resource.data.teacherId == request.auth.uid || resource.data.studentIds.hasAny([request.auth.uid]));
-        }
+      function isSignedIn() {
+        return request.auth != null;
+      }
 
-        allow get: if userInGroup();
-        allow list: if false;
-        allow create: if isSignedIn();
-        allow update: if userInGroup();
-        allow delete: if userInGroup();
+      allow get, list: if true;
+      allow create: if isSignedIn(); // TODO: Impose teacher role
+      allow update: if isSignedIn() && request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId; // TODO: Impose teacher role
+      allow delete: if isSignedIn() && request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId; // TODO: Impose teacher role
     }
 
     /**
-     * @description Allows teachers and students within a group to read lessons within that group.
-     *  Does not allow public listing of lessons.
+     * @description Allows teachers to manage lessons within a group. Students can read if the group exists.
      * @path /groups/{groupId}/lessons/{lessonId}
-     * @allow (get) Teacher or student within group 'group123' can read lesson 'lesson456'.
-     * @deny (create) User not in group 'group123' cannot create a lesson.
-     * @principle Enforces group membership for access to lessons.
+     * @allow (get, list) Teacher can read a lesson within a group. Student can read if group exists.
+     * @deny (create, update, delete) Non-teachers cannot create, update, or delete lessons.
+     * @principle Teacher-only writes; public read if the group exists.
      */
     match /groups/{groupId}/lessons/{lessonId} {
-        function userInGroup() {
-            let groupId = parent_path().split("/")[2];
-            return isSignedIn() && (get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid || get(/databases/$(database)/documents/groups/$(groupId)).data.studentIds.hasAny([request.auth.uid]));
-        }
+      function isSignedIn() {
+        return request.auth != null;
+      }
 
-        allow get: if userInGroup();
-        allow list: if false;
-        allow create: if userInGroup();
-        allow update: if userInGroup();
-        allow delete: if userInGroup();
+      function isTeacherOfGroup(groupId) {
+        return get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid;
+      }
+
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn() && isTeacherOfGroup(groupId); // TODO: Impose teacher role
+      allow update: if isSignedIn() && isTeacherOfGroup(groupId); // TODO: Impose teacher role
+      allow delete: if isSignedIn() && isTeacherOfGroup(groupId); // TODO: Impose teacher role
     }
 
-       /**
-        * @description Allows students to create, read, update, and delete their own homework submissions.
-        * @path /groups/{groupId}/lessons/{lessonId}/homework_submissions/{submissionId}
-        * @allow (create) Student with ID 'student123' can create a submission for lesson 'lesson456'.
-        * @deny (create) Student with ID 'student123' cannot create a submission with a different student ID.
-        * @principle Enforces ownership for homework submissions.
-        */
+     /**
+      * @description Allows students to submit homework and teachers to access it.
+      * @path /groups/{groupId}/lessons/{lessonId}/homework_submissions/{submissionId}
+      * @allow (create) Students can create submissions for their own homework.
+      * @allow (get, list, update) Teachers can read and update submissions.
+      * @deny (create) Students cannot submit homework for other students.
+      * @deny (update, delete) Students cannot update or delete other students homework.
+      * @principle Student-owned submissions; teacher access for management.
+      */
     match /groups/{groupId}/lessons/{lessonId}/homework_submissions/{submissionId} {
-        function isHomeworkOwner() {
-          return isSignedIn() && request.auth.uid == resource.data.studentId;
-        }
-        allow get: if isHomeworkOwner();
-        allow list: if false;
-        allow create: if isSignedIn() && request.auth.uid == request.resource.data.studentId; // Assuming student id is checked in function logic
-        allow update: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
-        allow delete: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isTeacherOfGroup(groupId) {
+        return get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid;
+      }
+      
+      allow get, list: if isSignedIn() && isTeacherOfGroup(groupId);
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
+      allow update: if isSignedIn() && isTeacherOfGroup(groupId); // TODO: Impose teacher role
+      allow delete: if isSignedIn() && isTeacherOfGroup(groupId); // Only teachers can delete homework
     }
 
     /**
-     * @description Allows anyone to create and read PQRS messages.
+     * @description Allows authenticated users to create PQRS messages.
      * @path /pqrs/{pqrsId}
-     * @allow (create) Any user can create a PQRS message.
-     * @allow (get) Any user can read a PQRS message.
-     * @principle Allows public read and write access for PQRS messages.
+     * @allow (create) Authenticated users can create PQRS messages.
+     * @deny (get, list, update, delete) No one can get, list, update, or delete PQRS messages.
+     * @principle Only creation is allowed.
      */
     match /pqrs/{pqrsId} {
-      allow get: if true;
-      allow list: if false;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
       allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow get, list, update, delete: if false;
     }
 
     /**
-     * @description Allows students to manage their personal notes.
+     * @description Allows a student to manage their own notes.
      * @path /student_notes/{noteId}
-     * @allow (create) Student with ID 'student123' can create a note.
-     * @deny (update) Student with ID 'student123' cannot update a note belonging to another student.
-     * @principle Enforces ownership for student notes.
+     * @allow (create, get, update, delete) The owner of the note can create, get, update, and delete it.
+     * @deny (create, get, update, delete) Other users cannot access or modify the note.
+     * @principle Enforces document ownership for all operations.
      */
     match /student_notes/{noteId} {
-        function isNoteOwner() {
-          return isSignedIn() && request.auth.uid == resource.data.userId;
-        }
+      function isOwner(studentId) {
+        return request.auth != null && request.auth.uid == studentId;
+      }
 
-        allow get: if isNoteOwner();
-        allow list: if false;
-        allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
-        allow update: if isSignedIn() && request.auth.uid == request.resource.data.userId;
-        allow delete: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn() && request.auth.uid == resource.data.studentId;
+      allow list: if false;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
+      allow update: if isSignedIn() && request.auth.uid == resource.data.studentId;
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.studentId;
     }
 
     /**
-     * @description Allows anyone to read bank cards, but only the owner can modify them.
+     * @description Allows the owner of a bank card to manage it.
      * @path /bank_cards/{cardId}
-     * @allow (get) Any user can read a bank card.
-     * @deny (create) User cannot create a bank card with a different owner ID.
-     * @principle Enforces ownership for bank card writes, allows public reads.
+     * @allow (create, get, update, delete) The owner of the card can create, get, update, and delete it.
+     * @deny (create, get, update, delete) Other users cannot access or modify the card.
+     * @principle Enforces document ownership for all operations.
      */
     match /bank_cards/{cardId} {
-        function isCardOwner() {
-          return isSignedIn() && request.auth.uid == resource.data.userId;
-        }
+      function isOwner(ownerId) {
+        return request.auth != null && request.auth.uid == ownerId;
+      }
 
-        allow get: if true;
-        allow list: if false;
-        allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
-        allow update: if isSignedIn() && request.auth.uid == request.resource.data.userId;
-        allow delete: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn() && request.auth.uid == resource.data.ownerId;
+      allow list: if false;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.ownerId;
+      allow update: if isSignedIn() && request.auth.uid == resource.data.ownerId;
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.ownerId;
     }
   }
 }

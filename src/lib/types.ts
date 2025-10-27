@@ -12,6 +12,8 @@ export interface User {
   hasOnboarded?: boolean;
   email?: string;
   groupHistory?: string[]; // Array of group IDs
+  activeGroupIds?: string[]; // Array of active group IDs
+  groupId?: string; // For students in a single group
 }
 
 export interface TeacherInteraction {

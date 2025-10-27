@@ -125,42 +125,39 @@ export const getStudentData = async (userId: string): Promise<{ user: StudentPro
     const user = await getUserProfile(userId) as StudentProfile;
     if (!user) throw new Error("Student profile not found.");
 
-    const groupsRef = collection(db, "groups");
-    const q = query(groupsRef, where("studentIds", "array-contains", userId));
-    
-    try {
-        const querySnapshot = await getDocs(q);
-
-        let group: Group | null = null;
-        if (!querySnapshot.empty) {
-            const groupDoc = querySnapshot.docs[0];
-            const groupData = groupDoc.data() as Omit<Group, 'id'>;
-            
-            if (groupData.content.scheduledClasses) {
-                groupData.content.scheduledClasses = groupData.content.scheduledClasses.map(c => ({
-                    ...c,
-                    time: c.time instanceof Timestamp ? c.time.toDate().toISOString() : c.time,
-                }));
+    let group: Group | null = null;
+    if (user.groupId) {
+        const groupRef = doc(db, "groups", user.groupId);
+        try {
+            const groupDoc = await getDoc(groupRef);
+            if (groupDoc.exists()) {
+                const groupData = groupDoc.data() as Omit<Group, 'id'>;
+                
+                if (groupData.content.scheduledClasses) {
+                    groupData.content.scheduledClasses = groupData.content.scheduledClasses.map(c => ({
+                        ...c,
+                        time: c.time instanceof Timestamp ? c.time.toDate().toISOString() : c.time,
+                    }));
+                }
+                if (groupData.content.reminders) {
+                     groupData.content.reminders = groupData.content.reminders.map(r => ({
+                        ...r,
+                        sentAt: r.sentAt instanceof Timestamp ? r.sentAt.toDate().toISOString() : r.sentAt,
+                    }));
+                }
+                group = { id: groupDoc.id, ...groupData };
             }
-            if (groupData.content.reminders) {
-                 groupData.content.reminders = groupData.content.reminders.map(r => ({
-                    ...r,
-                    sentAt: r.sentAt instanceof Timestamp ? r.sentAt.toDate().toISOString() : r.sentAt,
-                }));
-            }
-            group = { id: groupDoc.id, ...groupData };
+        } catch (serverError) {
+            const error = new FirestorePermissionError({
+                path: groupRef.path,
+                operation: 'get',
+            });
+            errorEmitter.emit('permission-error', error);
+            throw error;
         }
-    
-        return { user, group };
-    } catch (serverError) {
-         const error = new FirestorePermissionError({
-            path: groupsRef.path,
-            operation: 'list',
-        });
-        errorEmitter.emit('permission-error', error);
-        throw error;
     }
 
+    return { user, group };
 }
 
 
@@ -367,6 +364,13 @@ export const createGroupWithTeacher = async (teacher: User, students: StudentPro
 
     batch.set(newGroupRef, groupData);
 
+    // Update each student's profile with the new group ID
+    studentIds.forEach(studentId => {
+        const studentRef = doc(db, "users", studentId);
+        batch.update(studentRef, { groupId: newGroupRef.id });
+    });
+
+
     try {
         await batch.commit();
     } catch (serverError) {
@@ -392,7 +396,7 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
     let groups: Group[] = [];
     let groupHistory: Group[] = [];
 
-    // Fetch active groups
+    // Fetch active groups by querying where teacherId matches
     try {
         const activeGroupsQuery = query(groupsRef, where("teacherId", "==", teacherId));
         const activeGroupsSnap = await getDocs(activeGroupsQuery);
@@ -401,6 +405,7 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
             ...(doc.data() as Omit<Group, 'id'>)
         }));
     } catch(serverError) {
+        // This query might still fail if list permissions are restrictive, but it's more specific.
         const error = new FirestorePermissionError({ path: groupsRef.path, operation: 'list' });
         errorEmitter.emit('permission-error', error);
         throw error;
@@ -772,16 +777,17 @@ export const uploadHomeworkFile = async (studentId: string, lessonId: string, fi
 export const getHomeworkSubmissionsForLesson = async (lessonIds: string[], studentId?: string): Promise<HomeworkSubmission[]> => {
     const submissionsRef = collectionGroup(db, 'homework_submissions');
     
-    // Fallback to the provided studentId if the current user is not available
     const currentUserId = auth.currentUser?.uid || studentId;
     if (!currentUserId) {
         console.warn("No student ID available for homework submission query.");
         return [];
     }
 
-    let q;
-    // Always filter by studentId to make the query secure and efficient
-    q = query(submissionsRef, where('lessonId', 'in', lessonIds), where('studentId', '==', currentUserId));
+    // A teacher might call this without a studentId to get all submissions for a lesson
+    // A student will always have a studentId
+    const q = studentId
+      ? query(submissionsRef, where('lessonId', 'in', lessonIds), where('studentId', '==', studentId))
+      : query(submissionsRef, where('lessonId', 'in', lessonIds));
     
     try {
         const querySnapshot = await getDocs(q);
@@ -794,8 +800,10 @@ export const getHomeworkSubmissionsForLesson = async (lessonIds: string[], stude
 };
 
 export const createOrUpdateHomeworkSubmission = async (studentId: string, lessonId: string, data: Partial<Omit<HomeworkSubmission, 'id' | 'submittedAt'>>): Promise<void> => {
-    // The path is now directly to the subcollection, which is more standard.
-    const parentLessonRef = doc(db, "groups", data.groupId!, "lessons", lessonId);
+    const groupRef = await getDoc(doc(db, "lessons", lessonId)).then(l => l.data()?.groupId);
+    if (!groupRef) throw new Error("Could not find group for lesson");
+
+    const parentLessonRef = doc(db, "groups", groupRef, "lessons", lessonId);
     const submissionsRef = collection(parentLessonRef, 'homework_submissions');
     const q = query(submissionsRef, where('studentId', '==', studentId));
 
