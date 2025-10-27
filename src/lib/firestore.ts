@@ -387,14 +387,16 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
 }> => {
     const teacherProfile = await getUserProfile(teacherId);
     if (!teacherProfile) throw new Error("Teacher profile not found.");
-    
+
     const groupsRef = collection(db, "groups");
-    
-    const qGroups = query(groupsRef, where("teacherId", "==", teacherId));
     let groups: Group[] = [];
+    let groupHistory: Group[] = [];
+
+    // Fetch active groups
     try {
-        const groupsSnap = await getDocs(qGroups);
-        groups = groupsSnap.docs.map(doc => ({
+        const activeGroupsQuery = query(groupsRef, where("teacherId", "==", teacherId));
+        const activeGroupsSnap = await getDocs(activeGroupsQuery);
+        groups = activeGroupsSnap.docs.map(doc => ({
             id: doc.id,
             ...(doc.data() as Omit<Group, 'id'>)
         }));
@@ -403,32 +405,26 @@ export const getTeacherDataForDashboard = async (teacherId: string): Promise<{
         errorEmitter.emit('permission-error', error);
         throw error;
     }
-    
-    let groupHistory: Group[] = [];
+
+    // Fetch historical groups
     const historyIds = teacherProfile?.groupHistory || [];
     if (historyIds.length > 0) {
         try {
-            const historyChunks: string[][] = [];
-            for (let i = 0; i < historyIds.length; i += 30) {
-                historyChunks.push(historyIds.slice(i, i + 30));
-            }
-            const historyPromises = historyChunks.map(chunk => getDocs(query(collection(db, "groups"), where("__name__", "in", chunk))));
-            const historySnapshots = await Promise.all(historyPromises);
-    
-            historySnapshots.forEach(snapshot => {
-                snapshot.forEach(doc => {
-                     groupHistory.push({ id: doc.id, ...doc.data() } as Group);
-                });
-            });
+            const historyPromises = historyIds.map(id => getDoc(doc(groupsRef, id)));
+            const historyDocs = await Promise.all(historyPromises);
+            groupHistory = historyDocs
+                .filter(doc => doc.exists())
+                .map(doc => ({ id: doc.id, ...doc.data() } as Group));
         } catch (serverError) {
-            const error = new FirestorePermissionError({ path: groupsRef.path, operation: 'list' });
-            errorEmitter.emit('permission-error', error);
-            throw error;
+             const error = new FirestorePermissionError({ path: `groups/{groupId}`, operation: 'get' });
+             errorEmitter.emit('permission-error', error);
+             throw error;
         }
     }
 
     return { teacher: teacherProfile, groups, groupHistory };
 }
+
 
 export const updateGroupObjectives = async (groupId: string, data: { mainObjective?: EditorContent, weeklyObjectives?: EditorContent }): Promise<void> => {
     const groupRef = doc(db, "groups", groupId);
