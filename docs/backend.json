@@ -1,0 +1,205 @@
+{
+    "entities": {
+        "user": {
+            "title": "User",
+            "description": "Represents a user in the system, can be a student, teacher, or admin.",
+            "type": "object",
+            "properties": {
+                "id": { "type": "string", "description": "Unique identifier for the user." },
+                "username": { "type": "string", "description": "User's username." },
+                "name": { "type": "string", "description": "User's full name." },
+                "email": { "type": "string", "format": "email", "description": "User's email address." },
+                "role": { "type": "string", "enum": ["student", "teacher", "admin"], "description": "Role of the user." },
+                "plan": { "type": "string", "enum": ["privado", "grupo pequeño", "grupo grande"], "description": "Student's plan, if applicable." },
+                "hasOnboarded": { "type": "boolean", "description": "Flag indicating if the student has completed onboarding." },
+                "groupHistory": { "type": "array", "items": { "type": "string" }, "description": "Array of group IDs the user has been part of." }
+            },
+            "required": ["id", "name", "role"]
+        },
+        "studentProfile": {
+            "title": "Student Profile",
+            "description": "Extends the base user with student-specific details.",
+            "type": "object",
+            "allOf": [{ "$ref": "#/entities/user" }],
+            "properties": {
+                "age": { "type": "integer" },
+                "phone": { "type": "string" },
+                "interests": { "type": "array", "items": { "type": "string" } },
+                "objective": { "type": "string" },
+                "objective_details": { "type": "string" },
+                "level": { "type": "string" },
+                "courseStartDate": { "type": "string", "format": "date" },
+                "courseDuration": { "type": "integer" },
+                "classesPerWeek": { "type": "integer" },
+                "scheduledSlots": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "date": { "type": "string", "format": "date" },
+                            "time": { "type": "string", "format": "time" }
+                        }
+                    }
+                }
+            }
+        },
+        "studentGroupInfo": {
+            "title": "Student Info in Group",
+            "description": "A subset of student information stored within a group document.",
+            "type": "object",
+            "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "level": { "type": "string" },
+                "plan": { "type": "string", "enum": ["privado", "grupo pequeño", "grupo grande"] }
+            },
+            "required": ["id", "name", "plan"]
+        },
+        "group": {
+            "title": "Group",
+            "description": "Represents a class group with a teacher and students.",
+            "type": "object",
+            "properties": {
+                "name": { "type": "string" },
+                "type": { "type": "string", "enum": ["privado", "grupo pequeño", "grupo grande"] },
+                "teacherId": { "type": "string" },
+                "teacherName": { "type": "string" },
+                "studentIds": { "type": "array", "items": { "type": "string" } },
+                "studentsInfo": { "type": "array", "items": { "$ref": "#/entities/studentGroupInfo" } },
+                "mainObjective": { "$ref": "#/entities/editorContent" },
+                "weeklyObjectives": { "$ref": "#/entities/editorContent" },
+                "content": {
+                    "type": "object",
+                    "properties": {
+                        "scheduledClasses": { "type": "array", "items": { "$ref": "#/entities/scheduledClass" } },
+                        "notes": { "type": "array", "items": { "$ref": "#/entities/note" } },
+                        "reminders": { "type": "array", "items": { "$ref": "#/entities/reminder" } }
+                    }
+                }
+            }
+        },
+        "lesson": {
+            "title": "Lesson",
+            "description": "Represents a single lesson within a group.",
+            "type": "object",
+            "properties": {
+                "groupId": { "type": "string" },
+                "name": { "type": "string" },
+                "number": { "type": "integer" },
+                "createdAt": { "type": "string", "format": "date-time" },
+                "scheduledTime": { "type": "string", "format": "date-time" },
+                "recording": { "type": "object", "properties": { "link": { "type": "string" } } },
+                "content": { "$ref": "#/entities/editorContent" },
+                "classNote": { "$ref": "#/entities/editorContent" },
+                "homework": { "$ref": "#/entities/editorContent" },
+                "comments": { "$ref": "#/entities/editorContent" },
+                "studentComments": { "type": "object" },
+                "attendance": { "type": "object" }
+            }
+        },
+        "homeworkSubmission": {
+            "title": "Homework Submission",
+            "description": "Represents a student's submission for a lesson's homework.",
+            "type": "object",
+            "properties": {
+                "lessonId": { "type": "string" },
+                "studentId": { "type": "string" },
+                "studentName": { "type": "string" },
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": { "type": "string" },
+                            "url": { "type": "string" },
+                            "path": { "type": "string" }
+                        }
+                    }
+                },
+                "submittedAt": { "type": "string", "format": "date-time" },
+                "grade": { "type": "string" }
+            },
+            "required": ["lessonId", "studentId", "studentName", "submittedAt"]
+        },
+        "pqrsMessage": {
+            "title": "PQRS Message",
+            "description": "A message from a student to a teacher (complaint, request, etc.).",
+            "type": "object",
+            "properties": {
+                "studentId": { "type": "string" },
+                "studentEmail": { "type": "string" },
+                "teacherId": { "type": "string" },
+                "teacherName": { "type": "string" },
+                "message": { "type": "string" },
+                "isAnonymous": { "type": "boolean" },
+                "createdAt": { "type": "string", "format": "date-time" }
+            }
+        },
+        "studentNote": {
+            "title": "Student Note",
+            "description": "A personal note created by a student.",
+            "type": "object",
+            "properties": {
+                "studentId": { "type": "string" },
+                "title": { "type": "string" },
+                "content": { "$ref": "#/entities/editorContent" },
+                "lessonId": { "type": "string" },
+                "createdAt": { "type": "string", "format": "date-time" },
+                "updatedAt": { "type": "string", "format": "date-time" }
+            }
+        },
+        "bankCard": {
+            "title": "Bank Card",
+            "description": "A reusable card of content for objectives, homework, etc.",
+            "type": "object",
+            "properties": {
+                "type": { "type": "string", "enum": ["objective", "homework", "image", "video", "audio"] },
+                "name": { "type": "string" },
+                "ownerId": { "type": "string" },
+                "ownerName": { "type": "string" },
+                "createdAt": { "type": "string", "format": "date-time" },
+                "level": { "type": "string" },
+                "content": { "$ref": "#/entities/editorContent" },
+                "fileUrl": { "type": "string" },
+                "filePath": { "type": "string" }
+            }
+        },
+        "editorContent": { "type": "object", "properties": {} },
+        "scheduledClass": { "type": "object", "properties": {} },
+        "note": { "type": "object", "properties": {} },
+        "reminder": { "type": "object", "properties": {} }
+    },
+    "firestore": {
+        "/users/{userId}": {
+            "schema": { "$ref": "#/entities/user" },
+            "description": "Stores user profile information."
+        },
+        "/groups/{groupId}": {
+            "schema": { "$ref": "#/entities/group" },
+            "description": "Stores information about class groups."
+        },
+        "/groups/{groupId}/lessons/{lessonId}": {
+            "schema": { "$ref": "#/entities/lesson" },
+            "description": "Sub-collection for lessons within a group."
+        },
+         "/groups/{groupId}/lessons/{lessonId}/homework_submissions/{submissionId}": {
+            "schema": { "$ref": "#/entities/homeworkSubmission" },
+            "description": "Sub-collection for student homework submissions for a specific lesson."
+        },
+        "/pqrs/{pqrsId}": {
+            "schema": { "$ref": "#/entities/pqrsMessage" },
+            "description": "Stores all PQRS messages from students."
+        },
+        "/student_notes/{noteId}": {
+            "schema": { "$ref": "#/entities/studentNote" },
+            "description": "Stores personal notes created by students."
+        },
+        "/bank_cards/{cardId}": {
+            "schema": { "$ref": "#/entities/bankCard" },
+            "description": "Stores reusable content cards for banks."
+        }
+    },
+    "auth": {
+        "providers": ["password"]
+    }
+}
