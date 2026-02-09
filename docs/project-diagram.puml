@@ -1,0 +1,241 @@
+@startuml Uncoverly Hub Class Diagram
+
+!theme spacelab
+
+' Style adjustments
+skinparam classAttributeIconSize 0
+hide empty members
+skinparam linetype ortho
+
+' Enums
+enum UserRole {
+  student
+  teacher
+  admin
+}
+
+enum StudentPlan {
+  privado
+  "grupo pequeño"
+  "grupo grande"
+}
+
+enum BankType {
+  objective
+  homework
+  image
+  video
+  audio
+}
+
+' Value Objects / Complex Types
+class EditorContent {
+  + type: "doc"
+  + content: any[]
+}
+note right of EditorContent: Represents rich text content (JSON format from Tiptap editor).
+
+class AttendanceStatus <<(V,orchid)>> {
+  'presente' | 'ausente' | { tarde: number }
+}
+note right of AttendanceStatus: Represents a student's attendance status. \nCan be a simple string or an object for lateness.
+
+class StudentGroupInfo {
+  + id: string
+  + name: string
+  + level: string
+  + plan: StudentPlan
+}
+note top of StudentGroupInfo: A denormalized, lightweight representation of a student within a Group document.
+
+' Core Classes
+class User {
+  + id: string
+  + username: string
+  + name: string
+  + role: UserRole
+  + email: string
+  + hasOnboarded: boolean
+  + groupId: string
+  + groupHistory: string[]
+}
+
+class StudentProfile {
+  + age: number
+  + phone: string
+  + interests: string[]
+  + objective: string
+  + objective_details: string
+  + level: string
+  + courseStartDate: string
+  + courseDuration: number
+  + classesPerWeek: number
+  + scheduledSlots: object[]
+}
+
+class Group {
+  + id: string
+  + name: string
+  + type: StudentPlan
+  + teacherId: string
+  + teacherName: string
+  + studentIds: string[]
+  --
+  + mainObjective: EditorContent
+  + weeklyObjectives: EditorContent
+  + content: object
+}
+
+class Lesson {
+  + id: string
+  + groupId: string
+  + name: string
+  + number: number
+  + createdAt: string
+  + scheduledTime: string
+  + recording: { link: string }
+  --
+  + content: EditorContent
+  + classNote: EditorContent
+  + homework: EditorContent
+  + comments: EditorContent
+  --
+  + studentComments: Record<string, EditorContent>
+  + attendance: Record<string, AttendanceStatus>
+}
+
+class StudentNote {
+  + id: string
+  + studentId: string
+  + title: string
+  + content: EditorContent
+  + lessonId: string
+  + createdAt: string
+  + updatedAt: string
+}
+
+class PQRSMessage {
+  + id: string
+  + studentId: string
+  + teacherId: string
+  + teacherName: string
+  + message: string
+  + isAnonymous: boolean
+  + createdAt: string
+}
+
+class HomeworkSubmission {
+  + id: string
+  + lessonId: string
+  + studentId: string
+  + studentName: string
+  + files: object[]
+  + submittedAt: string
+  + grade: string
+}
+
+class BankCard {
+  + id: string
+  + type: BankType
+  + name: string
+  + ownerId: string
+  + ownerName: string
+  + createdAt: string
+  + level: string
+  --
+  + content: EditorContent
+  + fileUrl: string
+  + filePath: string
+}
+
+' Service Classes
+class FirestoreService <<(S,lightblue)>> {
+  ' User Management
+  + getUserProfile(userId): User
+  + updateUserProfile(userId, data): void
+  + getUsersInRole(role): User[]
+  ' Student Data
+  + getStudentData(userId): { user, group }
+  ' Teacher Data
+  + getTeacherDataForDashboard(teacherId): { teacher, groups, groupHistory }
+  ' Group Management
+  + createGroupWithTeacher(teacher, students, plan): void
+  + updateGroupObjectives(groupId, data): void
+  + addContentToGroup(groupId, type, data): void
+  + removeStudentsFromGroup(groupId, studentIds): void
+  + updateGroupTeacherAndHistory(...): void
+  ' Lesson Management
+  + getLessonsForGroup(groupId): Lesson[]
+  + createLessonForGroup(...): void
+  + updateLesson(groupId, lessonId, data): void
+  ' PQRS
+  + submitPQRS(pqrsData): void
+  + getAllPqrsMessages(): PQRSMessage[]
+  + deletePQRSMessage(messageId): void
+  ' Student Notes
+  + createStudentNote(data): void
+  + getStudentNotes(studentId): StudentNote[]
+  + updateStudentNote(noteId, data): void
+  + deleteStudentNote(noteId): void
+  ' Bank Cards / Files
+  + getBankCards(type): BankCard[]
+  + createBankCard(data): string
+  + updateBankCard(cardId, data): void
+  + deleteBankCard(cardId): void
+  + uploadBankFile(...): Promise<void>
+  + deleteBankFile(cardId, filePath): Promise<void>
+  ' Homework
+  + uploadHomeworkFile(...): Promise<{...}>
+  + getHomeworkSubmissionsForLesson(...): HomeworkSubmission[]
+  + createOrUpdateHomeworkSubmission(...): void
+}
+
+class FirebaseService <<(S,orange)>> {
+  + signInWithEmailAndPassword(...)
+  + updateUserCredentials(currentPassword, newEmail, newPassword): Promise<void>
+}
+
+class GenkitService <<(S,palegreen)>> {
+  + generateEditorContent(input): string
+  + contextualQA(input): string
+}
+
+
+' Relationships
+User <|-- StudentProfile
+
+StudentProfile "1" -- "0..*" StudentNote : creates
+StudentProfile "1" -- "0..*" PQRSMessage : sends
+StudentProfile "1" -- "0..*" HomeworkSubmission : submits
+
+User "1" -- "1..*" Group : (teacher) manages
+Group "1" -- "1..*" StudentProfile : contains
+Group "1" *-- "1" StudentGroupInfo : has info for
+Group "1" -- "0..*" Lesson : consists of
+
+Lesson "1" -- "0..*" HomeworkSubmission : has
+Lesson "0..1" -- "0..*" StudentNote : associated with
+
+User "1..*" -- "0..*" BankCard : (teacher) creates
+
+' Service Dependencies (dashed lines)
+FirestoreService .> User
+FirestoreService .> StudentProfile
+FirestoreService .> Group
+FirestoreService .> Lesson
+FirestoreService .> StudentNote
+FirestoreService .> PQRSMessage
+FirestoreService .> HomeworkSubmission
+FirestoreService .@> BankCard
+
+' Content relationships
+Group::mainObjective -- EditorContent
+Group::weeklyObjectives -- EditorContent
+Lesson::content -- EditorContent
+Lesson::classNote -- EditorContent
+Lesson::homework -- EditorContent
+Lesson::comments -- EditorContent
+StudentNote::content -- EditorContent
+BankCard::content -- EditorContent
+
+@enduml
