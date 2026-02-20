@@ -1,0 +1,149 @@
+@startuml
+!theme spacelab
+
+skinparam linetype ortho
+skinparam monochrome true
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "Colecciones de Firestore" {
+
+  entity "users" as users {
+    + **userId** (string) <<PK>>
+    --
+    + name (string)
+    + email (string)
+    + role (enum: 'student', 'teacher', 'admin')
+    + plan (enum: 'privado', 'grupo pequeño', 'grupo grande')
+    + hasOnboarded (boolean)
+    + groupId (string) <<FK>>
+    + groupHistory (array<string>) <<FK>>
+    -- Student Profile --
+    + age (integer)
+    + phone (string)
+    + interests (array<string>)
+    + objective (string)
+    + scheduledSlots (array<map>)
+  }
+
+  entity "groups" as groups {
+    + **groupId** (string) <<PK>>
+    --
+    + name (string)
+    + type (enum: 'privado', 'grupo pequeño', 'grupo grande')
+    + teacherId (string) <<FK>>
+    + teacherName (string)
+    + studentIds (array<string>) <<FK>>
+    + studentsInfo (array<map>)
+    -- Content --
+    + mainObjective (map)
+    + weeklyObjectives (map)
+    + content (map)
+  }
+
+  entity "lessons" as lessons {
+    <<sub-collection>>
+    + **lessonId** (string) <<PK>>
+    --
+    + name (string)
+    + number (integer)
+    + createdAt (timestamp)
+    + scheduledTime (timestamp)
+    + recording (map)
+    + content (map)
+    + classNote (map)
+    + homework (map)
+    + comments (map)
+    + attendance (map<string, string>)
+  }
+
+  entity "homework_submissions" as homework_submissions {
+    <<sub-collection>>
+    + **submissionId** (string) <<PK>>
+    --
+    + studentId (string) <<FK>>
+    + studentName (string)
+    + submittedAt (timestamp)
+    + files (array<map>)
+    + grade (string)
+  }
+  
+  entity "pqrs" as pqrs {
+      + **pqrsId** (string) <<PK>>
+      --
+      + studentId (string) <<FK>>
+      + teacherId (string) <<FK>>
+      + message (string)
+      + isAnonymous (boolean)
+      + createdAt (timestamp)
+  }
+
+  entity "student_notes" as student_notes {
+      + **noteId** (string) <<PK>>
+      --
+      + studentId (string) <<FK>>
+      + lessonId (string) <<FK>>
+      + title (string)
+      + content (map)
+      + createdAt (timestamp)
+      + updatedAt (timestamp)
+  }
+
+  entity "bank_cards" as bank_cards {
+      + **cardId** (string) <<PK>>
+      --
+      + ownerId (string) <<FK>>
+      + ownerName (string)
+      + type (enum: 'objective', 'homework', 'image', 'video', 'audio')
+      + name (string)
+      + level (string)
+      + content (map)
+      + fileUrl (string)
+      + filePath (string)
+      + createdAt (timestamp)
+  }
+}
+
+' --- Relaciones ---
+
+' Docente -> Grupos
+users "1" -- "0..*" groups : "enseña en"
+groups::teacherId --> users::userId
+
+' Grupo <--> Estudiantes (Muchos a Muchos)
+users "0..*" -- "1" groups : "pertenece a"
+groups::studentIds --> users::userId
+users::groupId --> groups::groupId
+
+' Grupo -> Lecciones (Composición)
+groups "1" *-- "0..*" lessons : "contiene"
+
+' Lección -> Entregas (Composición)
+lessons "1" *-- "0..*" homework_submissions : "tiene"
+
+' Estudiante -> Entregas
+users ||--|{ homework_submissions : "entrega"
+homework_submissions::studentId --> users::userId
+
+' Estudiante -> PQRS
+users ||--|{ pqrs : "envía"
+pqrs::studentId --> users::userId
+
+' Docente -> PQRS
+users ||--|{ pqrs : "recibe"
+pqrs::teacherId --> users::userId
+
+' Estudiante -> Apuntes
+users ||--|{ student_notes : "crea"
+student_notes::studentId --> users::userId
+
+' Lección -> Apuntes (Opcional)
+lessons "1" .. "0..*" student_notes : "se relaciona con"
+student_notes::lessonId --> lessons::lessonId
+
+' Docente -> Tarjetas de Banco
+users ||--|{ bank_cards : "crea/posee"
+bank_cards::ownerId --> users::userId
+
+@enduml
