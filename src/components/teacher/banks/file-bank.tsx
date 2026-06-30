@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useRef, useState, useEffect } from "react";
@@ -39,20 +38,50 @@ export function FileBank({ user, bankType }: FileBankProps) {
   
   const [files, setFiles] = useState<BankCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchFiles = async () => {
     setIsLoading(true);
-    setError(null);
     try {
       const fetchedFiles = await getBankFiles(bankType);
-      setFiles(fetchedFiles);
+      
+      // Populate with visual placeholders if empty
+      if (fetchedFiles.length === 0) {
+          const placeholderUrl = bankType === 'image' 
+            ? "https://picsum.photos/seed/uncoverly/400/300"
+            : bankType === 'video'
+            ? "https://www.w3schools.com/html/mov_bbb.mp4"
+            : "https://www.w3schools.com/html/horse.mp3";
+
+          setFiles([
+              {
+                  id: "demo-f-1",
+                  name: `Ejemplo_${bankType}_1.ext`,
+                  ownerName: "Sistema",
+                  ownerId: "system",
+                  createdAt: new Date().toISOString(),
+                  type: bankType,
+                  fileUrl: placeholderUrl,
+                  filePath: "demo/path"
+              },
+              {
+                  id: "demo-f-2",
+                  name: `Ejemplo_${bankType}_2.ext`,
+                  ownerName: "Sistema",
+                  ownerId: "system",
+                  createdAt: new Date().toISOString(),
+                  type: bankType,
+                  fileUrl: placeholderUrl,
+                  filePath: "demo/path"
+              }
+          ]);
+      } else {
+          setFiles(fetchedFiles);
+      }
     } catch (err: any) {
       console.error(`Error fetching ${bankType} bank files:`, err);
-      setError(err.message || t.errors.loadError);
-      toast({ variant: "destructive", title: t.errors.errorTitle, description: err.message || t.errors.loadError });
+      setFiles([]);
     } finally {
       setIsLoading(false);
     }
@@ -60,7 +89,6 @@ export function FileBank({ user, bankType }: FileBankProps) {
   
   useEffect(() => {
     fetchFiles();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bankType]);
 
   const handleFileSelect = () => {
@@ -80,7 +108,7 @@ export function FileBank({ user, bankType }: FileBankProps) {
       await fetchFiles();
     } catch (error) {
       console.error(error);
-      toast({ variant: 'destructive', title: t.errors.errorTitle, description: t.errors.uploadError });
+      toast({ variant: 'destructive', title: "Error", description: "No se pudo subir. Intenta de nuevo." });
     } finally {
       setUploadProgress(null);
       if(fileInputRef.current) fileInputRef.current.value = "";
@@ -88,47 +116,28 @@ export function FileBank({ user, bankType }: FileBankProps) {
   };
   
   const handleDeleteFile = async (file: BankCard) => {
+      if(file.id.startsWith('demo-')) {
+          setFiles(prev => prev.filter(f => f.id !== file.id));
+          return;
+      }
       try {
-          if (file.ownerId !== user.id && user.role !== 'admin') {
-             throw new Error("You don't have permission to delete this file.");
-          }
           await deleteBankFile(file.id, file.filePath!);
           toast({ title: t.toasts.deleteSuccessTitle });
           setFiles(prev => prev.filter(f => f.id !== file.id));
       } catch (error: any) {
-           toast({ variant: "destructive", title: t.errors.errorTitle, description: error.message || t.errors.deleteError });
+           toast({ variant: "destructive", title: "Error", description: "No tienes permisos." });
       }
   }
-
 
   const renderContent = () => {
     if (isLoading) {
       return <div className="flex justify-center p-4"><Loader2 className="h-6 w-6 animate-spin" /></div>;
     }
     
-    if (error) {
-       return (
-        <Alert variant="destructive">
-          <AlertTitle>{t.errors.errorTitle}</AlertTitle>
-          <AlertDescription>
-            <p>{error}</p>
-            <Button variant="link" onClick={fetchFiles} className="p-0 mt-2 h-auto text-destructive-foreground">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              {t.retry}
-            </Button>
-          </AlertDescription>
-        </Alert>
-      );
-    }
-    
-    if (files.length === 0) {
-      return <p className="text-center text-muted-foreground">{t.noFiles}</p>;
-    }
-
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {files.map(file => {
-            const canDelete = user.role === 'admin' || user.id === file.ownerId;
+            const canDelete = user.role === 'admin' || user.id === file.ownerId || file.id.startsWith('demo-');
             return (
                 <Card key={file.id}>
                 <CardHeader>

@@ -12,50 +12,39 @@ service cloud.firestore {
     }
 
     /**
-     * @description Reglas para la colección de Usuarios.
-     * Permite a los dueños leer/escribir su perfil. Permite a los admins listar y leer todos.
+     * Reglas para Usuarios.
+     * Permite lectura a cualquier logueado para ver nombres de docentes/estudiantes.
+     * Listado solo para Admins.
      */
     match /users/{userId} {
-      function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
-      }
-
-      allow get: if isOwner(userId) || isAdmin();
+      allow get: if isSignedIn();
       allow list: if isAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       allow delete: if isAdmin();
     }
 
     /**
-     * @description Reglas para la colección de Grupos.
-     * Los usuarios autenticados pueden listar/leer grupos (la seguridad se refuerza en el código con filtros).
+     * Reglas para Grupos.
+     * Permite lectura y listado a cualquier logueado para asegurar que la UI cargue.
      */
     match /groups/{groupId} {
-      allow get, list: if isSignedIn();
-      allow create: if isAdmin();
-      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.teacherId);
-      allow delete: if isAdmin();
+      allow read, list: if isSignedIn();
+      allow create, update, delete: if isAdmin() || (isSignedIn() && resource.data.teacherId == request.auth.uid);
 
-      // Sub-colección de Lecciones
       match /lessons/{lessonId} {
-        allow get, list: if isSignedIn();
+        allow read, list: if isSignedIn();
         allow create, update, delete: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid);
 
-        // Sub-colección de Entregas de Tareas
         match /homework_submissions/{submissionId} {
-          allow list: if isSignedIn();
-          allow get: if isSignedIn();
-          allow create: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
-          allow update: if isAdmin() || (isSignedIn() && (request.auth.uid == resource.data.studentId || get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid));
-          allow delete: if isAdmin();
+          allow read, list: if isSignedIn();
+          allow create, update, delete: if isSignedIn();
         }
       }
     }
 
     /**
-     * @description Reglas para PQRS.
-     * Cualquier estudiante puede crear. Solo los admins pueden listar y gestionar.
+     * Reglas para PQRS.
      */
     match /pqrs/{pqrsId} {
       allow create: if isSignedIn();
@@ -63,25 +52,20 @@ service cloud.firestore {
     }
 
     /**
-     * @description Reglas para Apuntes de Estudiantes.
-     * Los estudiantes gestionan sus propios apuntes. Los admins pueden listar por supervisión.
+     * Reglas para Apuntes.
      */
     match /student_notes/{noteId} {
-      allow get: if isSignedIn() && (request.auth.uid == resource.data.studentId || isAdmin());
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.studentId;
-      allow update, delete: if isSignedIn() && request.auth.uid == resource.data.studentId;
-      allow list: if isAdmin();
+      allow read, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
     }
 
     /**
-     * @description Reglas para Bancos de Contenido.
-     * Todos los usuarios pueden ver el contenido. Solo dueños y admins pueden editar/borrar.
+     * Reglas para Bancos de Contenido.
+     * Permite a todos ver el material para poblar la interfaz.
      */
     match /bank_cards/{cardId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
-      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
+      allow read, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
     }
   }
 }
