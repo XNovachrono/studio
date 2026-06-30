@@ -1,0 +1,119 @@
+@startuml Conceptual Model - Uncoverly Hub
+
+skinparam theme cerulean
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+package "Usuarios y Roles" {
+    abstract class User {
+        + id: String
+        + name: String
+        + email: String
+        + role: Role
+        + login()
+        + logout()
+        + updateProfile()
+    }
+
+    class Student {
+        + plan: StudentPlan
+        + level: String
+        + hasOnboarded: Boolean
+        + onboard()
+        + viewMyLessons()
+        + submitHomework()
+        + createPersonalNote()
+        + sendPQRS()
+        + schedulePreferredTime()
+    }
+
+    class Teacher {
+        + groupHistory: List<ID>
+        + manageActiveGroups()
+        + createLessons()
+        + registerAttendance()
+        + gradeHomework()
+        + createBankContent()
+        + provideFeedback()
+    }
+
+    class Admin {
+        + manageAllUsers()
+        + createAndAssignGroups()
+        + viewAllPQRS()
+        + monitorBankContent()
+        + dissolveGroups()
+    }
+
+    User <|-- Student
+    User <|-- Teacher
+    User <|-- Admin
+}
+
+package "Gestión Académica" {
+    class Group {
+        + name: String
+        + type: PlanType
+        + mainObjective: HTML
+        + weeklyObjectives: HTML
+        + defineProgram()
+    }
+
+    class Lesson {
+        + number: Int
+        + scheduledTime: DateTime
+        + recordingLink: URL
+        + classNotes: HTML
+        + objective: HTML
+        + publishRecording()
+    }
+
+    class HomeworkSubmission {
+        + files: List<URL>
+        + submittedAt: DateTime
+        + grade: String
+        + upload()
+        + assignGrade()
+    }
+}
+
+package "Recursos y Comunicación" {
+    class BankCard {
+        + type: BankType
+        + level: String
+        + content: HTML
+        + fileUrl: URL
+        + shareWithOtherTeachers()
+    }
+
+    class PQRSMessage {
+        + message: String
+        + isAnonymous: Boolean
+        + createdAt: DateTime
+    }
+
+    class StudentNote {
+        + title: String
+        + content: HTML
+        + linkToLesson()
+    }
+}
+
+' Relaciones conceptuales
+Teacher "1" -- "0..*" Group : "enseña en"
+Student "1..*" -- "0..1" Group : "pertenece a"
+Group "1" *-- "0..*" Lesson : "contiene"
+Student "1" -- "0..*" HomeworkSubmission : "realiza"
+Lesson "1" -- "0..*" HomeworkSubmission : "tiene entregas de"
+Teacher "1" -- "0..*" BankCard : "crea/es el autor de"
+Student "1" -- "0..*" PQRSMessage : "envía"
+Teacher "1" -- "0..*" PQRSMessage : "recibe (si no es anónimo)"
+Student "1" -- "0..*" StudentNote : "escribe"
+StudentNote "0..1" -- "0..1" Lesson : "referencia a"
+
+note top of BankCard
+  Visualización: Todos los roles
+  Gestión: Solo Autor (Teacher) o Admin
+end note
+
+@enduml

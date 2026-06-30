@@ -1,0 +1,112 @@
+@startuml Logical Data Model - Firestore Structure
+
+skinparam theme materia
+hide circle
+
+entity "users" as users {
+    * userId : string <<PK>>
+    --
+    name : string
+    email : string
+    role : enum("student", "teacher", "admin")
+    plan : string
+    level : string
+    phone : string
+    hasOnboarded : boolean
+    groupId : string <<FK>>
+    groupHistory : array<string>
+    scheduledSlots : array<map>
+}
+
+entity "groups" as groups {
+    * groupId : string <<PK>>
+    --
+    name : string
+    type : string
+    teacherId : string <<FK>>
+    teacherName : string
+    studentIds : array<string> <<FK>>
+    studentsInfo : array<map>
+    mainObjective : map (EditorContent)
+    weeklyObjectives : map (EditorContent)
+    content : map {
+        scheduledClasses : array<map>
+        notes : array<map>
+        reminders : array<map>
+    }
+}
+
+entity "lessons" as lessons {
+    * lessonId : string <<PK>>
+    --
+    * groupId : string <<Parent FK>>
+    number : integer
+    name : string
+    scheduledTime : timestamp
+    recording : map { link: string }
+    content : map (EditorContent)
+    classNote : map (EditorContent)
+    homework : map (EditorContent)
+    attendance : map { studentId: status }
+    studentComments : map { studentId: EditorContent }
+}
+
+entity "homework_submissions" as submissions {
+    * submissionId : string <<PK>>
+    --
+    * lessonId : string <<Parent FK>>
+    studentId : string <<FK>>
+    studentName : string
+    files : array<map { name, url, path }>
+    submittedAt : timestamp
+    grade : string
+}
+
+entity "bank_cards" as bank {
+    * cardId : string <<PK>>
+    --
+    ownerId : string <<FK>>
+    ownerName : string
+    type : enum("objective", "homework", "image", "video", "audio")
+    level : string
+    name : string
+    content : map (EditorContent)
+    fileUrl : string
+    filePath : string
+    createdAt : timestamp
+}
+
+entity "pqrs" as pqrs {
+    * pqrsId : string <<PK>>
+    --
+    studentId : string <<FK>>
+    teacherId : string <<FK>>
+    teacherName : string
+    message : string
+    isAnonymous : boolean
+    createdAt : timestamp
+}
+
+entity "student_notes" as notes {
+    * noteId : string <<PK>>
+    --
+    studentId : string <<FK>>
+    lessonId : string <<FK>>
+    title : string
+    content : map (EditorContent)
+    createdAt : timestamp
+    updatedAt : timestamp
+}
+
+' Relaciones Lógicas (Cardinalidad)
+users ||--o{ groups : "Teacher teaching"
+users ||--o| groups : "Student belongs to"
+groups ||--|{ lessons : "Contains (Sub-collection)"
+lessons ||--o{ submissions : "Sub-collection"
+users ||--o{ submissions : "Student submits"
+users ||--o{ bank : "Teacher creates"
+users ||--o{ pqrs : "Student sends / Teacher receives"
+users ||--o{ notes : "Student writes"
+lessons ||--o{ notes : "Contextual link"
+
+@enduml
