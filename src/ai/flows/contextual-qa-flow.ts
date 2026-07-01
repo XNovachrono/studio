@@ -1,5 +1,4 @@
 
-'use server';
 /**
  * MOCK AI FLOW FOR PRESENTATION
  */
