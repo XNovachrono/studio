@@ -78,6 +78,10 @@ export const getBankCards = async (type: BankType): Promise<BankCard[]> => {
     return bankCards.filter((c: any) => c.type === type);
 };
 
+export const getAllBankCards = async (): Promise<BankCard[]> => {
+    return bankCards;
+};
+
 export const createBankCard = async (data: Omit<BankCard, 'id' | 'createdAt'>): Promise<string> => {
     const newCard: BankCard = {
         id: `card-${Date.now()}`,
