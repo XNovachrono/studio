@@ -1,10 +1,12 @@
 import { cn } from "@/lib/utils";
+import { useBasePath } from "@/hooks/use-base-path";
 
 export function Logo({ className }: { className?: string }) {
+  const basePath = useBasePath;
   return (
     <div className={cn("flex items-center gap-3", className)}>
       <img 
-        src="/logo.png"
+        src={basePath("/logo.png")}
         alt="Uncoverly Logo"
         width={32}
         height={32}
