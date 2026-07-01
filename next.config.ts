@@ -1,7 +1,9 @@
 import type {NextConfig} from 'next';
 
+// Detectar si está en GitHub Actions o si se compiló explícitamente para GitHub Pages
+const isGitHubPages = process.env.GITHUB_ACTIONS === 'true' || process.env.NEXT_PUBLIC_GITHUB_PAGES === 'true';
 const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1] ?? 'studio';
-const basePath = process.env.BASE_PATH ?? (process.env.GITHUB_ACTIONS ? `/${repoName}` : '');
+const basePath = isGitHubPages ? `/${repoName}` : '';
 const assetPrefix = basePath ? `${basePath}/` : '';
 
 const nextConfig: NextConfig = {

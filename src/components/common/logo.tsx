@@ -1,12 +1,13 @@
+"use client";
+
 import { cn } from "@/lib/utils";
-import { useBasePath } from "@/hooks/use-base-path";
+import { withBasePath } from "@/hooks/use-base-path";
 
 export function Logo({ className }: { className?: string }) {
-  const basePath = useBasePath;
   return (
     <div className={cn("flex items-center gap-3", className)}>
       <img 
-        src={basePath("/logo.png")}
+        src={withBasePath("/logo.png")}
         alt="Uncoverly Logo"
         width={32}
         height={32}
