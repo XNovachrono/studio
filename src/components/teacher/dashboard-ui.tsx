@@ -47,7 +47,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Separator } from "../ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { Slider } from "../ui/slider";
-import Image from "next/image";
 
 
 interface TeacherDashboardData {
@@ -587,7 +586,7 @@ const HomeworkSubmissionsViewer = ({ isOpen, onOpenChange, lesson, groupMembers 
                                         <div className="grid grid-cols-2 gap-4 pr-4">
                                             {selectedSubmission.files.map((file, index) => (
                                                 <a key={index} href={file.url} target="_blank" rel="noopener noreferrer">
-                                                    <Image src={file.url} alt={file.name} width={200} height={200} className="rounded-md w-full h-auto object-cover"/>
+                                                    <img src={file.url} alt={file.name} width={200} height={200} className="rounded-md w-full h-auto object-cover" />
                                                 </a>
                                             ))}
                                         </div>

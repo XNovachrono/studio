@@ -30,7 +30,6 @@ import { Input } from "../ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { StudentNotesManager } from "./notes-manager";
-import Image from "next/image";
 
 
 interface StudentDashboardData {
@@ -82,8 +81,8 @@ const HomeworkUploader = ({ student, lesson, submission, onUploadSuccess }: { st
             {submission?.files && submission.files.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                     {submission.files.map((file, index) => (
-                        <div key={index} className="relative aspect-square w-full">
-                            <Image src={file.url} alt={file.name} layout="fill" objectFit="cover" className="rounded-md" />
+                        <div key={index} className="relative aspect-square w-full overflow-hidden rounded-md">
+                            <img src={file.url} alt={file.name} className="w-full h-full object-cover" />
                         </div>
                     ))}
                 </div>

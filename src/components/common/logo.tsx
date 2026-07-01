@@ -1,10 +1,9 @@
 import { cn } from "@/lib/utils";
-import Image from "next/image";
 
 export function Logo({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <Image 
+      <img 
         src="/logo.png"
         alt="Uncoverly Logo"
         width={32}
