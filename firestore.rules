@@ -1,71 +1,10 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Funciones de ayuda
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    /**
-     * Reglas para Usuarios.
-     * Permite lectura a cualquier logueado para ver nombres de docentes/estudiantes.
-     * Listado solo para Admins.
-     */
-    match /users/{userId} {
-      allow get: if isSignedIn();
-      allow list: if isAdmin();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow delete: if isAdmin();
-    }
-
-    /**
-     * Reglas para Grupos.
-     * Permite lectura y listado a cualquier logueado para asegurar que la UI cargue.
-     */
-    match /groups/{groupId} {
-      allow read, list: if isSignedIn();
-      allow create, update, delete: if isAdmin() || (isSignedIn() && resource.data.teacherId == request.auth.uid);
-
-      match /lessons/{lessonId} {
-        allow read, list: if isSignedIn();
-        allow create, update, delete: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid);
-
-        match /homework_submissions/{submissionId} {
-          allow read, list: if isSignedIn();
-          allow create, update, delete: if isSignedIn();
-        }
-      }
-    }
-
-    /**
-     * Reglas para PQRS.
-     */
-    match /pqrs/{pqrsId} {
-      allow create: if isSignedIn();
-      allow get, list, delete: if isAdmin();
-    }
-
-    /**
-     * Reglas para Apuntes.
-     */
-    match /student_notes/{noteId} {
-      allow read, list: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
-    }
-
-    /**
-     * Reglas para Bancos de Contenido.
-     * Permite a todos ver el material para poblar la interfaz.
-     */
-    match /bank_cards/{cardId} {
-      allow read, list: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+    // MOCK RULES FOR PRESENTATION: ALLOW ALL FOR LOCAL DEV EXPERIENCE
+    match /{allPaths=**} {
+      allow read, write: if true;
     }
   }
 }

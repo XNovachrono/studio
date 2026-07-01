@@ -1,53 +1,14 @@
 
 'use server';
 /**
- * @fileOverview A flow for answering questions or explaining text within a specific context.
+ * MOCK AI FLOW FOR PRESENTATION
  */
-
-import {ai, gemini15Flash} from '@/ai/genkit';
-import {z} from 'genkit';
-
-const ContextualQASchema = z.object({
-  language: z.string().describe('The language for the AI to respond in (e.g., "es", "en").'),
-  selectedText: z.string().describe('The text that was selected by the user.'),
-  userQuery: z.string().optional().describe('The specific question the user has about the selected text. If empty, the AI should just explain the text.'),
-});
-export type ContextualQAInput = z.infer<typeof ContextualQASchema>;
-
-const ContextualQAOutputSchema = z
-  .string()
-  .describe(
-    'The generated content as an HTML string.'
-  );
-export type ContextualQAOutput = z.infer<typeof ContextualQASchema>;
-
-export async function contextualQA(
-  input: ContextualQAInput
-): Promise<ContextualQAOutput> {
-  return contextualQAFlow(input);
+export async function contextualQA(input: any): Promise<string> {
+    return `
+        <div class="space-y-2">
+            <p><strong>Explicación de la IA:</strong></p>
+            <p>El texto seleccionado hace referencia a conceptos fundamentales del idioma aplicados al contexto profesional.</p>
+            <p><em>Sugerencia:</em> Intenta utilizar esta estructura en tu próxima presentación para sonar más natural.</p>
+        </div>
+    `;
 }
-
-
-const contextualQAFlow = ai.defineFlow(
-  {
-    name: 'contextualQAFlow',
-    inputSchema: ContextualQASchema,
-    outputSchema: ContextualQAOutputSchema,
-  },
-  async (input) => {
-    const { language, selectedText, userQuery } = input;
-
-    const promptText = userQuery
-      ? `Based on the following text, answer the user's question. Respond in ${language}.
-         User's Question: "${userQuery}"
-         Selected Text: "${selectedText}"`
-      : `Explain the following text clearly and concisely. Respond in ${language}.
-         Selected Text: "${selectedText}"`;
-    
-    const {text} = await ai.generate({
-      model: gemini15Flash,
-      prompt: promptText,
-    });
-    return text;
-  }
-);
